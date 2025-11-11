@@ -1,15 +1,10 @@
 [package]
-name = "dojo_starter"
+name = "beast_marketplace"
 version = "1.8.0"
 edition = "2024_07"
 
 [cairo]
 sierra-replace-ids = true
-
-[scripts]
-migrate = "sozo build && sozo migrate"
-spawn = "sozo execute dojo_starter-actions spawn --wait"
-move = "sozo execute dojo_starter-actions move -c 1 --wait"
 
 [dependencies]
 dojo = "1.8.0"
