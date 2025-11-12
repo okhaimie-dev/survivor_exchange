@@ -1,4 +1,4 @@
-use beast_marketplace::models::index::{Auction, Rental};
+use beast_marketplace::models::index::Rental;
 
 // define the interface
 
@@ -27,51 +27,61 @@ pub trait IRentalMarketplace<TContractState> {
     fn claim_collateral(ref self: TContractState, token_id: u32);
 }
 
+pub mod errors {
+    pub const RENTAL_NOT_AVAILABLE: felt252 = 'Rental not available';
+    pub const INVALID_COLLATERAL: felt252 = 'Invalid collateral amount';
+    pub const UNAUTHORIZED: felt252 = 'Unauthorized access';
+    // Add more error constants as needed
+}
+
 // dojo decorator
 #[dojo::contract]
 pub mod actions {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
-    use super::{Auction, IRentalMarketplace, Rental};
+    use super::{IRentalMarketplace, Rental};
 
     #[abi(embed_v0)]
-    impl RentalImpl of IRentalMarketplace<ContractState> {
-        fn spawn(ref self: ContractState) {
-            // Get the default world.
-            let mut world = self.world_default();
-
-            // Get the address of the current caller, possibly the player's address.
-            let player = get_caller_address();
-            // Retrieve the player's current position from the world.
-            let position: Position = world.read_model(player);
-
-            // Update the world state with the new data.
-
-            // 1. Move the player's position 10 units in both the x and y direction.
-            let new_position = Position {
-                player, vec: Vec2 { x: position.vec.x + 10, y: position.vec.y + 10 },
-            };
-
-            // Write the new position to the world.
-            world.write_model(@new_position);
-
-            // 2. Set the player's remaining moves to 100.
-            let moves = Moves {
-                player, remaining: 100, last_direction: Option::None, can_move: true,
-            };
-
-            // Write the new moves to the world.
-            world.write_model(@moves);
+    impl RentalMarketplaceImpl of IRentalMarketplace<ContractState> {
+        fn create_rental(
+            ref self: ContractState,
+            token_id: u32,
+            rental_price: u8,
+            duration: u64,
+            collateral: u64,
+        ) { // TODO: Implement rental creation logic
+        // - Validate inputs
+        // - Set Rental model with defaults (renter: 0, start_time: 0, end_time: 0, status: 0)
+        // - Emit event
+        // - Transfer token ownership if needed (e.g., to escrow)
         }
-    }
 
-    #[generate_trait]
-    impl InternalImpl of InternalTrait {
-        /// Use the default namespace "dojo_starter". This function is handy since the ByteArray
-        /// can't be const.
-        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
-            self.world(@"dojo_starter")
+        fn rent(
+            ref self: ContractState, token_id: u32, collateral_amount: u64,
+        ) { // TODO: Implement rent logic
+        // - Fetch existing Rental
+        // - Check availability (status == 0), collateral_amount >= required
+        // - Lock collateral (transfer to escrow)
+        // - Update model: renter = caller, start_time = now, end_time = now + duration, status = 1
+        // - Emit event
+        }
+
+        fn return_rental(ref self: ContractState, token_id: u32) { // TODO: Implement return logic
+        // - Fetch Rental
+        // - Check renter == caller or owner
+        // - Update status to 2 (returned), release access
+        // - Calculate fees and prepare for claim
+        // - Emit event
+        }
+
+        fn claim_collateral(ref self: ContractState, token_id: u32) { // TODO: Implement claim logic
+        // - Fetch Rental
+        // - Check owner == caller and status == 2
+        // - Deduct rental fees from collateral
+        // - Transfer remaining collateral back to owner
+        // - Optionally archive or reset model
+        // - Emit event
         }
     }
 }
