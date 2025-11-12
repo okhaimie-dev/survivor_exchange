@@ -1,4 +1,6 @@
+use beast_marketplace::constants::Errors;
 pub use beast_marketplace::models::index::Auction;
+use beast_marketplace::types::status::Status;
 
 pub mod errors {}
 
@@ -24,5 +26,18 @@ pub impl AuctionImpl of AuctionTrait {
             end_time,
             owner,
         }
+    }
+}
+
+#[generate_trait]
+pub impl AuctionAssert of AssertTrait {
+    #[inline]
+    fn assert_does_not_exist(self: @Auction) {
+        assert(*self.status == Status::None.into(), Errors::AUCTION_ALREADY_EXISTS);
+    }
+
+    #[inline]
+    fn assert_does_exist(self: @Auction) {
+        assert(*self.status != Status::None.into(), Errors::AUCTION_NOT_EXIST);
     }
 }
