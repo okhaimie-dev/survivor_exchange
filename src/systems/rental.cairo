@@ -29,7 +29,7 @@ pub trait IRentalMarketplace<TContractState> {
 
 // dojo decorator
 #[dojo::contract]
-pub mod actions {
+pub mod rental_systems {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};

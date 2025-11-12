@@ -22,7 +22,7 @@ pub trait IBeastAuctionMarketplace<TContractState> {
 
 // dojo decorator
 #[dojo::contract]
-pub mod actions {
+pub mod auction_systems {
     use beast_marketplace::constants::DEFAULT_NS;
     use beast_marketplace::store::StoreTrait;
     use dojo::event::EventStorage;

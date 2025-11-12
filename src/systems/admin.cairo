@@ -10,7 +10,7 @@ pub trait IMarketplaceAdmin<TContractState> {
 }
 
 #[dojo::contract]
-pub mod actions {
+pub mod admin_systems {
     use starknet::get_caller_address;
     use super::{ContractAddress, IMarketplaceAdmin};
 
