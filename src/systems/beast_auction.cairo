@@ -9,7 +9,7 @@ pub trait IBeastAuctionMarketplace<TContractState> {
     /// Places a bid in an active English auction (must exceed current_bid).
     /// - `token_id`: The auction's token ID.
     /// - `bid_amount`: The new bid value (transfers ETH/token to escrow).
-    fn place_bid(ref self: TContractState, token_id: u32, bid_amount: u8);
+    fn bid(ref self: TContractState, token_id: u32, bid_amount: u8);
 
     /// Ends an auction (manual or if expired; callable by anyone after end_time).
     /// - `token_id`: The auction's token ID.
@@ -44,7 +44,7 @@ pub mod actions {
         // - Transfer token ownership if needed (e.g., to escrow)
         }
 
-        fn place_bid(ref self: ContractState, token_id: u32, bid_amount: u8) {
+        fn bid(ref self: ContractState, token_id: u32, bid_amount: u8) {
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Implement bid logic
         // - Fetch existing Auction
