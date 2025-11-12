@@ -1,4 +1,5 @@
 pub mod systems {
+    pub mod admin;
     pub mod beast_auction;
     pub mod rental;
 }
