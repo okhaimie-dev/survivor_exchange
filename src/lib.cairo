@@ -13,6 +13,8 @@ pub mod types {
     pub mod status;
 }
 
+pub mod constants;
+
 pub mod store;
 
 pub mod tests {

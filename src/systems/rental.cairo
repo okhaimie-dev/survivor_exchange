@@ -27,13 +27,6 @@ pub trait IRentalMarketplace<TContractState> {
     fn claim_collateral(ref self: TContractState, token_id: u32);
 }
 
-pub mod errors {
-    pub const RENTAL_NOT_AVAILABLE: felt252 = 'Rental not available';
-    pub const INVALID_COLLATERAL: felt252 = 'Invalid collateral amount';
-    pub const UNAUTHORIZED: felt252 = 'Unauthorized access';
-    // Add more error constants as needed
-}
-
 // dojo decorator
 #[dojo::contract]
 pub mod actions {
