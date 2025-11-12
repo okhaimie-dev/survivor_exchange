@@ -1,5 +1,5 @@
 #[starknet::interface]
-pub trait IAuctionMarketplace<TContractState> {
+pub trait IBeastAuctionMarketplace<TContractState> {
     /// Creates a new English auction for a token.
     /// - `token_id`: The NFT/token ID to auction.
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
@@ -34,10 +34,10 @@ pub mod actions {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
-    use super::IAuctionMarketplace;
+    use super::IBeastAuctionMarketplace;
 
     #[abi(embed_v0)]
-    impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
+    impl AuctionMarketplaceImpl of IBeastAuctionMarketplace<ContractState> {
         fn create_auction(
             ref self: ContractState, token_id: u32, starting_price: u8, duration: u64,
         ) { // TODO: Implement auction creation logic
