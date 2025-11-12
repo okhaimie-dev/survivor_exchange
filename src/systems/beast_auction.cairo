@@ -4,20 +4,20 @@ pub trait IBeastAuctionMarketplace<TContractState> {
     /// - `token_id`: The NFT/token ID to auction.
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
     /// - `duration`: Auction length in seconds (end_time = block_timestamp + duration).
-    fn create_auction(ref self: TContractState, token_id: u32, starting_price: u8, duration: u64);
+    fn create_auction(ref self: TContractState, auction_id: u32, starting_price: u8, duration: u64);
 
     /// Places a bid in an active English auction (must exceed current_bid).
     /// - `token_id`: The auction's token ID.
     /// - `bid_amount`: The new bid value (transfers ETH/token to escrow).
-    fn bid(ref self: TContractState, token_id: u32, bid_amount: u8);
+    fn bid(ref self: TContractState, auction_id: u32, bid_amount: u8);
 
     /// Ends an auction (manual or if expired; callable by anyone after end_time).
     /// - `token_id`: The auction's token ID.
-    fn end_auction(ref self: TContractState, token_id: u32);
+    fn end_auction(ref self: TContractState, auction_id: u32);
 
     /// Settles an ended auction: transfers token to highest bidder, funds to owner.
     /// - `token_id`: The auction's token ID.
-    fn settle_auction(ref self: TContractState, token_id: u32);
+    fn settle_auction(ref self: TContractState, auction_id: u32);
 }
 
 // dojo decorator
@@ -33,7 +33,7 @@ pub mod actions {
     #[abi(embed_v0)]
     impl AuctionMarketplaceImpl of IBeastAuctionMarketplace<ContractState> {
         fn create_auction(
-            ref self: ContractState, token_id: u32, starting_price: u8, duration: u64,
+            ref self: ContractState, auction_id: u32, starting_price: u8, duration: u64,
         ) {
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Implement auction creation logic
@@ -44,7 +44,7 @@ pub mod actions {
         // - Transfer token ownership if needed (e.g., to escrow)
         }
 
-        fn bid(ref self: ContractState, token_id: u32, bid_amount: u8) {
+        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Implement bid logic
         // - Fetch existing Auction
@@ -55,7 +55,7 @@ pub mod actions {
         // - Emit event
         }
 
-        fn end_auction(ref self: ContractState, token_id: u32) { // TODO: Implement end logic
+        fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
             let mut store = StoreTrait::new(self.world_default());
             // - Fetch Auction
         // - Check expired (now >= end_time) or owner callable
@@ -63,7 +63,9 @@ pub mod actions {
         // - Emit event
         }
 
-        fn settle_auction(ref self: ContractState, token_id: u32) { // TODO: Implement settle logic
+        fn settle_auction(
+            ref self: ContractState, auction_id: u32,
+        ) { // TODO: Implement settle logic
             let mut store = StoreTrait::new(self.world_default());
             // - Fetch Auction
         // - Check ended (status == 1)

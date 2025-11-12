@@ -8,7 +8,7 @@ pub mod errors {}
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
     fn new(
-        token_id: u32, starting_price: u8, duration: u64, owner: felt252, current_timestamp: u64,
+        auction_id: u32, starting_price: u8, duration: u64, owner: felt252, current_timestamp: u64,
     ) -> Auction {
         assert(starting_price > 0, 'Invalid starting price');
         assert(duration > 0, 'Invalid duration');
@@ -18,7 +18,7 @@ pub impl AuctionImpl of AuctionTrait {
         let end_time = current_time + duration;
 
         Auction {
-            token_id,
+            auction_id,
             starting_price,
             current_bid: 0,
             highest_bidder: 0x0,

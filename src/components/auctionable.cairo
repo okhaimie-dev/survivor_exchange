@@ -31,7 +31,7 @@ pub mod AuctionableComponent {
         fn create(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
-            token_id: u32,
+            auction_id: u32,
             starting_price: u8,
             duration: u64,
         ) {
@@ -41,7 +41,7 @@ pub mod AuctionableComponent {
             let owner = get_caller_address();
             let current_timestamp = get_block_timestamp();
             let mut auction: Auction = AuctionTrait::new(
-                token_id, starting_price, duration, owner.into(), current_timestamp,
+                auction_id, starting_price, duration, owner.into(), current_timestamp,
             );
             store.set_auction(@auction);
         }
@@ -49,29 +49,29 @@ pub mod AuctionableComponent {
         fn bid(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
-            token_id: u32,
+            auction_id: u32,
             bid_amount: u8,
         ) {
             let mut store = StoreTrait::new(world);
             // TODO: Auction should have a unique ID and contain metadata for auction
             // Check if there are no rentals in auction items.
-            let mut auction = store.auction(token_id);
+            let mut auction = store.auction(auction_id);
             store.set_auction(@auction);
         }
 
-        fn end(self: @ComponentState<TContractState>, world: WorldStorage, token_id: u32) {
+        fn end(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
             // TODO: Auction should have a unique ID and contain metadata for auction
             // Check if there are no rentals in auction items.
-            let mut auction = store.auction(token_id);
+            let mut auction = store.auction(auction_id);
             store.set_auction(@auction);
         }
 
-        fn settle(self: @ComponentState<TContractState>, world: WorldStorage, token_id: u32) {
+        fn settle(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
             // TODO: Auction should have a unique ID and contain metadata for auction
             // Check if there are no rentals in auction items.
-            let mut auction = store.auction(token_id);
+            let mut auction = store.auction(auction_id);
             store.set_auction(@auction);
         }
     }
