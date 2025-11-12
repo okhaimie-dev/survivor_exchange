@@ -1,5 +1,5 @@
 use beast_marketplace::constants::Errors;
-pub use beast_marketplace::models::index::Auction;
+pub use beast_marketplace::models::index::{Auction, AuctionItem};
 use beast_marketplace::types::status::Status;
 
 pub mod errors {}
@@ -26,6 +26,17 @@ pub impl AuctionImpl of AuctionTrait {
             end_time,
             owner,
         }
+    }
+}
+
+#[generate_trait]
+pub impl AuctionItemImpl of AuctionItemTrait {
+    #[inline]
+    fn new_item(
+        auction_id: u32, item_index: u32, token_id: u32, contract_address: felt252,
+    ) -> AuctionItem {
+        // Assert valid contract
+        AuctionItem { auction_id, item_index, token_id, contract_address }
     }
 }
 

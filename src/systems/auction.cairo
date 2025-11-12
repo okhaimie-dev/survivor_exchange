@@ -1,10 +1,38 @@
+use starknet::ContractAddress;
+
 #[starknet::interface]
-pub trait IBeastAuctionMarketplace<TContractState> {
-    /// Creates a new English auction for a token.
-    /// - `token_id`: The NFT/token ID to auction.
+pub trait IAuctionMarketplace<TContractState> {
+    /// Initializes a draft auction (status=0, beast_count=0). Items must be added before starting.
+    /// - `auction_id`: Unique ID for the auction (caller-generated or from counter).
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
+    fn create_auction(ref self: TContractState, auction_id: u32, starting_price: u8);
+
+    /// Adds multiple items to a draft auction (status must be 0; owner only).
+    /// - `auction_id`: The draft auction ID.
+    /// - `token_ids`: Array of BEAST token IDs (e.g., up to 20).
+    /// - `collection_addresses`: Parallel array of ERC721/ERC1155 addresses (must be supported).
+    fn add_items(
+        ref self: TContractState,
+        auction_id: u32,
+        token_ids: Span<u32>,
+        collection_addresses: Span<ContractAddress>,
+    );
+
+    /// Adds a single item to a draft auction (convenience; status must be 0; owner only).
+    /// - `auction_id`: The draft auction ID.
+    /// - `token_id`: The BEAST token ID.
+    /// - `collection_address`: The ERC721/ERC1155 address (must be supported).
+    fn add_item(
+        ref self: TContractState,
+        auction_id: u32,
+        token_id: u32,
+        collection_address: ContractAddress,
+    );
+
+    /// Starts an active auction (sets end_time, status=1; requires beast_count > 0; owner only).
+    /// - `auction_id`: The draft auction ID.
     /// - `duration`: Auction length in seconds (end_time = block_timestamp + duration).
-    fn create_auction(ref self: TContractState, auction_id: u32, starting_price: u8, duration: u64);
+    fn start_auction(ref self: TContractState, auction_id: u32, duration: u64);
 
     /// Places a bid in an active English auction (must exceed current_bid).
     /// - `token_id`: The auction's token ID.
@@ -28,13 +56,11 @@ pub mod auction_systems {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
-    use super::IBeastAuctionMarketplace;
+    use super::IAuctionMarketplace;
 
     #[abi(embed_v0)]
-    impl AuctionMarketplaceImpl of IBeastAuctionMarketplace<ContractState> {
-        fn create_auction(
-            ref self: ContractState, auction_id: u32, starting_price: u8, duration: u64,
-        ) {
+    impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
+        fn create_auction(ref self: ContractState, auction_id: u32, starting_price: u8) {
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Implement auction creation logic
         // - Validate inputs
@@ -43,6 +69,22 @@ pub mod auction_systems {
         // - Emit event
         // - Transfer token ownership if needed (e.g., to escrow)
         }
+
+        fn add_items(
+            ref self: ContractState,
+            auction_id: u32,
+            token_ids: Span<u32>,
+            collection_addresses: Span<ContractAddress>,
+        ) {}
+
+        fn add_item(
+            ref self: ContractState,
+            auction_id: u32,
+            token_id: u32,
+            collection_address: ContractAddress,
+        ) {}
+
+        fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {}
 
         fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
             let mut store = StoreTrait::new(self.world_default());
