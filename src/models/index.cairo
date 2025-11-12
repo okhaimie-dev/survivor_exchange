@@ -42,7 +42,6 @@ pub struct Rental {
 pub struct SupportedNFTCollection {
     #[key]
     pub collection_address: felt252,
-    pub name: felt252,
     // 0=ERC721, 1=ERC1155 (for future handling)
     pub standard: u8,
 }

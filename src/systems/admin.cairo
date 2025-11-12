@@ -4,7 +4,7 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IMarketplaceAdmin<TContractState> {
     fn add_supported_collection(
-        ref self: TContractState, collection_address: ContractAddress, name: felt252, standard: u8,
+        ref self: TContractState, collection_address: ContractAddress, standard: u8,
     );
     fn remove_supported_collection(ref self: TContractState, collection_address: ContractAddress);
 }
@@ -17,11 +17,8 @@ pub mod actions {
     #[abi(embed_v0)]
     impl MarketplaceAdminImpl of IMarketplaceAdmin<ContractState> {
         fn add_supported_collection(
-            ref self: ContractState,
-            collection_address: ContractAddress,
-            name: felt252,
-            standard: u8,
-        ) {// TODO: Assert admin (e.g., caller == deployer_address)
+            ref self: ContractState, collection_address: ContractAddress, standard: u8,
+        ) { // TODO: Assert admin (e.g., caller == deployer_address)
         // Check if already exists
 
         // Create and set

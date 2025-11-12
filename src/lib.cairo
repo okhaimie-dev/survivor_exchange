@@ -22,6 +22,7 @@ pub mod components {
 pub mod constants;
 
 pub mod store;
+pub mod utils;
 
 pub mod tests {
     //mod test_world;
