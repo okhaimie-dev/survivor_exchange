@@ -22,16 +22,15 @@ pub impl RentalImpl of RentalTrait {
         // If immediate availability: uncomment below and set start_time = current_timestamp,
         // end_time = current_timestamp + duration let start_time = current_timestamp;
         // let end_time = current_timestamp + duration;
-
         Rental {
             token_id,
             rental_price,
             duration,
             collateral,
-            renter: 0, // Not rented yet
+            renter: 0,
             start_time: 0,
             end_time: 0,
-            status: 0, // 0 = available
+            status: 0,
             owner,
         }
     }
