@@ -1,6 +1,5 @@
+use beast_marketplace::constants::Errors;
 pub use beast_marketplace::models::index::Rental;
-
-pub mod errors {}
 
 #[generate_trait]
 pub impl RentalImpl of RentalTrait {
@@ -39,5 +38,20 @@ pub impl RentalImpl of RentalTrait {
     /// Returns true if status == 1 (rented), false otherwise.
     fn is_rental(self: Rental) -> bool {
         self.rental_status == 2
+    }
+}
+
+#[generate_trait]
+pub impl RentalAssert of AssertTrait {
+    #[inline]
+    fn assert_does_not_exist(self: @Rental) {
+        // TODO: FIX to use the right error message
+        assert(*self.owner == 0, Errors::AUCTION_ALREADY_EXISTS);
+    }
+
+    #[inline]
+    fn assert_does_exist(self: @Rental) {
+        // TODO: FIX to use the right error message
+        assert(*self.owner != 0, Errors::AUCTION_NOT_EXIST);
     }
 }

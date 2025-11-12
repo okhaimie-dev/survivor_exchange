@@ -15,6 +15,7 @@ pub mod types {
 
 pub mod components {
     pub mod auctionable;
+    pub mod rentable;
 }
 
 pub mod constants;
