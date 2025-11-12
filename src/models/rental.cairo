@@ -30,8 +30,14 @@ pub impl RentalImpl of RentalTrait {
             renter: 0,
             start_time: 0,
             end_time: 0,
-            status: 0,
+            rental_status: 0,
             owner,
         }
+    }
+
+    /// Checks if the rental is currently active (i.e., rented out to someone).
+    /// Returns true if status == 1 (rented), false otherwise.
+    fn is_rental(self: Rental) -> bool {
+        self.rental_status == 2
     }
 }

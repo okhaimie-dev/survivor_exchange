@@ -13,6 +13,10 @@ pub mod types {
     pub mod status;
 }
 
+pub mod components {
+    pub mod auctionable;
+}
+
 pub mod constants;
 
 pub mod store;

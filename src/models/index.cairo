@@ -22,6 +22,6 @@ pub struct Rental {
     pub renter: felt252,
     pub start_time: u64,
     pub end_time: u64,
-    pub status: u8,
+    pub rental_status: u8,
     pub owner: felt252,
 }

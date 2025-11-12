@@ -20,4 +20,6 @@ People post unique sales. Votes made for which qualifies.
 
 MetaData
 
+// You cannot auction a rental.
+
 Blobert Auction.
