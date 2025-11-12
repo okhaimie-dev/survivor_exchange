@@ -16,3 +16,8 @@ Can only auction bundles. e.g. 100 BEASTS - 10 Shinny, 3 T1s and 1 Rank 1 and 50
 People post unique sales. Votes made for which qualifies. 
 
 - Integrate w/ a lending protocol on Starknet.
+
+
+MetaData
+
+Blobert Auction.
