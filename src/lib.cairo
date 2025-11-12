@@ -1,5 +1,6 @@
 pub mod systems {
-    pub mod actions;
+    pub mod auction;
+    pub mod rental;
 }
 
 pub mod models {
