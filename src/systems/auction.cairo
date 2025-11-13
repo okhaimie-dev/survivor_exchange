@@ -51,12 +51,11 @@ pub trait IAuctionMarketplace<TContractState> {
 // dojo decorator
 #[dojo::contract]
 pub mod auction_systems {
-    use dojo::event::EventStorage;
-    use dojo::model::ModelStorage;
-    use starknet::{ContractAddress, get_caller_address};
+    //use dojo::event::EventStorage;
+    //use dojo::model::ModelStorage;
+    use starknet::ContractAddress;
     use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
-    use survivor_exchange::store::StoreTrait;
     use super::IAuctionMarketplace;
 
     component!(path: AuctionableComponent, storage: auctionable, event: AuctionableEvent);
@@ -109,11 +108,14 @@ pub mod auction_systems {
                 .add_item(self.world_default(), auction_id, token_id, collection_address);
         }
 
-        fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {}
+        fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {
+            self.auctionable.start_auction(self.world_default(), auction_id, duration);
+        }
 
-        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
-            let mut store = StoreTrait::new(self.world_default());
-            // TODO: Implement bid logic
+        fn bid(
+            ref self: ContractState, auction_id: u32, bid_amount: u8,
+        ) { //let mut store = StoreTrait::new(self.world_default());
+        // TODO: Implement bid logic
         // - Fetch existing Auction
         // - Check active (status == 0, now < end_time), bid_amount > current_bid
         // - Refund previous bidder if any
@@ -123,8 +125,8 @@ pub mod auction_systems {
         }
 
         fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
-            let mut store = StoreTrait::new(self.world_default());
-            // - Fetch Auction
+        //let mut store = StoreTrait::new(self.world_default());
+        // - Fetch Auction
         // - Check expired (now >= end_time) or owner callable
         // - Update status to 1 (ended)
         // - Emit event
@@ -133,8 +135,8 @@ pub mod auction_systems {
         fn settle_auction(
             ref self: ContractState, auction_id: u32,
         ) { // TODO: Implement settle logic
-            let mut store = StoreTrait::new(self.world_default());
-            // - Fetch Auction
+        //let mut store = StoreTrait::new(self.world_default());
+        // - Fetch Auction
         // - Check ended (status == 1)
         // - Transfer token to highest_bidder (if bid > 0) or back to owner
         // - Transfer funds to owner (current_bid)

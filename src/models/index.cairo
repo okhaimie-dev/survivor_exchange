@@ -10,7 +10,7 @@ pub struct Auction {
     pub status: u8,
     pub end_time: u64,
     pub item_count: u32,
-    pub owner: felt252,
+    pub seller: felt252,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]
@@ -22,6 +22,16 @@ pub struct AuctionItem {
     pub item_index: u32,
     pub token_id: u32,
     pub contract_address: felt252,
+}
+
+#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[dojo::model]
+pub struct Bid {
+    #[key]
+    pub auction_id: u32,
+    #[key]
+    pub bidder: felt252,
+    pub amount: u8,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]

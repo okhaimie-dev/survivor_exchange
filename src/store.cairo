@@ -1,6 +1,6 @@
 use dojo::model::ModelStorage;
 use dojo::world::WorldStorage;
-use survivor_exchange::models::index::{Auction, AuctionItem, Rental};
+use survivor_exchange::models::index::{Auction, AuctionItem, Bid, Rental};
 
 #[derive(Copy, Drop)]
 pub struct Store {
@@ -32,6 +32,16 @@ pub impl StoreImpl of StoreTrait {
     #[inline]
     fn set_auction_item(ref self: Store, auction_item: @AuctionItem) {
         self.world.write_model(auction_item);
+    }
+
+    #[inline]
+    fn bid(self: Store, auction_id: u32, bidder: felt252) -> Bid {
+        self.world.read_model((auction_id, bidder))
+    }
+
+    #[inline]
+    fn set_bid(ref self: Store, bid: @Bid) {
+        self.world.write_model(bid)
     }
 
     #[inline]

@@ -1,11 +1,5 @@
 #[starknet::component]
 pub mod AuctionableComponent {
-    // Starknet imports
-
-    // Dojo imports
-
-    // Internal imports
-
     use dojo::world::WorldStorage;
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
@@ -13,17 +7,13 @@ pub mod AuctionableComponent {
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
+    use survivor_exchange::models::bid::{BidAssert, BidTrait};
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
 
-
-    // Storage
-
     #[storage]
     pub struct Storage {}
-
-    // Events
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -41,11 +31,10 @@ pub mod AuctionableComponent {
             starting_price: u8,
         ) {
             let mut store = StoreTrait::new(world);
-            // Check if there are no rentals in auction items.
-            let owner = get_caller_address();
+            let seller = get_caller_address();
             let current_timestamp = get_block_timestamp();
             let mut auction: Auction = AuctionTrait::new(
-                auction_id, name, starting_price, owner.into(), current_timestamp,
+                auction_id, name, starting_price, seller.into(), current_timestamp,
             );
 
             store.set_auction(@auction);
@@ -76,6 +65,24 @@ pub mod AuctionableComponent {
             store.set_auction(@auction);
         }
 
+        fn start_auction(
+            self: @ComponentState<TContractState>,
+            world: WorldStorage,
+            auction_id: u32,
+            duration: u64,
+        ) {
+            let mut store = StoreTrait::new(world);
+            let mut auction = store.auction(auction_id);
+            auction.assert_is_draft();
+
+            assert(auction.item_count >= 1, 'Auction: empty auction');
+
+            let current_time = get_block_timestamp();
+            auction.end_time = current_time + duration;
+            auction.switch_status(AuctionStatus::Active.into());
+            store.set_auction(@auction);
+        }
+
         fn bid(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
@@ -91,41 +98,74 @@ pub mod AuctionableComponent {
             auction.assert_does_exist();
             assert(status == AuctionStatus::Active, Errors::AUCTION_NOT_ACTIVE);
             assert(current_time < auction.end_time, Errors::AUCTION_EXPIRED);
+            assert(bid_amount > auction.starting_price, Errors::BID_TOO_LOW);
             assert(bid_amount > auction.current_bid, Errors::BID_TOO_LOW);
 
-            // For first bid, ensure >= starting_price (though >0 covers if current_bid=0)
-            let caller = get_caller_address();
+            let bidder = get_caller_address();
 
             // TODO: Check no active rentals on items (query if needed)
             // TODO: Transfer bid_amount to escrow (e.g., via ERC20 dispatcher for real currency)
             //       E.g., eth_dispatcher.transfer(escrow_address, bid_amount.into());
             // TODO: Refund previous highest_bidder if exists (transfer back current_bid)
 
+            let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
+            store.set_bid(@bid);
+
             // Update auction state
             auction.current_bid = bid_amount;
-            auction.highest_bidder = caller.into();
+            auction.highest_bidder = bidder.into();
             store.set_auction(@auction);
-            // TODO: Emit BidPlaced event (auction_id, caller, bid_amount)
+        }
+
+        fn withdraw_bid(
+            self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,
+        ) {
+            let bidder = get_caller_address();
+            let mut store = StoreTrait::new(world);
+
+            // Fetch entities
+            let auction = store.auction(auction_id);
+            assert(
+                auction.status == AuctionStatus::Active.into()
+                    || auction.end_time > get_block_timestamp(),
+                'unauthorized',
+            );
+
+            let mut bid = store.bid(auction_id, bidder.into());
+            assert(bid.amount > 0, 'no bid to withdraw');
+            assert(bid.bidder == bidder.into(), 'not owner');
+            assert(bid.bidder != auction.highest_bidder, 'Auction: highest bidder');
+
+            // Refund from escrow
+            // TODO: Transfer bid.amount back to bidder
+            // E.g., let escrow_dispatcher = IERC20Dispatcher { contract_address: escrow_address };
+            // escrow_dispatcher.transfer(bidder, bid.amount.into());
+
+            // Clear the bid
+            let mut cleared_bid = bid;
+            cleared_bid.amount = 0;
+            store.set_bid(@cleared_bid);
         }
 
         fn end(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();
             let mut auction = store.auction(auction_id);
-            let status = auction.status;
 
             // Assert auction exists
             auction.assert_does_exist();
             assert(
-                status == AuctionStatus::Active.into(), Errors::AUCTION_NOT_ACTIVE,
+                auction.status == AuctionStatus::Active.into(), Errors::AUCTION_NOT_ACTIVE,
             ); // Only end active ones
 
             let caller = get_caller_address();
-            let is_owner = caller.into() == auction.owner;
+            let is_seller = caller.into() == auction.seller;
             let is_expired = current_time >= auction.end_time;
 
             // Anyone after expiry, or owner anytime
-            assert(is_expired || is_owner, Errors::UNAUTHORIZED_TO_END);
+            assert(is_expired || is_seller, Errors::UNAUTHORIZED_TO_END);
+
+            // Owner pays a fine to end auction before expiry.
 
             // TODO: Check no active rentals on items before ending
 
@@ -144,10 +184,11 @@ pub mod AuctionableComponent {
             auction.assert_does_exist();
             assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
 
-            let winner = auction.highest_bidder;
-            let owner = auction.owner;
-            let has_winner = winner != 0_felt252; // Assuming 0 means no bids
-            let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET() };
+            //let winner = auction.highest_bidder;
+            //let seller = auction.seller;
+            //let has_winner = winner != 0_felt252; // Assuming 0 means no bids
+            //let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET()
+            //};
 
             // Transfer items (loop over auction items; assumes you can fetch via
             // store.auction_items(auction_id))

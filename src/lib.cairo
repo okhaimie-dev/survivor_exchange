@@ -1,11 +1,12 @@
 pub mod systems {
-    pub mod admin;
+    //pub mod admin;
     pub mod auction;
-    pub mod rental;
+    //pub mod rental;
 }
 
 pub mod models {
     pub mod auction;
+    pub mod bid;
     pub mod index;
     pub mod rental;
 }
@@ -16,7 +17,7 @@ pub mod types {
 
 pub mod components {
     pub mod auctionable;
-    pub mod rentable;
+    //pub mod rentable;
 }
 
 pub mod constants;
