@@ -15,8 +15,8 @@ pub impl StoreImpl of StoreTrait {
     }
 
     #[inline]
-    fn auction(self: Store, token_id: u32) -> Auction {
-        self.world.read_model(token_id)
+    fn auction(self: Store, auction_id: u32) -> Auction {
+        self.world.read_model(auction_id)
     }
 
     #[inline]

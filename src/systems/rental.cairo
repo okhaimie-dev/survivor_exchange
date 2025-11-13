@@ -29,7 +29,9 @@ pub trait IRentalMarketplace<TContractState> {
 
 // dojo decorator
 #[dojo::contract]
-pub mod actions {
+pub mod rental_systems {
+    use beast_marketplace::constants::DEFAULT_NS;
+    use beast_marketplace::store::StoreTrait;
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
@@ -43,7 +45,9 @@ pub mod actions {
             rental_price: u8,
             duration: u64,
             collateral: u64,
-        ) { // TODO: Implement rental creation logic
+        ) {
+            let mut store = StoreTrait::new(self.world_default());
+            // TODO: Implement rental creation logic
         // - Validate inputs
         // - Set Rental model with defaults (renter: 0, start_time: 0, end_time: 0, status: 0)
         // - Emit event
@@ -75,6 +79,13 @@ pub mod actions {
         // - Transfer remaining collateral back to owner
         // - Optionally archive or reset model
         // - Emit event
+        }
+    }
+
+    #[generate_trait]
+    impl InternalImpl of InternalTrait {
+        fn world_default(self: @ContractState) -> dojo::world::WorldStorage {
+            self.world(@DEFAULT_NS())
         }
     }
 }

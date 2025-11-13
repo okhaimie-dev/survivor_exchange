@@ -8,6 +8,7 @@ sierra-replace-ids = true
 
 [dependencies]
 dojo = "1.8.0"
+openzeppelin_token = "2.0.0"
 starknet = "2.13.1"
 
 [[target.starknet-contract]]
