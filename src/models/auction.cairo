@@ -1,6 +1,6 @@
-use beast_marketplace::constants::Errors;
-pub use beast_marketplace::models::index::{Auction, AuctionItem};
-use beast_marketplace::types::status::Status;
+use survivor_exchange::constants::Errors;
+pub use survivor_exchange::models::index::{Auction, AuctionItem};
+use survivor_exchange::types::status::Status;
 
 pub mod errors {}
 
@@ -8,7 +8,12 @@ pub mod errors {}
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
     fn new(
-        auction_id: u32, starting_price: u8, duration: u64, owner: felt252, current_timestamp: u64,
+        auction_id: u32,
+        name: felt252,
+        starting_price: u8,
+        duration: u64,
+        owner: felt252,
+        current_timestamp: u64,
     ) -> Auction {
         assert(starting_price > 0, 'Invalid starting price');
         assert(duration > 0, 'Invalid duration');
@@ -19,6 +24,7 @@ pub impl AuctionImpl of AuctionTrait {
 
         Auction {
             auction_id,
+            name,
             starting_price,
             current_bid: 0,
             highest_bidder: 0x0,

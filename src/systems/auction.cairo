@@ -5,7 +5,7 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Initializes a draft auction (status=0, beast_count=0). Items must be added before starting.
     /// - `auction_id`: Unique ID for the auction (caller-generated or from counter).
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
-    fn create_auction(ref self: TContractState, auction_id: u32, starting_price: u8);
+    fn create_auction(ref self: TContractState, auction_id: u32, name: felt252, starting_price: u8);
 
     /// Adds multiple items to a draft auction (status must be 0; owner only).
     /// - `auction_id`: The draft auction ID.
@@ -51,16 +51,18 @@ pub trait IAuctionMarketplace<TContractState> {
 // dojo decorator
 #[dojo::contract]
 pub mod auction_systems {
-    use beast_marketplace::constants::DEFAULT_NS;
-    use beast_marketplace::store::StoreTrait;
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
+    use survivor_exchange::constants::DEFAULT_NS;
+    use survivor_exchange::store::StoreTrait;
     use super::IAuctionMarketplace;
 
     #[abi(embed_v0)]
     impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
-        fn create_auction(ref self: ContractState, auction_id: u32, starting_price: u8) {
+        fn create_auction(
+            ref self: ContractState, auction_id: u32, name: felt252, starting_price: u8,
+        ) {
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Implement auction creation logic
         // - Validate inputs

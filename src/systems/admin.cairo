@@ -1,5 +1,5 @@
-use beast_marketplace::models::index::SupportedNFTCollection;
 use starknet::ContractAddress;
+use survivor_exchange::models::index::SupportedNFTCollection;
 
 #[starknet::interface]
 pub trait IMarketplaceAdmin<TContractState> {
@@ -11,9 +11,9 @@ pub trait IMarketplaceAdmin<TContractState> {
 
 #[dojo::contract]
 pub mod admin_systems {
-    use beast_marketplace::constants::DEFAULT_NS;
-    use beast_marketplace::store::StoreTrait;
     use starknet::get_caller_address;
+    use survivor_exchange::constants::DEFAULT_NS;
+    use survivor_exchange::store::StoreTrait;
     use super::{ContractAddress, IMarketplaceAdmin};
 
     #[abi(embed_v0)]

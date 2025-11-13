@@ -6,11 +6,11 @@ pub mod AuctionableComponent {
 
     // Internal imports
 
-    use beast_marketplace::models::auction::{AuctionAssert, AuctionTrait};
-    use beast_marketplace::store::StoreTrait;
-    use beast_marketplace::types::status::{RentalStatus, Status};
     use dojo::world::WorldStorage;
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
+    use survivor_exchange::models::auction::{AuctionAssert, AuctionTrait};
+    use survivor_exchange::store::StoreTrait;
+    use survivor_exchange::types::status::{RentalStatus, Status};
     use crate::models::auction::Auction;
 
     // Storage
@@ -32,16 +32,16 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
+            name: felt252,
             starting_price: u8,
             duration: u64,
         ) {
             let mut store = StoreTrait::new(world);
-            // TODO: Auction should have a unique ID and contain metadata for auction
             // Check if there are no rentals in auction items.
             let owner = get_caller_address();
             let current_timestamp = get_block_timestamp();
             let mut auction: Auction = AuctionTrait::new(
-                auction_id, starting_price, duration, owner.into(), current_timestamp,
+                auction_id, name, starting_price, duration, owner.into(), current_timestamp,
             );
             store.set_auction(@auction);
         }

@@ -3,6 +3,7 @@
 pub struct Auction {
     #[key]
     pub auction_id: u32,
+    pub name: felt252,
     pub starting_price: u8,
     pub current_bid: u8,
     pub highest_bidder: felt252,

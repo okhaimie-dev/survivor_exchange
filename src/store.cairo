@@ -1,6 +1,6 @@
-use beast_marketplace::models::index::{Auction, Rental};
 use dojo::model::ModelStorage;
 use dojo::world::WorldStorage;
+use survivor_exchange::models::index::{Auction, Rental};
 
 #[derive(Copy, Drop)]
 pub struct Store {
