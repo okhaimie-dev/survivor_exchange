@@ -2,12 +2,14 @@
 
 ## Establish On-Chain Auction and Rental Marketplace for BEAST NFTs with Initial Auction of 75 Unique Shiny BEASTs
 
-## Okhai Omotuebe - BEAST Marketplace Developer 
-(x: @sudo_okhai)
-Date: tbd, 2025
+## Submitter
+Okhai Omotuebe - BEAST Marketplace Developer  
+(x: @sudo_okhai)  
+Date: November 26, 2025
+  
 
 ## Executive Summary
-Loot Survivor has demonstrated exceptional product-market fit since launch in September 2025. Within just two months, the ecosystem has achieved **77,902 total games played, 5.6M+ transactions on Starknet, $368,235 in ticket purchases, and $55,651 in network fees**—signaling strong organic adoption and genuine economic activity. Beast NFT secondary sales have exceeded 1,526,539.8 **LORDS** ~$40,000, validating collector demand. However, the current secondary market infrastructure lacks efficient mechanisms for **bulk sales and collection management**—specifically, the ability for collectors to liquidate curated Beast collections (e.g., 75-unit shiny or tier-specific sets, 30-units of 10 T1s, 19 T2s, and Rank 1 Dragon) at optimal prices without OTC friction. We propose the development of a purpose-built **NFT Auction and Rental Marketplace** that enables efficient bulk trading, reduces transaction friction, and establishes sustainable token economics for Survivor DAO. This marketplace will be architected with modern, scalable infrastructure and delivered in three milestone-based phases, requiring a total funding allocation of **100,000 SURVIVOR tokens** for development, engineering, and community marketing initiatives.
+Loot Survivor has demonstrated exceptional product-market fit since launch in September 2025. Within just two months per LS Data Analytics dune dashboard, the ecosystem has achieved **77,902 total games played, 5.6M+ transactions on Starknet, $368,235 in ticket purchases, and $55,651 in network fees**—signaling strong organic adoption and genuine economic activity. Beast NFT secondary sales have exceeded 1,526,539.8 **LORDS** ~$40,000, validating collector demand. However, the current secondary market infrastructure lacks efficient mechanisms for **bulk sales and collection management**—specifically, the ability for collectors to liquidate curated Beast collections (e.g., 75-unit shiny or tier-specific sets, 30-units of 10 T1s, 19 T2s, and Rank 1 Dragon) at optimal prices without OTC friction. We propose the development of a purpose-built **NFT Auction and Rental Marketplace** that enables efficient bulk trading, reduces transaction friction, and enhances the existing sustainable token economics of Survivor DAO by increasing SURVIVOR utility through marketplace fees and bidding incentives. This marketplace will be architected with modern, scalable infrastructure and delivered in three milestone-based phases, requiring a total funding allocation of **100,000 SURVIVOR tokens** for development, engineering, and community marketing initiatives.
 
 ## Problem Statement
 Loot Survivor's early success demonstrates genuine player-collector interest in Beast NFTs. However, three operational constraints currently inhibit secondary market growth:
@@ -56,6 +58,6 @@ Build and deploy the BEAST Marketplace as outlined in PRD.md:
 - **Security Risks**: Smart contract vulnerabilities → Full audit; bug bounties via DAO.
 
 ## Appendix
-- **References**: PRD.md (detailed specs); BEAST Docs (https://docs.provable.games/lootsurvivor/beasts); LS Data Analytics (https://dune.com/pg_team_6083/ls-data); Codebase (src/auction.cairo).
+- **References**: PRD.md (detailed specs); BEAST Docs (https://docs.provable.games/lootsurvivor/beasts); LS Data Analytics (https://dune.com/pg_team_6083/ls-data); Codebase (src/auction.cairo); Survivor tokenomics (https://docs.provable.games/lootsurvivor/token/tokenomics).
 - **Contact**: Discord: `tony.stark` for questions.
 - **Version**: 1.0
