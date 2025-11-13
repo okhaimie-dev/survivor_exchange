@@ -9,6 +9,7 @@ pub struct Auction {
     pub highest_bidder: felt252,
     pub status: u8,
     pub end_time: u64,
+    pub item_count: u32,
     pub owner: felt252,
 }
 

@@ -6,6 +6,10 @@ pub mod Errors {
     pub const AUCTION_NOT_ACTIVE: felt252 = 'Auction not active';
     pub const AUCTION_NOT_EXIST: felt252 = 'Auction: does not exist';
     pub const AUCTION_ALREADY_EXISTS: felt252 = 'Auction: already exist';
+    pub const BID_TOO_LOW: felt252 = 'Auction: must exceed current';
+    pub const AUCTION_EXPIRED: felt252 = 'Auction: expired';
+    pub const UNAUTHORIZED_TO_END: felt252 = 'Auction: cannot end';
+    pub const NOT_BEAST_OWNER: felt252 = 'Beast: not owner';
     pub const INVALID_BID: felt252 = 'Invalid bid amount';
     pub const AUCTION_NOT_ENDED: felt252 = 'Auction not ended';
     pub const UNAUTHORIZED: felt252 = 'Unauthorized access';

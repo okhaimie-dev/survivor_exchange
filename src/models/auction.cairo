@@ -28,8 +28,9 @@ pub impl AuctionImpl of AuctionTrait {
             starting_price,
             current_bid: 0,
             highest_bidder: 0x0,
-            status: 0,
+            status: 1,
             end_time,
+            item_count: 0,
             owner,
         }
     }
@@ -61,5 +62,10 @@ pub impl AuctionAssert of AssertTrait {
     #[inline]
     fn assert_does_exist(self: @Auction) {
         assert(*self.status != AuctionStatus::None.into(), Errors::AUCTION_NOT_EXIST);
+    }
+
+    #[inline]
+    fn assert_is_draft(self: @Auction) {
+        assert(*self.status == AuctionStatus::Draft.into(), Errors::AUCTION_NOT_EXIST)
     }
 }
