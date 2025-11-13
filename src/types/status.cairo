@@ -1,9 +1,11 @@
 #[derive(Copy, Drop, PartialEq)]
-pub enum Status {
+pub enum AuctionStatus {
     None,
-    Placed,
+    Draft,
+    Active,
+    Ended,
+    Settled,
     Canceled,
-    Executed,
 }
 
 #[derive(Copy, Drop, PartialEq)]
@@ -17,27 +19,31 @@ pub enum RentalStatus {
     Canceled,
 }
 
-pub impl IntoStatusU8 of core::traits::Into<Status, u8> {
+pub impl IntoAuctionStatusU8 of core::traits::Into<AuctionStatus, u8> {
     #[inline]
-    fn into(self: Status) -> u8 {
+    fn into(self: AuctionStatus) -> u8 {
         match self {
-            Status::None => 0,
-            Status::Placed => 1,
-            Status::Canceled => 2,
-            Status::Executed => 3,
+            AuctionStatus::None => 0,
+            AuctionStatus::Draft => 1,
+            AuctionStatus::Active => 2,
+            AuctionStatus::Ended => 3,
+            AuctionStatus::Settled => 4,
+            AuctionStatus::Canceled => 5,
         }
     }
 }
 
-pub impl IntoU8Status of core::traits::Into<u8, Status> {
+pub impl IntoU8AuctionStatus of core::traits::Into<u8, AuctionStatus> {
     #[inline]
-    fn into(self: u8) -> Status {
+    fn into(self: u8) -> AuctionStatus {
         match self {
-            0 => Status::None,
-            1 => Status::Placed,
-            2 => Status::Canceled,
-            3 => Status::Executed,
-            _ => Status::None,
+            0 => AuctionStatus::None,
+            1 => AuctionStatus::Draft,
+            2 => AuctionStatus::Active,
+            3 => AuctionStatus::Ended,
+            4 => AuctionStatus::Settled,
+            5 => AuctionStatus::Canceled,
+            _ => AuctionStatus::None,
         }
     }
 }

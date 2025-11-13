@@ -1,6 +1,6 @@
 use survivor_exchange::constants::Errors;
 pub use survivor_exchange::models::index::{Auction, AuctionItem};
-use survivor_exchange::types::status::Status;
+use survivor_exchange::types::status::AuctionStatus;
 
 pub mod errors {}
 
@@ -33,6 +33,11 @@ pub impl AuctionImpl of AuctionTrait {
             owner,
         }
     }
+
+    #[inline]
+    fn is_active(self: @Auction) -> bool {
+        *self.status == 2
+    }
 }
 
 #[generate_trait]
@@ -50,11 +55,11 @@ pub impl AuctionItemImpl of AuctionItemTrait {
 pub impl AuctionAssert of AssertTrait {
     #[inline]
     fn assert_does_not_exist(self: @Auction) {
-        assert(*self.status == Status::None.into(), Errors::AUCTION_ALREADY_EXISTS);
+        assert(*self.status == AuctionStatus::None.into(), Errors::AUCTION_ALREADY_EXISTS);
     }
 
     #[inline]
     fn assert_does_exist(self: @Auction) {
-        assert(*self.status != Status::None.into(), Errors::AUCTION_NOT_EXIST);
+        assert(*self.status != AuctionStatus::None.into(), Errors::AUCTION_NOT_EXIST);
     }
 }
