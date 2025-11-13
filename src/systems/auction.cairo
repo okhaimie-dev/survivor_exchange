@@ -115,16 +115,17 @@ pub mod auction_systems {
         }
 
         fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
-        //let mut store = StoreTrait::new(self.world_default());
+            self.auctionable.end(self.world_default(), auction_id);
+            //let mut store = StoreTrait::new(self.world_default());
         // - Fetch Auction
         // - Check expired (now >= end_time) or owner callable
         // - Update status to 1 (ended)
         // - Emit event
         }
 
-        fn settle_auction(
-            ref self: ContractState, auction_id: u32,
-        ) { // TODO: Implement settle logic
+        fn settle_auction(ref self: ContractState, auction_id: u32) {
+            self.auctionable.settle(self.world_default(), auction_id);
+            // TODO: Implement settle logic
         //let mut store = StoreTrait::new(self.world_default());
         // - Fetch Auction
         // - Check ended (status == 1)
