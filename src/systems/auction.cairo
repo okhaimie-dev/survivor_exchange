@@ -51,8 +51,6 @@ pub trait IAuctionMarketplace<TContractState> {
 // dojo decorator
 #[dojo::contract]
 pub mod auction_systems {
-    //use dojo::event::EventStorage;
-    //use dojo::model::ModelStorage;
     use starknet::ContractAddress;
     use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
@@ -67,8 +65,6 @@ pub mod auction_systems {
         auctionable: AuctionableComponent::Storage,
     }
 
-    // Events
-
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
@@ -82,12 +78,6 @@ pub mod auction_systems {
             ref self: ContractState, auction_id: u32, name: felt252, starting_price: u8,
         ) {
             self.auctionable.create(self.world_default(), auction_id, name, starting_price);
-            // TODO: Implement auction creation logic
-        // - Validate inputs
-        // - Set Auction model with defaults (current_bid: 0, highest_bidder: 0, status: 0,
-        // end_time: now + duration)
-        // - Emit event
-        // - Transfer token ownership if needed (e.g., to escrow)
         }
 
         fn add_items(
@@ -112,16 +102,8 @@ pub mod auction_systems {
             self.auctionable.start_auction(self.world_default(), auction_id, duration);
         }
 
-        fn bid(
-            ref self: ContractState, auction_id: u32, bid_amount: u8,
-        ) { //let mut store = StoreTrait::new(self.world_default());
-        // TODO: Implement bid logic
-        // - Fetch existing Auction
-        // - Check active (status == 0, now < end_time), bid_amount > current_bid
-        // - Refund previous bidder if any
-        // - Transfer bid_amount to escrow
-        // - Update model: current_bid = bid_amount, highest_bidder = caller
-        // - Emit event
+        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
+            self.auctionable.bid(self.world_default(), auction_id, bid_amount);
         }
 
         fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
