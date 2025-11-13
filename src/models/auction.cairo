@@ -8,19 +8,14 @@ pub mod errors {}
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
     fn new(
-        auction_id: u32,
-        name: felt252,
-        starting_price: u8,
-        duration: u64,
-        owner: felt252,
-        current_timestamp: u64,
+        auction_id: u32, name: felt252, starting_price: u8, owner: felt252, current_timestamp: u64,
     ) -> Auction {
         assert(starting_price > 0, 'Invalid starting price');
-        assert(duration > 0, 'Invalid duration');
+        //assert(duration > 0, 'Invalid duration');
         assert(owner != 0, 'Invalid owner');
 
-        let current_time = current_timestamp; // get_block_timestamp()
-        let end_time = current_time + duration;
+        //let current_time = current_timestamp; // get_block_timestamp()
+        //let end_time = current_time + duration;
 
         Auction {
             auction_id,
@@ -29,7 +24,7 @@ pub impl AuctionImpl of AuctionTrait {
             current_bid: 0,
             highest_bidder: 0x0,
             status: 1,
-            end_time,
+            end_time: 0,
             item_count: 0,
             owner,
         }

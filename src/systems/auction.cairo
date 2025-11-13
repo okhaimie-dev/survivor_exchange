@@ -54,16 +54,35 @@ pub mod auction_systems {
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
+    use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::store::StoreTrait;
     use super::IAuctionMarketplace;
+
+    component!(path: AuctionableComponent, storage: auctionable, event: AuctionableEvent);
+    impl AuctionableImpl = AuctionableComponent::InternalImpl<ContractState>;
+
+    #[storage]
+    struct Storage {
+        #[substorage(v0)]
+        auctionable: AuctionableComponent::Storage,
+    }
+
+    // Events
+
+    #[event]
+    #[derive(Drop, starknet::Event)]
+    enum Event {
+        #[flat]
+        AuctionableEvent: AuctionableComponent::Event,
+    }
 
     #[abi(embed_v0)]
     impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
         fn create_auction(
             ref self: ContractState, auction_id: u32, name: felt252, starting_price: u8,
         ) {
-            let mut store = StoreTrait::new(self.world_default());
+            self.auctionable.create(self.world_default(), auction_id, name, starting_price);
             // TODO: Implement auction creation logic
         // - Validate inputs
         // - Set Auction model with defaults (current_bid: 0, highest_bidder: 0, status: 0,
@@ -84,7 +103,11 @@ pub mod auction_systems {
             auction_id: u32,
             token_id: u32,
             collection_address: ContractAddress,
-        ) {}
+        ) {
+            self
+                .auctionable
+                .add_item(self.world_default(), auction_id, token_id, collection_address);
+        }
 
         fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {}
 

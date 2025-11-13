@@ -39,14 +39,13 @@ pub mod AuctionableComponent {
             auction_id: u32,
             name: felt252,
             starting_price: u8,
-            duration: u64,
         ) {
             let mut store = StoreTrait::new(world);
             // Check if there are no rentals in auction items.
             let owner = get_caller_address();
             let current_timestamp = get_block_timestamp();
             let mut auction: Auction = AuctionTrait::new(
-                auction_id, name, starting_price, duration, owner.into(), current_timestamp,
+                auction_id, name, starting_price, owner.into(), current_timestamp,
             );
 
             store.set_auction(@auction);
