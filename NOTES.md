@@ -1,6 +1,7 @@
 // TODO: 
 
 - Whitelisting auctioners.
+- Payment LORDS/SURVIVOR
 
 Invite only auction website.
 
@@ -23,3 +24,10 @@ MetaData
 // You cannot auction a rental.
 
 Blobert Auction.
+
+
+One of the purest fully on-chain game in the world is built on Dojo engine.
+
+Add achievement system.
+
+BEAST Hunter book.
