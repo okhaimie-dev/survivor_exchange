@@ -7,17 +7,6 @@ pub trait IAuctionMarketplace<TContractState> {
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
     fn create_auction(ref self: TContractState, auction_id: u32, name: felt252, starting_price: u8);
 
-    /// Adds multiple items to a draft auction (status must be 0; owner only).
-    /// - `auction_id`: The draft auction ID.
-    /// - `token_ids`: Array of BEAST token IDs (e.g., up to 20).
-    /// - `collection_addresses`: Parallel array of ERC721/ERC1155 addresses (must be supported).
-    fn add_items(
-        ref self: TContractState,
-        auction_id: u32,
-        token_ids: Span<u32>,
-        collection_addresses: Span<ContractAddress>,
-    );
-
     /// Adds a single item to a draft auction (convenience; status must be 0; owner only).
     /// - `auction_id`: The draft auction ID.
     /// - `token_id`: The BEAST token ID.
@@ -29,6 +18,17 @@ pub trait IAuctionMarketplace<TContractState> {
         collection_address: ContractAddress,
     );
 
+    /// Adds multiple items to a draft auction (status must be 0; owner only).
+    /// - `auction_id`: The draft auction ID.
+    /// - `token_ids`: Array of BEAST token IDs (e.g., up to 20).
+    /// - `collection_addresses`: Parallel array of ERC721/ERC1155 addresses (must be supported).
+    fn add_items(
+        ref self: TContractState,
+        auction_id: u32,
+        token_ids: Span<u32>,
+        collection_addresses: Span<ContractAddress>,
+    );
+
     /// Starts an active auction (sets end_time, status=1; requires beast_count > 0; owner only).
     /// - `auction_id`: The draft auction ID.
     /// - `duration`: Auction length in seconds (end_time = block_timestamp + duration).
@@ -38,6 +38,10 @@ pub trait IAuctionMarketplace<TContractState> {
     /// - `token_id`: The auction's token ID.
     /// - `bid_amount`: The new bid value (transfers ETH/token to escrow).
     fn bid(ref self: TContractState, auction_id: u32, bid_amount: u8);
+
+    /// Withdraws a non-winning bid from an active auction (refunds from escrow; caller only).
+    /// - `auction_id`: The active auction ID.
+    fn withdraw_bid(ref self: TContractState, auction_id: u32);
 
     /// Ends an auction (manual or if expired; callable by anyone after end_time).
     /// - `token_id`: The auction's token ID.
@@ -80,13 +84,6 @@ pub mod auction_systems {
             self.auctionable.create(self.world_default(), auction_id, name, starting_price);
         }
 
-        fn add_items(
-            ref self: ContractState,
-            auction_id: u32,
-            token_ids: Span<u32>,
-            collection_addresses: Span<ContractAddress>,
-        ) {}
-
         fn add_item(
             ref self: ContractState,
             auction_id: u32,
@@ -98,12 +95,23 @@ pub mod auction_systems {
                 .add_item(self.world_default(), auction_id, token_id, collection_address);
         }
 
+        fn add_items(
+            ref self: ContractState,
+            auction_id: u32,
+            token_ids: Span<u32>,
+            collection_addresses: Span<ContractAddress>,
+        ) {}
+
         fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {
             self.auctionable.start_auction(self.world_default(), auction_id, duration);
         }
 
         fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
             self.auctionable.bid(self.world_default(), auction_id, bid_amount);
+        }
+
+        fn withdraw_bid(ref self: ContractState, auction_id: u32) {
+            self.auctionable.withdraw_bid(self.world_default(), auction_id);
         }
 
         fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
