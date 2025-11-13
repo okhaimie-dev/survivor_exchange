@@ -73,9 +73,10 @@ pub mod AuctionableComponent {
         ) {
             let mut store = StoreTrait::new(world);
             let mut auction = store.auction(auction_id);
-            auction.assert_is_draft();
 
-            assert(auction.item_count >= 1, 'Auction: empty auction');
+            auction.assert_is_draft();
+            auction.assert_is_seller(get_caller_address().into());
+            auction.assert_auction_not_empty();
 
             let current_time = get_block_timestamp();
             auction.end_time = current_time + duration;
