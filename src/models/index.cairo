@@ -48,12 +48,12 @@ pub struct Rental {
     pub rental_status: u8,
     pub owner: felt252,
 }
+//#[derive(Copy, Drop, IntrospectPacked, Serde)]
+//#[dojo::model]
+//pub struct SupportedNFTCollection {
+//    #[key]
+//    pub collection_address: felt252,
+//    // 0=ERC721, 1=ERC1155 (for future handling)
+//    pub standard: u8,
+//}
 
-#[derive(Copy, Drop, IntrospectPacked, Serde)]
-#[dojo::model]
-pub struct SupportedNFTCollection {
-    #[key]
-    pub collection_address: felt252,
-    // 0=ERC721, 1=ERC1155 (for future handling)
-    pub standard: u8,
-}

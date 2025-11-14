@@ -4,7 +4,7 @@ use survivor_exchange::models::index::{Auction, AuctionItem, Bid, Rental};
 
 #[derive(Copy, Drop)]
 pub struct Store {
-    world: WorldStorage,
+    pub world: WorldStorage,
 }
 
 #[generate_trait]

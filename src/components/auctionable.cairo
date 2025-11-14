@@ -1,6 +1,6 @@
 #[starknet::component]
 pub mod AuctionableComponent {
-    use dojo::world::WorldStorage;
+    use dojo::world::{IWorldDispatcherTrait, WorldStorage};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use survivor_exchange::constants::Errors;
@@ -26,16 +26,18 @@ pub mod AuctionableComponent {
         fn create(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
-            auction_id: u32,
             name: felt252,
             starting_price: u8,
         ) {
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
             let current_timestamp = get_block_timestamp();
+
+            let auction_id: u32 = store.world.dispatcher.uuid();
             let mut auction: Auction = AuctionTrait::new(
-                auction_id, name, starting_price, seller.into(), current_timestamp,
+                name, starting_price, seller.into(), current_timestamp,
             );
+            auction.auction_id = auction_id;
 
             store.set_auction(@auction);
         }

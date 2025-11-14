@@ -26,5 +26,5 @@ pub mod store;
 pub mod utils;
 
 pub mod tests {
-    //mod test_world;
+    mod test_world;
 }

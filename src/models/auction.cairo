@@ -8,14 +8,12 @@ pub mod errors {}
 #[generate_trait]
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
-    fn new(
-        auction_id: u32, name: felt252, starting_price: u8, seller: felt252, current_timestamp: u64,
-    ) -> Auction {
+    fn new(name: felt252, starting_price: u8, seller: felt252, current_timestamp: u64) -> Auction {
         AuctionAssert::assert_valid_starting_price(starting_price);
         AuctionAssert::assert_valid_seller(seller);
         AuctionAssert::assert_valid_name(name);
         Auction {
-            auction_id,
+            auction_id: 0,
             name,
             starting_price,
             current_bid: 0,

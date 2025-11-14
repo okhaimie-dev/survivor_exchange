@@ -33,3 +33,6 @@ One of the purest fully on-chain game in the world is built on Dojo engine.
 Add achievement system.
 
 BEAST Hunter book.
+
+
+Add auto-increment for `auction_id`. Users shouldn't set this.
