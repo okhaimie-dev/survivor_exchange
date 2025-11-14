@@ -32,12 +32,9 @@ pub mod AuctionableComponent {
         ) {
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
-            let current_timestamp = get_block_timestamp();
 
             let auction_id: u32 = store.world.dispatcher.uuid();
-            let mut auction: Auction = AuctionTrait::new(
-                name, starting_price, seller.into(), current_timestamp,
-            );
+            let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
             auction.auction_id = auction_id;
 
             store.set_auction(@auction);
