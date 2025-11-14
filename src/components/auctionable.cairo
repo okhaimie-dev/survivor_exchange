@@ -11,6 +11,7 @@ pub mod AuctionableComponent {
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
+    use crate::models::bid::AssertTrait;
 
     #[storage]
     pub struct Storage {}
@@ -136,9 +137,10 @@ pub mod AuctionableComponent {
             );
 
             let mut bid = store.bid(auction_id, bidder.into());
-            assert(bid.amount > 0, 'no bid to withdraw');
-            assert(bid.bidder == bidder.into(), 'not owner');
-            assert(bid.bidder != auction.highest_bidder, 'Auction: highest bidder');
+
+            bid.assert_bid_amount_not_zero();
+            bid.assert_is_bid_owner(bidder.into());
+            bid.assert_not_highest_bidder(@auction);
 
             // Refund from escrow
             // TODO: Transfer bid.amount back to bidder

@@ -1,5 +1,5 @@
 //use survivor_exchange::constants::Errors;
-pub use survivor_exchange::models::index::Bid;
+pub use survivor_exchange::models::index::{Auction, Bid};
 
 #[generate_trait]
 pub impl BidImpl of BidTrait {
@@ -11,8 +11,18 @@ pub impl BidImpl of BidTrait {
 
 #[generate_trait]
 pub impl BidAssert of AssertTrait { //#[inline]
-//fn assert_does_not_exist(self: @Bid) {
-//    // TODO: FIX to use the right error message
-//    assert(*self.owner == 0, Errors::AUCTION_ALREADY_EXISTS);
-//}
+    #[inline]
+    fn assert_bid_amount_not_zero(self: @Bid) {
+        assert(*self.amount > 0, 'Bid: no balance to withdraw');
+    }
+
+    #[inline]
+    fn assert_is_bid_owner(self: @Bid, caller: felt252) {
+        assert(*self.bidder == caller, 'Bid: not owner');
+    }
+
+    #[inline]
+    fn assert_not_highest_bidder(self: @Bid, auction: @Auction) {
+        assert(*self.bidder != *auction.highest_bidder, 'Auction: highest bidder');
+    }
 }
