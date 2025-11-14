@@ -112,9 +112,9 @@ mod tests {
 
     // Constants
 
-    const NAME: felt252 = 341104419177;
+    const NAME: felt252 = 7265849240828751573555476048407354681602097;
     const STARTING_PRICE: u8 = 100;
-    const SELLER: felt252 = 'FEE_RECEIVER';
+    const SELLER: felt252 = 'SELLER_ADDRESS';
     const CURRENT_TIMESTAMP: u64 = 0x0;
 
     #[test]
