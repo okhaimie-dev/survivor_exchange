@@ -108,7 +108,7 @@ mod tests {
     // Local imports
 
     //use survivor_exchange::constants::{BOOK_ID, VERSION};
-    use super::{AuctionAssert, AuctionTrait};
+    use super::{Auction, AuctionAssert, AuctionTrait};
 
     // Constants
 
@@ -119,10 +119,15 @@ mod tests {
 
     #[test]
     fn test_auction_new() {
-        let auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        let auction: Auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
         assert_eq!(auction.auction_id, 0);
         assert_eq!(auction.name, NAME);
-        assert_eq!(auction.seller, SELLER);
+        assert_eq!(auction.starting_price, STARTING_PRICE);
         assert_eq!(auction.current_bid, 0);
+        assert_eq!(auction.highest_bidder, 0);
+        assert_eq!(auction.status, 1);
+        assert_eq!(auction.end_time, 0);
+        assert_eq!(auction.item_count, 0);
+        assert_eq!(auction.seller, SELLER);
     }
 }
