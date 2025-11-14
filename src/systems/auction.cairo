@@ -112,9 +112,10 @@ pub mod auction_systems {
             self.auctionable.withdraw_bid(self.world_default(), auction_id);
         }
 
-        fn end_auction(ref self: ContractState, auction_id: u32) { // TODO: Implement end logic
+        fn end_auction(ref self: ContractState, auction_id: u32) {
             self.auctionable.end(self.world_default(), auction_id);
-            //let mut store = StoreTrait::new(self.world_default());
+            // TODO: Implement end logic
+        //let mut store = StoreTrait::new(self.world_default());
         // - Fetch Auction
         // - Check expired (now >= end_time) or owner callable
         // - Update status to 1 (ended)
