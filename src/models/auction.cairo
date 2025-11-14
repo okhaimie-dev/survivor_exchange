@@ -108,7 +108,7 @@ mod tests {
     // Local imports
 
     //use survivor_exchange::constants::{BOOK_ID, VERSION};
-    use super::{Auction, AuctionAssert, AuctionTrait};
+    use super::{Auction, AuctionAssert, AuctionItemImpl, AuctionStatus, AuctionTrait};
 
     // Constants
 
@@ -129,5 +129,32 @@ mod tests {
         assert_eq!(auction.end_time, 0);
         assert_eq!(auction.item_count, 0);
         assert_eq!(auction.seller, SELLER);
+    }
+
+    #[test]
+    fn test_auction_is_active() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        assert(!auction.is_active(), 'should be inactive in draft');
+
+        auction.switch_status(AuctionStatus::Active.into());
+        assert(auction.is_active(), 'should be active after switch');
+
+        auction.switch_status(AuctionStatus::Ended.into());
+        assert(!auction.is_active(), 'should be inactive after end');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Invalid name')]
+    fn test_auction_new_invalid_name() {
+        let _auction = AuctionTrait::new(0, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+    }
+
+    #[test]
+    fn test_auction_item_new() {
+        let item = AuctionItemImpl::new_item(1, 0, 123, '0x1234');
+        assert_eq!(item.auction_id, 1);
+        assert_eq!(item.item_index, 0);
+        assert_eq!(item.token_id, 123);
+        assert_eq!(item.contract_address, '0x1234');
     }
 }
