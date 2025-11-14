@@ -102,3 +102,27 @@ pub impl AuctionAssert of AssertTrait {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    // Local imports
+
+    //use survivor_exchange::constants::{BOOK_ID, VERSION};
+    use super::{AuctionAssert, AuctionTrait};
+
+    // Constants
+
+    const NAME: felt252 = 341104419177;
+    const STARTING_PRICE: u8 = 100;
+    const SELLER: felt252 = 'FEE_RECEIVER';
+    const CURRENT_TIMESTAMP: u64 = 0x0;
+
+    #[test]
+    fn test_auction_new() {
+        let auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        assert_eq!(auction.auction_id, 0);
+        assert_eq!(auction.name, NAME);
+        assert_eq!(auction.seller, SELLER);
+        assert_eq!(auction.current_bid, 0);
+    }
+}
