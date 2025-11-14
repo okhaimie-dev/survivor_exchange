@@ -102,7 +102,7 @@ pub mod AuctionableComponent {
 
             // Assert auction exists and is active
             auction.assert_does_exist();
-            auction.assert_auction_expired(current_time);
+            auction.assert_not_expired(current_time);
             auction.assert_bid_not_low(bid_amount);
             assert(status == AuctionStatus::Active, Errors::AUCTION_NOT_ACTIVE);
 

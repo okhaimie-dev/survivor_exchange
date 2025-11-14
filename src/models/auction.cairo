@@ -2,7 +2,6 @@ use survivor_exchange::constants::Errors;
 pub use survivor_exchange::models::index::{Auction, AuctionItem};
 use survivor_exchange::types::status::AuctionStatus;
 
-
 pub mod errors {}
 
 #[generate_trait]
@@ -31,8 +30,36 @@ pub impl AuctionImpl of AuctionTrait {
     }
 
     #[inline]
+    fn is_expired(self: @Auction, current_time: u64) -> bool {
+        *self.end_time > 0 && current_time >= *self.end_time
+    }
+
+    #[inline]
+    fn set_auction_id(ref self: Auction, id: u32) {
+        self.auction_id = id;
+    }
+
+    #[inline]
     fn switch_status(ref self: Auction, status: u8) {
+        assert(status <= 4_u8, Errors::INVALID_STATUS);
         self.status = status
+    }
+
+    #[inline]
+    fn update_bid(ref self: Auction, bidder: felt252, amount: u8, current_time: u64) {
+        assert(self.is_active(), Errors::AUCTION_NOT_ACTIVE);
+        self.assert_not_expired(current_time);
+        self.assert_bid_not_low(amount);
+
+        self.current_bid = amount;
+        self.highest_bidder = bidder;
+    }
+
+    #[inline]
+    fn activate(ref self: Auction, duration: u64, current_time: u64) {
+        self.assert_is_draft();
+        self.end_time = current_time + duration;
+        self.switch_status(AuctionStatus::Active.into());
     }
 }
 
@@ -42,7 +69,8 @@ pub impl AuctionItemImpl of AuctionItemTrait {
     fn new_item(
         auction_id: u32, item_index: u32, token_id: u32, contract_address: felt252,
     ) -> AuctionItem {
-        // Assert valid contract
+        assert(contract_address != 0, Errors::INVALID_CONTRACT); // Define in constants if missing
+        assert(token_id != 0, Errors::INVALID_TOKEN_ID);
         AuctionItem { auction_id, item_index, token_id, contract_address }
     }
 }
@@ -61,7 +89,7 @@ pub impl AuctionAssert of AssertTrait {
 
     #[inline]
     fn assert_is_draft(self: @Auction) {
-        assert(*self.status == AuctionStatus::Draft.into(), Errors::AUCTION_NOT_EXIST)
+        assert(*self.status == AuctionStatus::Draft.into(), Errors::AUCTION_NOT_DRAFT)
     }
 
     #[inline]
@@ -90,28 +118,25 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_auction_expired(self: @Auction, current_time: u64) {
-        assert(current_time < *self.end_time, Errors::AUCTION_EXPIRED);
+    fn assert_not_expired(self: @Auction, current_time: u64) {
+        assert(*self.end_time > 0 && current_time < *self.end_time, Errors::AUCTION_EXPIRED);
     }
 
     #[inline]
     fn assert_bid_not_low(self: @Auction, bid_amount: u8) {
         assert(
-            bid_amount > *self.current_bid || bid_amount > *self.starting_price,
+            bid_amount > *self.current_bid && bid_amount >= *self.starting_price,
             Errors::BID_TOO_LOW,
-        )
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
     // Local imports
-
-    //use survivor_exchange::constants::{BOOK_ID, VERSION};
     use super::{Auction, AuctionAssert, AuctionItemImpl, AuctionStatus, AuctionTrait};
 
     // Constants
-
     const NAME: felt252 = 7265849240828751573555476048407354681602097;
     const STARTING_PRICE: u8 = 100;
     const SELLER: felt252 = 'SELLER_ADDRESS';
@@ -156,5 +181,76 @@ mod tests {
         assert_eq!(item.item_index, 0);
         assert_eq!(item.token_id, 123);
         assert_eq!(item.contract_address, '0x1234');
+    }
+
+    #[test]
+    fn test_activate_valid() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        assert_eq!(auction.status, AuctionStatus::Draft.into(), "must start as draft");
+
+        let duration = 3600_u64;
+        let current_time = 100_u64;
+        auction.activate(duration, current_time);
+
+        assert(auction.is_active(), 'should activate');
+        assert_eq!(auction.end_time, current_time + duration, "end time calc wrong");
+        assert_eq!(auction.status, AuctionStatus::Active.into(), "status not active");
+    }
+
+    #[test]
+    #[should_panic(expected: 'Auction not in draft status')]
+    fn test_activate_not_draft() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        auction.switch_status(AuctionStatus::Ended.into());
+        auction.activate(3600, 100);
+    }
+
+    #[test]
+    fn test_update_bid_valid() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        auction.activate(3600, 100);
+        let bidder = '0xBIDDER';
+        let amount = 150_u8;
+        auction.update_bid(bidder, amount, 200);
+        assert_eq!(auction.current_bid, amount);
+        assert_eq!(auction.highest_bidder, bidder);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Auction: bid too low')]
+    fn test_update_bid_low() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        auction.activate(3600, 100);
+        auction.update_bid(SELLER, 50, 200);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Auction: has expired')]
+    fn test_update_bid_expired() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        auction.activate(10, 100);
+        auction.update_bid(SELLER, 150, 120);
+    }
+
+    #[test]
+    fn test_is_expired() {
+        let mut auction = AuctionTrait::new(NAME, STARTING_PRICE, SELLER, CURRENT_TIMESTAMP);
+        assert(!auction.is_expired(50), 'draft should not expire');
+
+        auction.activate(3600, 100);
+        assert(!auction.is_expired(200), 'not expired yet');
+        assert(auction.is_expired(5000), 'expired after end_time');
+    }
+
+    #[test]
+    #[should_panic(expected: 'Auction: invalid starting price')]
+    fn test_auction_new_invalid_price() {
+        let _auction = AuctionTrait::new(NAME, 0, SELLER, CURRENT_TIMESTAMP);
+    }
+
+    #[test]
+    #[should_panic(expected: 'Auction: invalid seller')]
+    fn test_auction_new_invalid_seller() {
+        let _auction = AuctionTrait::new(NAME, STARTING_PRICE, 0, CURRENT_TIMESTAMP);
     }
 }
