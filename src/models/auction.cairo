@@ -88,4 +88,17 @@ pub impl AuctionAssert of AssertTrait {
     fn assert_valid_starting_price(starting_price: u8) {
         assert(starting_price != 0, Errors::INVALID_STARTING_PRICE);
     }
+
+    #[inline]
+    fn assert_auction_expired(self: @Auction, current_time: u64) {
+        assert(current_time < *self.end_time, Errors::AUCTION_EXPIRED);
+    }
+
+    #[inline]
+    fn assert_bid_not_low(self: @Auction, bid_amount: u8) {
+        assert(
+            bid_amount > *self.current_bid || bid_amount > *self.starting_price,
+            Errors::BID_TOO_LOW,
+        )
+    }
 }

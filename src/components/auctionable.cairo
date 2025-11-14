@@ -57,6 +57,8 @@ pub mod AuctionableComponent {
             let beast_owner = beast_dispatcher.owner_of(token_id.into());
             assert(get_caller_address() == beast_owner, Errors::NOT_BEAST_OWNER);
 
+            //TODO: approve exchange as BEAST spender. I also need to validate
+
             let item_index = auction.item_count;
 
             let auction_item = AuctionItemTrait::new_item(
@@ -99,10 +101,9 @@ pub mod AuctionableComponent {
 
             // Assert auction exists and is active
             auction.assert_does_exist();
+            auction.assert_auction_expired(current_time);
+            auction.assert_bid_not_low(bid_amount);
             assert(status == AuctionStatus::Active, Errors::AUCTION_NOT_ACTIVE);
-            assert(current_time < auction.end_time, Errors::AUCTION_EXPIRED);
-            assert(bid_amount > auction.starting_price, Errors::BID_TOO_LOW);
-            assert(bid_amount > auction.current_bid, Errors::BID_TOO_LOW);
 
             let bidder = get_caller_address();
 
