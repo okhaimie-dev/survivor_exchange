@@ -76,13 +76,10 @@ pub mod AuctionableComponent {
             let mut store = StoreTrait::new(world);
             let mut auction = store.auction(auction_id);
 
-            auction.assert_is_draft();
             auction.assert_is_seller(get_caller_address().into());
-            auction.assert_auction_not_empty();
-
             let current_time = get_block_timestamp();
-            auction.end_time = current_time + duration;
-            auction.switch_status(AuctionStatus::Active.into());
+            auction.activate(duration, current_time);
+
             store.set_auction(@auction);
         }
 
@@ -95,27 +92,19 @@ pub mod AuctionableComponent {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();
             let mut auction = store.auction(auction_id);
-            let status = auction.status.into();
 
             // Assert auction exists and is active
             auction.assert_does_exist();
-            auction.assert_not_expired(current_time);
-            auction.assert_bid_not_low(bid_amount);
-            assert(status == AuctionStatus::Active, Errors::AUCTION_NOT_ACTIVE);
-
             let bidder = get_caller_address();
 
             // TODO: Check no active rentals on items (query if needed)
             // TODO: Transfer bid_amount to escrow (e.g., via ERC20 dispatcher for real currency)
             //       E.g., eth_dispatcher.transfer(escrow_address, bid_amount.into());
-            // TODO: Refund previous highest_bidder if exists (transfer back current_bid)
 
             let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
             store.set_bid(@bid);
 
-            // Update auction state
-            auction.current_bid = bid_amount;
-            auction.highest_bidder = bidder.into();
+            auction.update_bid(bidder.into(), bid_amount, current_time);
             store.set_auction(@auction);
         }
 
