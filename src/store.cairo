@@ -1,6 +1,8 @@
 use dojo::model::ModelStorage;
 use dojo::world::WorldStorage;
-use survivor_exchange::models::index::{Auction, AuctionItem, Bid, Rental};
+use survivor_exchange::models::index::{
+    Auction, AuctionItem, Bid, ExchangeSettings, Rental, SupportedNFTCollection,
+};
 
 #[derive(Copy, Drop)]
 pub struct Store {
@@ -52,5 +54,27 @@ pub impl StoreImpl of StoreTrait {
     #[inline]
     fn set_rental(ref self: Store, rental: @Rental) {
         self.world.write_model(rental);
+    }
+
+    #[inline]
+    fn exchange_settings(self: Store, settings_id: u8) -> ExchangeSettings {
+        self.world.read_model(settings_id)
+    }
+
+    #[inline]
+    fn set_exchange_settings(ref self: Store, exchange_settings: @ExchangeSettings) {
+        self.world.write_model(exchange_settings);
+    }
+
+    #[inline]
+    fn supported_nft_collection(self: Store, address: felt252) -> SupportedNFTCollection {
+        self.world.read_model(address)
+    }
+
+    #[inline]
+    fn set_supported_nft_collection(
+        ref self: Store, support_nft_collection: @SupportedNFTCollection,
+    ) {
+        self.world.write_model(support_nft_collection)
     }
 }
