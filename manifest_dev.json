@@ -33,8 +33,8 @@
   },
   "contracts": [
     {
-      "address": "0x28ec67a630676d936beb384158c9a43bdfbac5e08a7a468684f7a99d88addad",
-      "class_hash": "0x409da1aa8c715a230288758c4a3ca0edfbe4362b295ec4ef40b5d3f4b93d766",
+      "address": "0x4f9ce98eab3e41ccfe1042d2d542b61e3a4608930c2394e7685b0dbcca38a05",
+      "class_hash": "0x15aea565f2e30b4c0add52bbddebca86b9e5a972316820b386e8f09aec763a4",
       "init_calldata": [],
       "tag": "bm_0_0_1-auction_systems",
       "selector": "0x208bbc9b28f912d259d64ade669b76be80e17bd9d5e209e38147c918f8f5cf1",
@@ -157,6 +157,28 @@
     {
       "members": [
         {
+          "name": "settings_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16",
+          "key": false
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252",
+          "key": false
+        }
+      ],
+      "class_hash": "0x5e1bdd9c82dce2d01639aa93439a38adb1102c47a216281b5f80b2d36488ab7",
+      "tag": "bm_0_0_1-ExchangeSettings",
+      "selector": "0xb8b54f773ed12a66884f7b133fa782dbda9dccc844c0cbcfe97692e64eb6b3"
+    },
+    {
+      "members": [
+        {
           "name": "token_id",
           "type": "core::integer::u32",
           "key": true
@@ -205,6 +227,23 @@
       "class_hash": "0x402bedbb7fc249f582ce4a4d35dd5356d5cf9120a46dbead84fc0bedfad10c2",
       "tag": "bm_0_0_1-Rental",
       "selector": "0x39a1bd3ae404769198c6f313bcd186724c5cadb212f4334d5459de617897cd3"
+    },
+    {
+      "members": [
+        {
+          "name": "collection_address",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "standard",
+          "type": "core::integer::u8",
+          "key": false
+        }
+      ],
+      "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
+      "tag": "bm_0_0_1-SupportedNFTCollection",
+      "selector": "0x1c22cf6b9e1a00ee7d5ed9cdc0b944ede1b3a80482ef44ff131f6879d6e1646"
     }
   ],
   "events": [],
@@ -2016,7 +2055,7 @@
       "inputs": [
         {
           "name": "model",
-          "type": "survivor_exchange::models::index::Rental"
+          "type": "survivor_exchange::models::index::SupportedNFTCollection"
         }
       ],
       "outputs": [],
@@ -2035,7 +2074,7 @@
       "inputs": [
         {
           "name": "value",
-          "type": "survivor_exchange::models::index::RentalValue"
+          "type": "survivor_exchange::models::index::SupportedNFTCollectionValue"
         }
       ],
       "outputs": [],
@@ -2193,6 +2232,38 @@
     },
     {
       "type": "struct",
+      "name": "survivor_exchange::models::index::ExchangeSettings",
+      "members": [
+        {
+          "name": "settings_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16"
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::ExchangeSettingsValue",
+      "members": [
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16"
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "survivor_exchange::models::index::Rental",
       "members": [
         {
@@ -2272,6 +2343,30 @@
       ]
     },
     {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::SupportedNFTCollection",
+      "members": [
+        {
+          "name": "collection_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "standard",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::SupportedNFTCollectionValue",
+      "members": [
+        {
+          "name": "standard",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
       "type": "event",
       "name": "survivor_exchange::models::index::m_Auction::Event",
       "kind": "enum",
@@ -2291,7 +2386,19 @@
     },
     {
       "type": "event",
+      "name": "survivor_exchange::models::index::m_ExchangeSettings::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
       "name": "survivor_exchange::models::index::m_Rental::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_SupportedNFTCollection::Event",
       "kind": "enum",
       "variants": []
     },
