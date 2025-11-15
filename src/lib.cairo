@@ -5,6 +5,7 @@ pub mod systems {
 }
 
 pub mod models {
+    pub mod admin;
     pub mod auction;
     pub mod bid;
     pub mod index;

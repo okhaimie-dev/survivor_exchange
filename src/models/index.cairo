@@ -62,7 +62,8 @@ pub struct SupportedNFTCollection {
 #[dojo::model]
 pub struct ExchangeSettings {
     #[key]
-    pub settings_id: u32,
+    pub settings_id: u8,
     pub platform_fee: u16,
     pub fee_token: felt252,
+    pub admin: felt252,
 }
