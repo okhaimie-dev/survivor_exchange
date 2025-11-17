@@ -21,6 +21,12 @@ pub mod components {
     //pub mod rentable;
 }
 
+pub mod events {
+    pub mod auction;
+    pub mod bid;
+    pub mod index;
+}
+
 pub mod constants;
 
 pub mod store;

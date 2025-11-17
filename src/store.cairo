@@ -1,8 +1,12 @@
+use dojo::event::EventStorage;
 use dojo::model::ModelStorage;
 use dojo::world::WorldStorage;
+use survivor_exchange::events::auction::AuctionEventTrait;
+use survivor_exchange::events::bid::BidPlacedTrait;
 use survivor_exchange::models::index::{
     Auction, AuctionItem, Bid, ExchangeSettings, Rental, SupportedNFTCollection,
 };
+
 
 #[derive(Copy, Drop)]
 pub struct Store {
@@ -76,5 +80,17 @@ pub impl StoreImpl of StoreTrait {
         ref self: Store, support_nft_collection: @SupportedNFTCollection,
     ) {
         self.world.write_model(support_nft_collection)
+    }
+
+    #[inline]
+    fn auction_created(ref self: Store, auction: Auction, timestamp: u64) {
+        let event = AuctionEventTrait::new(auction, timestamp);
+        self.world.emit_event(@event)
+    }
+
+    #[inline]
+    fn bid_placed(ref self: Store, auction: @Auction, bid: @Bid, timestamp: u64) {
+        let event = BidPlacedTrait::new(auction, bid, timestamp);
+        self.world.emit_event(@event)
     }
 }

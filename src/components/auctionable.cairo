@@ -7,11 +7,10 @@ pub mod AuctionableComponent {
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
-    use survivor_exchange::models::bid::{BidAssert, BidTrait};
+    use survivor_exchange::models::bid::{AssertTrait, BidAssert, BidTrait};
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
-    use crate::models::bid::AssertTrait;
 
     #[storage]
     pub struct Storage {}
@@ -38,6 +37,7 @@ pub mod AuctionableComponent {
             auction.auction_id = auction_id;
 
             store.set_auction(@auction);
+            store.auction_created(auction, get_block_timestamp())
         }
 
         fn add_item(
@@ -105,6 +105,7 @@ pub mod AuctionableComponent {
             store.set_bid(@bid);
 
             auction.update_bid(bidder.into(), bid_amount, current_time);
+            store.bid_placed(@auction, @bid, get_block_timestamp());
             store.set_auction(@auction);
         }
 
