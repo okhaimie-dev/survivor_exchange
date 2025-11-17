@@ -5,7 +5,10 @@ mod tests {
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, spawn_test_world,
     };
     use survivor_exchange::constants::DEFAULT_NS;
-    use survivor_exchange::models::index::{m_Auction, m_AuctionItem, m_Bid, m_Rental};
+    use survivor_exchange::events::index::{e_AuctionEvent, e_BidPlaced};
+    use survivor_exchange::models::index::{
+        m_Auction, m_AuctionItem, m_Bid, m_ExchangeSettings, m_Rental, m_SupportedNFTCollection,
+    };
     use survivor_exchange::systems::auction::{IAuctionMarketplaceDispatcher, auction_systems};
 
     #[derive(Drop)]
@@ -21,6 +24,10 @@ mod tests {
                 TestResource::Model(m_Auction::TEST_CLASS_HASH),
                 TestResource::Model(m_AuctionItem::TEST_CLASS_HASH),
                 TestResource::Model(m_Rental::TEST_CLASS_HASH),
+                TestResource::Model(m_ExchangeSettings::TEST_CLASS_HASH),
+                TestResource::Model(m_SupportedNFTCollection::TEST_CLASS_HASH),
+                TestResource::Event(e_AuctionEvent::TEST_CLASS_HASH),
+                TestResource::Event(e_BidPlaced::TEST_CLASS_HASH),
                 TestResource::Contract(auction_systems::TEST_CLASS_HASH),
             ]
                 .span(),

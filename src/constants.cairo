@@ -1,5 +1,5 @@
 pub fn DEFAULT_NS() -> ByteArray {
-    "bm_0_0_1"
+    "bm_0_0_2"
 }
 
 pub mod Errors {

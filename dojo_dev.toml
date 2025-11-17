@@ -4,7 +4,7 @@ description = "The official Dojo Starter guide, the quickest and most streamline
 cover_uri = "file://assets/cover.png"
 icon_uri = "file://assets/icon.png"
 website = "https://github.com/dojoengine/dojo-starter"
-seed = "bm_0_0_1"
+seed = "bm_0_0_2"
 
 [world.socials]
 x = "https://x.com/ohayo_dojo"
@@ -13,14 +13,14 @@ github = "https://github.com/dojoengine/dojo-starter"
 telegram = "https://t.me/dojoengine"
 
 [namespace]
-default = "bm_0_0_1"
+default = "bm_0_0_2"
 
 [env]
-rpc_url = "http://localhost:5050/"
+rpc_url = ""
 # Default account for katana with seed = 0
-account_address = "0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec"
-private_key = "0xc5b2fcab997346f3ea1c00b002ecf6f382c5f9c9659a3894eb783c5320f912"
+account_address = ""
+private_key = ""
 # world_address = "0x026d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef"
 
 [writers]
-"bm_0_0_1" = ["bm_0_0_1-auction_systems"]
+"bm_0_0_2" = ["bm_0_0_2-auction_systems", "bm_0_0_2-admin_systems"]
