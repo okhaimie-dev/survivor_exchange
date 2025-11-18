@@ -4,7 +4,7 @@ use dojo::world::WorldStorage;
 use survivor_exchange::events::auction::AuctionEventTrait;
 use survivor_exchange::events::bid::BidPlacedTrait;
 use survivor_exchange::models::index::{
-    Auction, AuctionItem, Bid, ExchangeSettings, Rental, SupportedNFTCollection,
+    Auction, AuctionItem, Bid, ExchangeSettings, Rental, SupportedNFTCollection, Vault, VaultShare,
 };
 
 
@@ -80,6 +80,26 @@ pub impl StoreImpl of StoreTrait {
         ref self: Store, support_nft_collection: @SupportedNFTCollection,
     ) {
         self.world.write_model(support_nft_collection)
+    }
+
+    #[inline]
+    fn vault(self: Store, vault_id: u32) -> Vault {
+        self.world.read_model(vault_id)
+    }
+
+    #[inline]
+    fn set_vault(ref self: Store, vault: @Vault) {
+        self.world.write_model(vault)
+    }
+
+    #[inline]
+    fn vault_share(self: Store, vault_id: u32, user: felt252) -> VaultShare {
+        self.world.read_model((vault_id, user))
+    }
+
+    #[inline]
+    fn set_vault_share(ref self: Store, vault_share: @VaultShare) {
+        self.world.write_model(vault_share)
     }
 
     #[inline]

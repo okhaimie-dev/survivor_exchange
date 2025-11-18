@@ -10,6 +10,7 @@ pub mod models {
     pub mod bid;
     pub mod index;
     pub mod rental;
+    pub mod vault;
 }
 
 pub mod types {
