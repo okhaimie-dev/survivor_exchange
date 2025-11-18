@@ -47,7 +47,7 @@
     },
     {
       "address": "0x23886a55d413d1d85881ecb9a6fe14ac9e6c53690628f10de06f64a1ccedc5",
-      "class_hash": "0x37eddf9bddea5f4d9da2abda1d077ed0ad456b1dad959e2fefadad412751cd0",
+      "class_hash": "0x3479d7f3e2c27c334cebbea44ee411dd4fb4e81902cc480b62804141d1e5a9f",
       "init_calldata": [],
       "tag": "bm_0_0_2-auction_systems",
       "selector": "0x4a8c01bfa9d6ec54ff5df2121cb487c6a7e2392bc67d009fa979317d04e4b9a",
@@ -262,6 +262,70 @@
       "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
       "tag": "bm_0_0_2-SupportedNFTCollection",
       "selector": "0x54e8d21be0c631db91fea1d932e6383de474bda3ac8e7c4399235b22c98eb2a"
+    },
+    {
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x2e720496fde1ce54d91d25f317e923c86fd2dc26c9f1079f676f783af789784",
+      "tag": "bm_0_0_2-Vault",
+      "selector": "0x3434117478a27168fdde300c11dedb7ed6ff0217a943c04ac9ee80b152d7bdc"
+    },
+    {
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "user",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "claimed",
+          "type": "core::bool",
+          "key": false
+        },
+        {
+          "name": "updated_at",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x78503a10f5b7095dd3266a9653d03d53bb8964908c8ba99e65a4ed354732a34",
+      "tag": "bm_0_0_2-VaultShare",
+      "selector": "0x292f459c16ab52d22636100a0ab290bcfd9c98855bf95365b49e7cf28a3a440"
     }
   ],
   "events": [
@@ -2588,6 +2652,98 @@
       ]
     },
     {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::Vault",
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultShare",
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "user",
+          "type": "core::felt252"
+        },
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "claimed",
+          "type": "core::bool"
+        },
+        {
+          "name": "updated_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultShareValue",
+      "members": [
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "claimed",
+          "type": "core::bool"
+        },
+        {
+          "name": "updated_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultValue",
+      "members": [
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
       "type": "event",
       "name": "survivor_exchange::models::index::m_Auction::Event",
       "kind": "enum",
@@ -2620,6 +2776,18 @@
     {
       "type": "event",
       "name": "survivor_exchange::models::index::m_SupportedNFTCollection::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_Vault::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_VaultShare::Event",
       "kind": "enum",
       "variants": []
     },

@@ -116,7 +116,8 @@ pub mod AuctionableComponent {
             let scaled_amount = (bid_amount.into() * TEN_POW_18);
             // Transfer funds to vault.
             survivor_dispatcher
-                .transfer(
+                .transfer_from(
+                    get_caller_address(),
                     0x04dc934EAE2fBC336cd4752378c9d2843F2171699Fa2e96500086591A0F543de
                         .try_into()
                         .unwrap(),

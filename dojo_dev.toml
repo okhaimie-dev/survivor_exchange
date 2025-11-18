@@ -16,7 +16,7 @@ telegram = "https://t.me/dojoengine"
 default = "bm_0_0_2"
 
 [env]
-rpc_url = ""
+rpc_url = "https://api.cartridge.gg/x/starknet/mainnet"
 # Default account for katana with seed = 0
 account_address = ""
 private_key = ""
