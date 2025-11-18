@@ -1,16 +1,18 @@
 #[starknet::component]
 pub mod AuctionableComponent {
     use dojo::world::{IWorldDispatcherTrait, WorldStorage};
+    use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
-    use survivor_exchange::constants::Errors;
+    use survivor_exchange::constants::{Errors, TEN_POW_18};
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
     use survivor_exchange::models::bid::{AssertTrait, BidAssert, BidTrait};
+    use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
-    use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
+    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
 
     #[storage]
     pub struct Storage {}
@@ -80,6 +82,11 @@ pub mod AuctionableComponent {
             let current_time = get_block_timestamp();
             auction.activate(duration, current_time);
 
+            let mut vault: Vault = VaultTrait::new(
+                auction.auction_id, 0, SURVIVOR_ADDRESS_MAINNET().into(), get_block_timestamp(),
+            );
+            store.set_vault(@vault);
+
             store.set_auction(@auction);
         }
 
@@ -100,6 +107,21 @@ pub mod AuctionableComponent {
             // TODO: Check no active rentals on items (query if needed)
             // TODO: Transfer bid_amount to escrow (e.g., via ERC20 dispatcher for real currency)
             //       E.g., eth_dispatcher.transfer(escrow_address, bid_amount.into());
+
+            let survivor_dispatcher = IERC20Dispatcher {
+                contract_address: SURVIVOR_ADDRESS_MAINNET(),
+            };
+
+            // TODO: calculate the diff between bidder balance and bid amount to transfer.
+            let scaled_amount = (bid_amount.into() * TEN_POW_18);
+            // Transfer funds to vault.
+            survivor_dispatcher
+                .transfer(
+                    0x04dc934EAE2fBC336cd4752378c9d2843F2171699Fa2e96500086591A0F543de
+                        .try_into()
+                        .unwrap(),
+                    scaled_amount,
+                );
 
             let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
             store.set_bid(@bid);

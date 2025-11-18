@@ -1,11 +1,5 @@
 #[starknet::component]
 pub mod RentableComponent {
-    // Starknet imports
-
-    // Dojo imports
-
-    // Internal imports
-
     use dojo::world::WorldStorage;
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use survivor_exchange::models::rental::{Rental, RentalAssert, RentalTrait};
@@ -13,12 +7,8 @@ pub mod RentableComponent {
     use survivor_exchange::types::status::{AuctionStatus, RentalStatus};
     use crate::models::auction::Auction;
 
-    // Storage
-
     #[storage]
     pub struct Storage {}
-
-    // Events
 
     #[event]
     #[derive(Drop, starknet::Event)]
