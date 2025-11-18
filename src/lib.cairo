@@ -19,6 +19,7 @@ pub mod types {
 
 pub mod components {
     pub mod auctionable;
+    pub mod vaultable;
     //pub mod rentable;
 }
 

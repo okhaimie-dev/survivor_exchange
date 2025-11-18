@@ -1,4 +1,4 @@
-use survivor_exchange::models::index::{Vault, VaultShare};
+pub use survivor_exchange::models::index::{Vault, VaultShare};
 
 #[generate_trait]
 pub impl VaultImpl of VaultTrait {
