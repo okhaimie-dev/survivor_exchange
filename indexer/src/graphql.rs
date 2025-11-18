@@ -3,6 +3,7 @@ use futures::Stream;
 use std::sync::Arc;
 
 use crate::db::{Database, Event};
+use crate::utils;
 
 // Normalize contract address to match database format (0x-prefixed, 64 hex chars, lowercase)
 // Database stores addresses using format!("{:#064x}", ...) which produces: 0x followed by 64 hex chars
@@ -40,11 +41,27 @@ impl QueryRoot {
             normalize_contract_address(addr)
         });
         
-        // If event_selector is provided, filter by first key instead of event_name
+        // If event_selector is provided, use it directly
+        // Otherwise, if event_name is provided, convert it to selector
+        // Otherwise, use event_name filter (for decoded events)
         let events = if let Some(selector) = event_selector {
             db.get_events_by_selector(
                 normalized_addr.as_deref(),
                 &selector,
+                limit.map(|l| l as i64),
+                offset.map(|o| o as i64),
+                from_block,
+                to_block,
+            )?
+        } else if let Some(name) = &event_name {
+            // Convert event name to selector and filter by it
+            let selector_felt = utils::calculate_event_selector(name)
+                .map_err(|e| Error::new(format!("Failed to calculate selector from event name '{}': {}", name, e)))?;
+            let selector_str = utils::format_selector_for_db(&selector_felt);
+            
+            db.get_events_by_selector(
+                normalized_addr.as_deref(),
+                &selector_str,
                 limit.map(|l| l as i64),
                 offset.map(|o| o as i64),
                 from_block,
@@ -55,7 +72,7 @@ impl QueryRoot {
                 normalized_addr.as_deref(),
                 limit.map(|l| l as i64),
                 offset.map(|o| o as i64),
-                event_name.as_deref(),
+                None, // No event_name filter
                 from_block,
                 to_block,
             )?
@@ -93,6 +110,14 @@ impl QueryRoot {
         });
         db.get_event_selectors(normalized_addr.as_deref())
             .map_err(|e| Error::new(e.to_string()))
+    }
+
+    /// Calculate event selector from event name
+    /// Example: eventSelectorFromName("StoreSetRecord") returns "0x1a2f334228cee715f1f0f54053bb6b5eac54fa336e0bc1aacf7516decb0471d"
+    async fn event_selector_from_name(&self, event_name: String) -> Result<String> {
+        let selector = utils::calculate_event_selector(&event_name)
+            .map_err(|e| Error::new(format!("Failed to calculate selector: {}", e)))?;
+        Ok(utils::format_selector(&selector))
     }
 
     async fn event_by_id(&self, ctx: &Context<'_>, id: i64) -> Result<Option<EventObject>> {

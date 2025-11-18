@@ -1,6 +1,7 @@
 mod db;
 mod graphql;
 mod indexer;
+mod utils;
 
 use anyhow::Result;
 use axum::{
