@@ -276,6 +276,118 @@ impl Database {
         )?;
         Ok(count)
     }
+
+    /// Get events by event selector (first key in the keys array)
+    pub fn get_events_by_selector(
+        &self,
+        contract_address: Option<&str>,
+        selector: &str,
+        limit: Option<i64>,
+        offset: Option<i64>,
+        from_block: Option<u64>,
+        to_block: Option<u64>,
+    ) -> Result<Vec<Event>> {
+        let conn = self.conn.lock().unwrap();
+        let mut query = "SELECT id, block_number, block_hash, transaction_hash, event_index, from_address, keys, data, event_name, timestamp FROM events WHERE json_extract(keys, '$[0]') = ?".to_string();
+        let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+        
+        // Normalize selector format - ensure it's 0x-prefixed and 64 hex chars
+        let normalized_selector = {
+            let hex_part = if selector.starts_with("0x") || selector.starts_with("0X") {
+                &selector[2..]
+            } else {
+                selector
+            };
+            format!("0x{:0>64}", hex_part.to_lowercase())
+        };
+        params_vec.push(Box::new(normalized_selector.clone()));
+
+        if let Some(addr) = contract_address {
+            query.push_str(" AND contract_address = ?");
+            params_vec.push(Box::new(addr));
+        }
+
+        if let Some(from) = from_block {
+            query.push_str(" AND block_number >= ?");
+            params_vec.push(Box::new(from as i64));
+        }
+
+        if let Some(to) = to_block {
+            query.push_str(" AND block_number <= ?");
+            params_vec.push(Box::new(to as i64));
+        }
+
+        query.push_str(" ORDER BY block_number DESC, event_index DESC");
+
+        if let Some(lim) = limit {
+            query.push_str(" LIMIT ?");
+            params_vec.push(Box::new(lim));
+        }
+
+        if let Some(off) = offset {
+            query.push_str(" OFFSET ?");
+            params_vec.push(Box::new(off));
+        }
+
+        let mut stmt = conn.prepare(&query)?;
+        let event_iter = stmt.query_map(
+            rusqlite::params_from_iter(params_vec.iter().map(|p| p.as_ref())),
+            |row| {
+                Ok(Event {
+                    id: row.get(0)?,
+                    block_number: row.get::<_, i64>(1)? as u64,
+                    block_hash: row.get(2)?,
+                    transaction_hash: row.get(3)?,
+                    event_index: row.get::<_, i64>(4)? as u64,
+                    from_address: row.get(5)?,
+                    keys: serde_json::from_str(&row.get::<_, String>(6)?).unwrap_or_default(),
+                    data: serde_json::from_str(&row.get::<_, String>(7)?).unwrap_or_default(),
+                    event_name: row.get(8)?,
+                    timestamp: row.get(9)?,
+                })
+            },
+        )?;
+
+        let mut events = Vec::new();
+        for event in event_iter {
+            events.push(event?);
+        }
+
+        Ok(events)
+    }
+
+    /// Get all unique event selectors (first key) - useful when events aren't decoded
+    pub fn get_event_selectors(&self, contract_address: Option<&str>) -> Result<Vec<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut query = "SELECT DISTINCT json_extract(keys, '$[0]') as selector FROM events WHERE json_array_length(keys) > 0".to_string();
+        let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+
+        if let Some(addr) = contract_address {
+            query.push_str(" AND contract_address = ?");
+            params_vec.push(Box::new(addr));
+        }
+
+        query.push_str(" ORDER BY selector");
+
+        let mut stmt = conn.prepare(&query)?;
+        let selector_iter = stmt.query_map(
+            rusqlite::params_from_iter(params_vec.iter().map(|p| p.as_ref())),
+            |row| {
+                let selector: Option<String> = row.get(0)?;
+                Ok(selector.unwrap_or_default())
+            },
+        )?;
+
+        let mut selectors = Vec::new();
+        for selector in selector_iter {
+            let sel = selector?;
+            if !sel.is_empty() {
+                selectors.push(sel);
+            }
+        }
+
+        Ok(selectors)
+    }
 }
 
 #[derive(Clone, Debug)]

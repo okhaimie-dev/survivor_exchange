@@ -29,6 +29,7 @@ impl QueryRoot {
         limit: Option<i32>,
         offset: Option<i32>,
         event_name: Option<String>,
+        event_selector: Option<String>, // Filter by first key (event selector) - works even if not decoded
         from_block: Option<u64>,
         to_block: Option<u64>,
     ) -> Result<Vec<EventObject>> {
@@ -39,14 +40,26 @@ impl QueryRoot {
             normalize_contract_address(addr)
         });
         
-        let events = db.get_events(
-            normalized_addr.as_deref(),
-            limit.map(|l| l as i64),
-            offset.map(|o| o as i64),
-            event_name.as_deref(),
-            from_block,
-            to_block,
-        )?;
+        // If event_selector is provided, filter by first key instead of event_name
+        let events = if let Some(selector) = event_selector {
+            db.get_events_by_selector(
+                normalized_addr.as_deref(),
+                &selector,
+                limit.map(|l| l as i64),
+                offset.map(|o| o as i64),
+                from_block,
+                to_block,
+            )?
+        } else {
+            db.get_events(
+                normalized_addr.as_deref(),
+                limit.map(|l| l as i64),
+                offset.map(|o| o as i64),
+                event_name.as_deref(),
+                from_block,
+                to_block,
+            )?
+        };
 
         Ok(events.into_iter().map(|e| e.into()).collect())
     }
@@ -65,6 +78,20 @@ impl QueryRoot {
         });
         
         db.get_event_count(normalized_addr.as_deref(), event_name.as_deref())
+            .map_err(|e| Error::new(e.to_string()))
+    }
+
+    /// Get all unique event selectors (first key) - useful to see what event types you have
+    async fn event_selectors(
+        &self,
+        ctx: &Context<'_>,
+        contract_address: Option<String>,
+    ) -> Result<Vec<String>> {
+        let db = ctx.data::<Arc<Database>>()?;
+        let normalized_addr = contract_address.as_ref().map(|addr| {
+            normalize_contract_address(addr)
+        });
+        db.get_event_selectors(normalized_addr.as_deref())
             .map_err(|e| Error::new(e.to_string()))
     }
 
