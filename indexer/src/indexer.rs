@@ -94,7 +94,7 @@ impl Indexer {
             println!("Narrowing down to find exact deployment block...");
             
             // Search backwards in smaller chunks within the found range
-            let mut narrow_start = chunk_start;
+            let narrow_start = chunk_start;
             let mut narrow_end = chunk_end;
             let mut earliest_block: Option<u64> = None;
             
