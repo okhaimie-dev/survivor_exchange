@@ -39,9 +39,7 @@ export default function Bids({
     error,
     currentPage,
     totalPages,
-    setCurrentPage,
-    getAuctionItems
-}: BidsProps) {
+    setCurrentPage}: BidsProps) {
     // Convert auctions to collections format
     const collections: Collection[] = useMemo(() => {
         return auctions.map((auction) => ({
@@ -154,15 +152,21 @@ export default function Bids({
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-                {collections.map((collection) => (
-                    <div key={collection.id} className="flex h-full w-full">
-                        <MonsterCollectionCard
-                            collection={collection}
-                            isSelected={collection.id === selectedCollectionId}
-                            onSelect={() => handleSelectCollection(collection)}
-                        />
-                    </div>
-                ))}
+                {collections.map((collection) => {
+                    const auction = auctions.find(a => a.auction_id === collection.id);
+                    const nfts = auction?.nfts || [];
+                    
+                    return (
+                        <div key={collection.id} className="flex h-full w-full">
+                            <MonsterCollectionCard
+                                collection={collection}
+                                isSelected={collection.id === selectedCollectionId}
+                                onSelect={() => handleSelectCollection(collection)}
+                                nfts={nfts}
+                            />
+                        </div>
+                    );
+                })}
             </div>
 
             {selectedCollection && (

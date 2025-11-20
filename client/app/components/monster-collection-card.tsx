@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { FormattedNFT } from "../lib/graphql";
 
 type MonsterCollectionCardProps = {
     collection: {
@@ -11,9 +12,10 @@ type MonsterCollectionCardProps = {
     };
     isSelected: boolean;
     onSelect: () => void;
+    nfts?: FormattedNFT[];
 };
 
-export default function MonsterCollectionCard({ collection, isSelected, onSelect }: MonsterCollectionCardProps) {
+export default function MonsterCollectionCard({ collection, isSelected, onSelect, nfts = [] }: MonsterCollectionCardProps) {
     const highestBidDisplay =
         collection.highestBid !== undefined ? `${collection.highestBid.toFixed(2)} ETH` : "No bids yet";
 
@@ -53,15 +55,161 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             </header>
 
             <div className="flex flex-col items-center gap-4 text-center">
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
-                    <Image
-                        src={collection.image}
-                        alt={collection.name}
-                        width={96}
-                        height={96}
-                        draggable={false}
-                        className="h-16 w-16 object-contain"
-                    />
+                <div className="h-24 w-24">
+                    {nfts.length === 0 ? (
+                        <div className="flex h-full w-full items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
+                            <Image
+                                src={collection.image}
+                                alt={collection.name}
+                                width={96}
+                                height={96}
+                                draggable={false}
+                                className="h-16 w-16 object-contain"
+                            />
+                        </div>
+                    ) : nfts.length === 1 ? (
+                        <div className="h-full w-full overflow-hidden rounded-3xl">
+                            {(() => {
+                                const nft = nfts[0];
+                                const imageSrc = nft.metadata?.image 
+                                    ? nft.metadata.image 
+                                    : nft.imagePath 
+                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    : collection.image;
+                                const isBase64 = imageSrc.startsWith("data:");
+                                
+                                return isBase64 ? (
+                                    <img
+                                        src={imageSrc}
+                                        alt={nft.metadataName || collection.name}
+                                        draggable={false}
+                                        className="h-full w-full object-contain"
+                                    />
+                                ) : (
+                                    <Image
+                                        src={imageSrc}
+                                        alt={nft.metadataName || collection.name}
+                                        width={96}
+                                        height={96}
+                                        draggable={false}
+                                        className="h-full w-full object-contain"
+                                        unoptimized
+                                    />
+                                );
+                            })()}
+                        </div>
+                    ) : nfts.length === 2 ? (
+                        <div className="flex h-full w-full gap-1">
+                            {nfts.slice(0, 2).map((nft, idx) => {
+                                const imageSrc = nft.metadata?.image 
+                                    ? nft.metadata.image 
+                                    : nft.imagePath 
+                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    : collection.image;
+                                const isBase64 = imageSrc.startsWith("data:");
+                                
+                                return (
+                                    <div key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} className="h-full w-1/2 overflow-hidden rounded-3xl">
+                                        {isBase64 ? (
+                                            <img
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                width={48}
+                                                height={96}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                                unoptimized
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="grid h-full w-full grid-cols-2 gap-1">
+                            {/* Top row: first 2 NFTs */}
+                            {nfts.slice(0, 2).map((nft, idx) => {
+                                const imageSrc = nft.metadata?.image 
+                                    ? nft.metadata.image 
+                                    : nft.imagePath 
+                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    : collection.image;
+                                const isBase64 = imageSrc.startsWith("data:");
+                                
+                                return (
+                                    <div 
+                                        key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} 
+                                        className="overflow-hidden rounded-3xl"
+                                    >
+                                        {isBase64 ? (
+                                            <img
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                width={48}
+                                                height={48}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                                unoptimized
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            {/* Bottom left: 3rd NFT */}
+                            {nfts.length >= 3 && (
+                                <div className="overflow-hidden rounded-3xl">
+                                    {(() => {
+                                        const nft = nfts[2];
+                                        const imageSrc = nft.metadata?.image 
+                                            ? nft.metadata.image 
+                                            : nft.imagePath 
+                                            ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                            : collection.image;
+                                        const isBase64 = imageSrc.startsWith("data:");
+                                        
+                                        return isBase64 ? (
+                                            <img
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                width={48}
+                                                height={48}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                                unoptimized
+                                            />
+                                        );
+                                    })()}
+                                </div>
+                            )}
+                            {/* Bottom right: "+X more" if 4+ NFTs, otherwise empty */}
+                            {nfts.length > 3 ? (
+                                <div className="flex items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12 text-[10px] font-orbitron uppercase tracking-widest text-[rgb(50,255,52)]">
+                                    +{nfts.length - 3} more
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-col gap-2 text-white">
                     <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{collection.name}</h3>
