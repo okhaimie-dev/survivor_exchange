@@ -1,28 +1,45 @@
 import Image from "next/image";
-
-export type Monster = {
-    id: string;
-    name: string;
-    epithet: string;
-    affinity: string;
-    role: string;
-    level: number;
-    power: number;
-    image: string;
-};
+import { FormattedNFT } from "../lib/graphql";
 
 type MonsterCardProps = {
-    monster: Monster;
+    nft: FormattedNFT;
     selected: boolean;
     onToggle: () => void;
 };
 
-export default function MonsterCard({ monster, selected, onToggle }: MonsterCardProps) {
+export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProps) {
+    // Get attribute values
+    const getAttribute = (traitType: string) => {
+        const attr = nft.attributes.find((a) => a.trait_type === traitType);
+        return attr ? String(attr.value) : undefined;
+    };
+
+    const beastName = nft.beastName || "Unknown";
+    const beastType = nft.beastType || getAttribute("Type") || "Unknown";
+    const tier = nft.tier || getAttribute("Tier") || "—";
+    const level = nft.level || getAttribute("Level") || "0";
+    const power = nft.power || getAttribute("Power") || "0";
+    const prefix = getAttribute("Prefix");
+    const suffix = getAttribute("Suffix");
+    
+    // Build epithet from prefix and suffix if available
+    const epithet = prefix && suffix ? `${prefix} ${suffix}` : prefix || suffix || "";
+
+    // Get image - prioritize base64 from metadata, then imagePath, then fallback
+    const imageSrc = nft.metadata?.image 
+        ? nft.metadata.image // Base64 data URI (e.g., "data:image/svg+xml;base64,...")
+        : nft.imagePath 
+        ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+        : "/logo.png";
+
+    // Format token ID for display
+    const tokenIdDisplay = `#${parseInt(nft.tokenId, 16).toString()}`;
+
     const stats = [
-        { label: "Affinity", value: monster.affinity },
-        { label: "Role", value: monster.role },
-        { label: "Level", value: `Lv. ${monster.level}` },
-        { label: "Power", value: `${monster.power.toFixed(1)}k` },
+        { label: "Type", value: beastType },
+        { label: "Tier", value: tier },
+        { label: "Level", value: `Lv. ${level}` },
+        { label: "Power", value: `${parseFloat(power).toFixed(1)}` },
     ];
 
     return (
@@ -41,24 +58,27 @@ export default function MonsterCard({ monster, selected, onToggle }: MonsterCard
             }`}
         >
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
-                <span>{monster.id}</span>
-                <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">{monster.epithet}</span>
+                <span>{tokenIdDisplay}</span>
+                {epithet && (
+                    <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">{epithet}</span>
+                )}
             </header>
 
             <div className="flex flex-col items-center gap-4 text-center text-white">
-                <div className="flex h-24 w-24 items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
+                <div className="flex h-44 w-fit items-center justify-center rounded-3xl">
                     <Image
-                        src={monster.image}
-                        alt={monster.name}
+                        src={imageSrc}
+                        alt={nft.metadataName}
                         width={96}
                         height={96}
                         draggable={false}
-                        className="h-16 w-16 object-contain"
+                        className="h-full w-full object-contain"
+                        unoptimized
                     />
                 </div>
                 <div className="flex flex-col gap-2">
-                    <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{monster.name}</h3>
-                    <p className="text-xs text-[rgb(186,255,188)]/70">{monster.affinity} lineage</p>
+                    <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{nft.metadataName}</h3>
+                    <p className="text-xs text-[rgb(186,255,188)]/70">{beastName}</p>
                 </div>
             </div>
 

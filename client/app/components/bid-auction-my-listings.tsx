@@ -5,8 +5,15 @@ import { clsx } from "../lib/utils";
 import Auction from "./auction";
 import Bids from "./bids";
 import MyListings from "./my-listings";
+import { FormattedNFT } from "../lib/graphql";
 
-export default function BidAuctionMyListingsRent() {
+interface BidAuctionMyListingsProps {
+    nfts: FormattedNFT[];
+    loading: boolean;
+    error: Error | null;
+}
+
+export default function BidAuctionMyListingsRent({ nfts, loading, error }: BidAuctionMyListingsProps) {
     const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
     return ( 
         <div className="flex flex-col items-center justify-center gap-4 w-full space-y-4 xl:max-w-2xl 2xl:max-w-6xl">
@@ -23,7 +30,7 @@ export default function BidAuctionMyListingsRent() {
             </div>
             <div className="w-full h-full">
                 {activeTab === "bid" && <Bids />}
-                {activeTab === "auction" && <Auction />}
+                {activeTab === "auction" && <Auction nfts={nfts} loading={loading} error={error} />}
                 {activeTab === "my-listings" && <MyListings />}
             </div>
         </div>

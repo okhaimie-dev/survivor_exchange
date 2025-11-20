@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 
     export default function Header() {
-        const { connectors } = useConnect();
+        const { connect, connectors } = useConnect();
         const { disconnect } = useDisconnect();
         const { address } = useAccount();
         const controller = useMemo(() => {
@@ -73,22 +73,14 @@ import { useEffect, useMemo, useState } from "react";
         const handleConnect = async () => {
             if (!controller) return;
 
-            await controller.connect();
-            try {
-                const name = await controller.username();
-                if (name) {
-                    setUsername(name);
-                }
-            } catch (error) {
-                console.error("Failed to resolve username after connecting", error);
-            }
-        }
+            await connect({ connector: controller });
+            setUsername(await controller?.username() || address || undefined);
+        };
 
         const handleDisconnect = async () => {
-            await controller?.disconnect();
             disconnect();
             setUsername(undefined);
-        }
+        };
 
         return (
             <div className="w-full h-14 bg-black flex flex-row items-center justify-center">

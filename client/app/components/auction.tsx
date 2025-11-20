@@ -1,117 +1,68 @@
 import { useCallback, useMemo, useState } from "react";
-import MonsterCard, { type Monster } from "./monster-card";
+import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
+import { FormattedNFT } from "../lib/graphql";
 
-const monsters: Monster[] = [
-    {
-        id: "#M-1207",
-        name: "Abyssal Ravager",
-        epithet: "Voidborne Vanguard",
-        affinity: "Shadow",
-        role: "Assault",
-        level: 52,
-        power: 4.6,
-        image: "/logo.png",
-    },
-    {
-        id: "#M-1042",
-        name: "Stormscale Siren",
-        epithet: "Tidal Enchanter",
-        affinity: "Water",
-        role: "Controller",
-        level: 47,
-        power: 3.8,
-        image: "/logo.png",
-    },
-    {
-        id: "#M-0981",
-        name: "Solaris Warden",
-        epithet: "Radiant Bulwark",
-        affinity: "Light",
-        role: "Guardian",
-        level: 55,
-        power: 5.1,
-        image: "/logo.png",
-    },
-    {
-        id: "#M-0876",
-        name: "Ironroot Stalker",
-        epithet: "Grove Sentinel",
-        affinity: "Earth",
-        role: "Skirmisher",
-        level: 43,
-        power: 3.2,
-        image: "/logo.png",
-    },
-    {
-        id: "#M-1310",
-        name: "Emberwing Talon",
-        epithet: "Blaze Harrier",
-        affinity: "Fire",
-        role: "Assault",
-        level: 49,
-        power: 4.1,
-        image: "/logo.png",
-    },
-    {
-        id: "#M-0764",
-        name: "Frostvein Oracle",
-        epithet: "Crystal Seer",
-        affinity: "Ice",
-        role: "Support",
-        level: 45,
-        power: 3.5,
-        image: "/logo.png",
-    },
-];
+interface AuctionProps {
+    nfts: FormattedNFT[];
+    loading: boolean;
+    error: Error | null;
+}
 
-export default function Auction() {
+export default function Auction({ nfts, loading, error }: AuctionProps) {
     const pageSize = 3;
     const [currentPage, setCurrentPage] = useState(1);
-    const [selectedMonsterIds, setSelectedMonsterIds] = useState<string[]>([]);
+    const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
 
-    const toggleCardSelection = useCallback((monsterId: string) => {
-        setSelectedMonsterIds((previouslySelected) => {
-            if (previouslySelected.includes(monsterId)) {
-                return previouslySelected.filter((existingId) => existingId !== monsterId);
+    const toggleCardSelection = useCallback((nftId: string) => {
+        setSelectedNFTIds((previouslySelected) => {
+            if (previouslySelected.includes(nftId)) {
+                return previouslySelected.filter((existingId) => existingId !== nftId);
             }
 
-            return [...previouslySelected, monsterId];
+            return [...previouslySelected, nftId];
         });
     }, []);
 
-    const totalPages = useMemo(() => Math.max(1, Math.ceil(monsters.length / pageSize)), [pageSize]);
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(nfts.length / pageSize)), [nfts.length, pageSize]);
 
-    const visibleMonsters = useMemo(() => {
+    const visibleNFTs = useMemo(() => {
         const startIndex = (currentPage - 1) * pageSize;
-        return monsters.slice(startIndex, startIndex + pageSize);
-    }, [currentPage, pageSize]);
+        return nfts.slice(startIndex, startIndex + pageSize);
+    }, [currentPage, pageSize, nfts]);
 
-    const selectedMonsters = useMemo(
-        () => monsters.filter((monster) => selectedMonsterIds.includes(monster.id)),
-        [selectedMonsterIds],
+    const selectedNFTs = useMemo(
+        () => nfts.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
+        [selectedNFTIds, nfts],
     );
 
-    const hasSelection = selectedMonsters.length > 0;
+    const hasSelection = selectedNFTs.length > 0;
 
     const averageLevel = useMemo(() => {
         if (!hasSelection) {
             return null;
         }
 
-        const totalLevels = selectedMonsters.reduce((sum, monster) => sum + monster.level, 0);
-        return Math.round(totalLevels / selectedMonsters.length);
-    }, [hasSelection, selectedMonsters]);
+        const totalLevels = selectedNFTs.reduce((sum, nft) => {
+            const level = nft.level ? parseInt(nft.level) : 0;
+            return sum + level;
+        }, 0);
+        return Math.round(totalLevels / selectedNFTs.length);
+    }, [hasSelection, selectedNFTs]);
 
     const totalPower = useMemo(() => {
         if (!hasSelection) {
             return null;
         }
 
-        return selectedMonsters.reduce((sum, monster) => sum + monster.power, 0).toFixed(1);
-    }, [hasSelection, selectedMonsters]);
+        const total = selectedNFTs.reduce((sum, nft) => {
+            const power = nft.power ? parseFloat(nft.power) : 0;
+            return sum + power;
+        }, 0);
+        return total.toFixed(1);
+    }, [hasSelection, selectedNFTs]);
 
     const handlePageChange = useCallback(
         (page: number) => {
@@ -124,18 +75,42 @@ export default function Auction() {
     );
 
     const handleClearSelection = useCallback(() => {
-        setSelectedMonsterIds([]);
+        setSelectedNFTIds([]);
     }, []);
+
+    if (loading) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-red-400">Error loading NFTs: {error.message}</p>
+            </div>
+        );
+    }
+
+    if (nfts.length === 0) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-                {visibleMonsters.map((monster) => (
-                    <div key={monster.id} className="flex h-full w-full">
+                {visibleNFTs.map((nft) => (
+                    <div key={nft.tokenId} className="flex h-full w-full">
                         <MonsterCard
-                            monster={monster}
-                            selected={selectedMonsterIds.includes(monster.id)}
-                            onToggle={() => toggleCardSelection(monster.id)}
+                            nft={nft}
+                            selected={selectedNFTIds.includes(nft.tokenId)}
+                            onToggle={() => toggleCardSelection(nft.tokenId)}
                         />
                     </div>
                 ))}
@@ -146,10 +121,10 @@ export default function Auction() {
                     <div className="flex flex-col gap-4">
                         <div>
                             <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                Selected Monsters
+                                Selected NFTs
                             </p>
                             <p className="text-3xl font-orbitron uppercase tracking-[0.18em] text-white">
-                                {selectedMonsters.length.toString().padStart(2, "0")}
+                                {selectedNFTs.length.toString().padStart(2, "0")}
                             </p>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm text-white">
@@ -164,7 +139,7 @@ export default function Auction() {
                                     Total Power
                                 </p>
                                 <p className="font-orbitron text-lg tracking-[0.12em]">
-                                    {totalPower ? `${totalPower}k` : "—"}
+                                    {totalPower ? `${totalPower}` : "—"}
                                 </p>
                             </div>
                         </div>
@@ -174,18 +149,18 @@ export default function Auction() {
                             </p>
                             {hasSelection ? (
                                 <ul className="flex flex-wrap gap-2">
-                                    {selectedMonsters.map((monster) => (
+                                    {selectedNFTs.map((nft) => (
                                         <li
-                                            key={monster.id}
+                                            key={nft.tokenId}
                                             className="rounded-full border border-[rgb(50,255,52)]/40 px-3 py-1 text-[10px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]"
                                         >
-                                            {monster.name}
+                                            {nft.metadataName}
                                         </li>
                                     ))}
                                 </ul>
                             ) : (
                                 <p className="text-xs text-[rgb(186,255,188)]/60">
-                                    Select monsters from the grid to assemble a collection for auction.
+                                    Select NFTs from the grid to assemble a collection for auction.
                                 </p>
                             )}
                         </div>
@@ -229,7 +204,7 @@ export default function Auction() {
                             <p className="text-xs text-[rgb(186,255,188)]/70">
                                 Choose a price that reflects rarity and combined power. You currently have{" "}
                                 <span className="font-orbitron tracking-[0.18em] text-white">
-                                    {selectedMonsters.length} {selectedMonsters.length === 1 ? "monster" : "monsters"}
+                                    {selectedNFTs.length} {selectedNFTs.length === 1 ? "NFT" : "NFTs"}
                                 </span>{" "}
                                 selected.
                             </p>
@@ -260,8 +235,8 @@ export default function Auction() {
                             </button>
                         </div>
                         <p className="text-xs text-[rgb(186,255,188)]/70">
-                            Tip: You can list multiple monsters together as a themed bundle. Buyers love cohesive teams with
-                            complementary roles.
+                            Tip: You can list multiple NFTs together as a themed bundle. Buyers love cohesive collections with
+                            complementary traits.
                         </p>
                     </div>
                 </div>
