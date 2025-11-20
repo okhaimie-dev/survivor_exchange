@@ -183,3 +183,122 @@ export function formatNFTs(tokens: ERC721Token[]): FormattedNFT[] {
   return tokens.map(formatNFT).filter((nft): nft is FormattedNFT => nft !== null);
 }
 
+/**
+ * Converts felt252 (hex string) to readable string
+ * Removes '0x' prefix and converts hex to ASCII
+ */
+export function felt252ToString(felt252: string): string {
+  if (!felt252) return '';
+  
+  // If it's already a readable string (no hex pattern), return as is
+  if (!felt252.match(/^0x[0-9a-fA-F]+$/i) && !felt252.match(/^[0-9a-fA-F]+$/i)) {
+    return felt252;
+  }
+  
+  // Remove '0x' prefix if present
+  const hex = felt252.startsWith('0x') ? felt252.slice(2) : felt252;
+  
+  // Convert hex to string
+  try {
+    let result = '';
+    for (let i = 0; i < hex.length; i += 2) {
+      const byte = hex.substr(i, 2);
+      if (byte.length < 2) break;
+      const charCode = parseInt(byte, 16);
+      if (charCode === 0) break; // Stop at null terminator
+      result += String.fromCharCode(charCode);
+    }
+    return result.trim() || felt252; // Return original if conversion results in empty string
+  } catch {
+    return felt252; // Return original if conversion fails
+  }
+}
+
+/**
+ * Truncates wallet address to show first 6 and last 4 characters
+ * Example: "0x1234567890abcdef..." -> "0x1234...cdef"
+ */
+export function truncateAddress(address: string, startLength: number = 6, endLength: number = 4): string {
+  if (!address) return '';
+  
+  if (address.length <= startLength + endLength) {
+    return address;
+  }
+  
+  const start = address.slice(0, startLength);
+  const end = address.slice(-endLength);
+  return `${start}...${end}`;
+}
+
+// Auction types
+export interface AuctionItem {
+  auction_id: string;
+  contract_address: string;
+  item_index: string;
+  token_id: string;
+}
+
+export interface AuctionItemNode {
+  node: AuctionItem;
+}
+
+export interface Auction {
+  auction_id: string;
+  current_bid: string;
+  end_time: string;
+  highest_bidder: string;
+  item_count: string;
+  name: string;
+  seller: string;
+  starting_price: string;
+  status: string;
+}
+
+export interface AuctionNode {
+  node: Auction;
+}
+
+export interface AuctionsResponse {
+  bm002AuctionModels: {
+    edges: AuctionNode[];
+  };
+  bm002AuctionItemModels: {
+    edges: AuctionItemNode[];
+  };
+}
+
+const AUCTIONS_QUERY = gql`
+  query MyQuery {
+    bm002AuctionModels {
+      edges {
+        node {
+          auction_id
+          current_bid
+          end_time
+          highest_bidder
+          item_count
+          name
+          seller
+          starting_price
+          status
+        }
+      }
+    }
+    bm002AuctionItemModels {
+      edges {
+        node {
+          auction_id
+          contract_address
+          item_index
+          token_id
+        }
+      }
+    }
+  }
+`;
+
+export async function fetchAuctions(): Promise<AuctionsResponse> {
+  const data = await client.request<AuctionsResponse>(AUCTIONS_QUERY);
+  return data;
+}
+

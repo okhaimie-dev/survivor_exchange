@@ -7,7 +7,6 @@ type MonsterCollectionCardProps = {
         totalMonsters: number;
         startingPrice: number;
         highestBid?: number;
-        rentPrice: number;
         image: string;
     };
     isSelected: boolean;
@@ -25,9 +24,9 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             suffix: "ETH",
         },
         {
-            label: "Rent / Day",
-            value: collection.rentPrice.toFixed(2),
-            suffix: "ETH",
+            label: "Current Bid",
+            value: collection.highestBid !== undefined ? collection.highestBid.toFixed(2) : "—",
+            suffix: collection.highestBid !== undefined ? "ETH" : undefined,
         },
     ];
 

@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
+import { Auction, AuctionItem, felt252ToString, truncateAddress } from "../lib/graphql";
 
 type Collection = {
     id: string;
@@ -9,78 +10,64 @@ type Collection = {
     totalMonsters: number;
     startingPrice: number;
     highestBid?: number;
-    rentPrice: number;
     image: string;
-    description: string;
+    status: string;
+    endTime: string;
+    seller: string;
+    highestBidder: string;
 };
 
-const collections: Collection[] = [
-    {
-        id: "#1127",
-        name: "Abyssal Wraith Collective",
-        totalMonsters: 12,
-        startingPrice: 3.25,
-        highestBid: 4.1,
-        rentPrice: 0.65,
-        image: "/logo.png",
-        description: "A legion of spectral guardians bound to the abyss, coveted for their stealth and ethereal strikes.",
-    },
-    {
-        id: "#0982",
-        name: "Crystal Spire Sentinels",
-        totalMonsters: 8,
-        startingPrice: 1.9,
-        rentPrice: 0.4,
-        image: "/logo.png",
-        description: "Shimmering constructs forged from crystal lattices, ideal for defensive lineups and high resilience.",
-    },
-    {
-        id: "#0544",
-        name: "Voidborne Choir",
-        totalMonsters: 16,
-        startingPrice: 5.75,
-        highestBid: 6.4,
-        rentPrice: 1.15,
-        image: "/logo.png",
-        description: "An ensemble of cosmic sirens whose harmonics destabilize opponents and fortify allied ranks.",
-    },
-    {
-        id: "#0458",
-        name: "Ironroot Vanguard",
-        totalMonsters: 10,
-        startingPrice: 2.4,
-        highestBid: 2.9,
-        rentPrice: 0.55,
-        image: "/logo.png",
-        description: "Ancient forest guardians specializing in crowd control and regenerative shielding.",
-    },
-    {
-        id: "#0721",
-        name: "Stormscale Phalanx",
-        totalMonsters: 9,
-        startingPrice: 2.8,
-        highestBid: 3.05,
-        rentPrice: 0.6,
-        image: "/logo.png",
-        description: "Electrified amphibious tacticians whose storms overwhelm adversaries in blitz assaults.",
-    },
-];
+interface BidsProps {
+    auctions: Auction[];
+    loading: boolean;
+    error: Error | null;
+    currentPage: number;
+    totalPages: number;
+    setCurrentPage: (page: number) => void;
+    getAuctionItems: (auctionId: string) => AuctionItem[];
+}
 
-const formatEth = (value: number) => `${value.toFixed(2)} ETH`;
+const formatEth = (value: number | string) => {
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    return `${numValue.toFixed(2)} ETH`;
+};
 
-export default function Bids() {
-    const pageSize = 3;
+export default function Bids({ 
+    auctions, 
+    loading, 
+    error,
+    currentPage,
+    totalPages,
+    setCurrentPage,
+    getAuctionItems
+}: BidsProps) {
+    // Convert auctions to collections format
+    const collections: Collection[] = useMemo(() => {
+        return auctions.map((auction) => ({
+            id: auction.auction_id,
+            name: felt252ToString(auction.name),
+            totalMonsters: parseInt(auction.item_count) || 0,
+            startingPrice: parseFloat(auction.starting_price) || 0,
+            highestBid: auction.current_bid ? parseFloat(auction.current_bid) : undefined,
+            image: "/logo.png", // Placeholder since image not in data
+            status: auction.status,
+            endTime: auction.end_time,
+            seller: truncateAddress(auction.seller),
+            highestBidder: truncateAddress(auction.highest_bidder),
+        }));
+    }, [auctions]);
+
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
-    const [bidAmount, setBidAmount] = useState<string>(() => {
-        const firstCollection = collections[0];
-        if (!firstCollection) {
-            return "";
-        }
+    const [bidAmount, setBidAmount] = useState<string>("");
 
-        const firstMinimum = Math.max(firstCollection.startingPrice, firstCollection.highestBid ?? firstCollection.startingPrice);
-        return firstMinimum.toFixed(2);
-    });
-    const [currentPage, setCurrentPage] = useState(1);
+    // Update bid amount when collection changes
+    useEffect(() => {
+        const selected = collections.find((c) => c.id === selectedCollectionId);
+        if (selected) {
+            const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
+            setBidAmount(minimum.toFixed(2));
+        }
+    }, [selectedCollectionId, collections]);
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
@@ -120,13 +107,6 @@ export default function Bids() {
         [updateSelection],
     );
 
-    const totalPages = useMemo(() => Math.max(1, Math.ceil(collections.length / pageSize)), [pageSize]);
-
-    const visibleCollections = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
-        return collections.slice(startIndex, startIndex + pageSize);
-    }, [currentPage, pageSize]);
-
     const handlePageChange = useCallback(
         (page: number) => {
             const nextPage = Math.min(Math.max(page, 1), totalPages);
@@ -135,16 +115,43 @@ export default function Bids() {
             }
 
             setCurrentPage(nextPage);
-            const firstOnPage = collections[(nextPage - 1) * pageSize];
+            // Select first collection on new page
+            const firstOnPage = collections[0];
+            if (firstOnPage) {
             updateSelection(firstOnPage);
+            }
         },
-        [currentPage, totalPages, updateSelection, pageSize],
+        [currentPage, totalPages, updateSelection, collections],
     );
+
+    if (loading) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">Loading auctions...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-red-400">Error loading auctions: {error.message}</p>
+            </div>
+        );
+    }
+
+    if (collections.length === 0) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">No auctions available.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-                {visibleCollections.map((collection) => (
+                {collections.map((collection) => (
                     <div key={collection.id} className="flex h-full w-full">
                         <MonsterCollectionCard
                             collection={collection}
@@ -176,7 +183,7 @@ export default function Bids() {
                                 {selectedCollection.name}
                             </h2>
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
-                                {selectedCollection.totalMonsters} monsters • {selectedCollection.description}
+                                {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} • Status: {selectedCollection.status}
                             </p>
                         </div>
 
@@ -192,10 +199,10 @@ export default function Bids() {
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
                                     <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
-                                        Rent / Day
+                                        Current Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {formatEth(selectedCollection.rentPrice)}
+                                        {selectedCollection.highestBid !== undefined ? formatEth(selectedCollection.highestBid) : "No bids"}
                                     </p>
                                 </div>
                             </div>
@@ -235,12 +242,6 @@ export default function Bids() {
                                             }`}
                                         >
                                             Place Bid
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)] px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] text-[rgb(50,255,52)] transition hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
-                                        >
-                                            Rent for {formatEth(selectedCollection.rentPrice)}
                                         </button>
                                     </div>
                                 </div>

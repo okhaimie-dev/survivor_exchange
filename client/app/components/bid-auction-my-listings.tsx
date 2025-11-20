@@ -5,15 +5,33 @@ import { clsx } from "../lib/utils";
 import Auction from "./auction";
 import Bids from "./bids";
 import MyListings from "./my-listings";
-import { FormattedNFT } from "../lib/graphql";
+import { FormattedNFT, Auction as AuctionType, AuctionItem } from "../lib/graphql";
 
 interface BidAuctionMyListingsProps {
     nfts: FormattedNFT[];
     loading: boolean;
     error: Error | null;
+    auctions: AuctionType[];
+    auctionsLoading: boolean;
+    auctionsError: Error | null;
+    currentPage: number;
+    totalPages: number;
+    setCurrentPage: (page: number) => void;
+    getAuctionItems: (auctionId: string) => AuctionItem[];
 }
 
-export default function BidAuctionMyListingsRent({ nfts, loading, error }: BidAuctionMyListingsProps) {
+export default function BidAuctionMyListingsRent({ 
+    nfts, 
+    loading, 
+    error,
+    auctions,
+    auctionsLoading,
+    auctionsError,
+    currentPage,
+    totalPages,
+    setCurrentPage,
+    getAuctionItems
+}: BidAuctionMyListingsProps) {
     const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
     return ( 
         <div className="flex flex-col items-center justify-center gap-4 w-full space-y-4 xl:max-w-2xl 2xl:max-w-6xl">
@@ -29,7 +47,17 @@ export default function BidAuctionMyListingsRent({ nfts, loading, error }: BidAu
                 </div>
             </div>
             <div className="w-full h-full">
-                {activeTab === "bid" && <Bids />}
+                {activeTab === "bid" && (
+                    <Bids 
+                        auctions={auctions}
+                        loading={auctionsLoading}
+                        error={auctionsError}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        setCurrentPage={setCurrentPage}
+                        getAuctionItems={getAuctionItems}
+                    />
+                )}
                 {activeTab === "auction" && <Auction nfts={nfts} loading={loading} error={error} />}
                 {activeTab === "my-listings" && <MyListings />}
             </div>
