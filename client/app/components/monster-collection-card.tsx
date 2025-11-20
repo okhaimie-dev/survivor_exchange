@@ -46,9 +46,9 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             }`}
         >
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
-                <span>{collection.id}</span>
+                {/* <span>{collection.id}</span> */}
                 <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">
-                    {collection.totalMonsters} monsters
+                    {collection.totalMonsters} nft{collection.totalMonsters === 1 ? '' : 's'} in this collection
                 </span>
             </header>
 

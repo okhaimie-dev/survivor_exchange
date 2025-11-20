@@ -176,14 +176,14 @@ export default function Bids({
                                     className="h-16 w-16 object-contain"
                                 />
                             </div>
-                            <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                {selectedCollection.id}
-                            </span>
                             <h2 className="text-2xl font-orbitron uppercase tracking-[0.12em] text-white">
                                 {selectedCollection.name}
                             </h2>
+                            <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                                Status: {selectedCollection.status}
+                            </span>
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
-                                {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} • Status: {selectedCollection.status}
+                                {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} in this collection
                             </p>
                         </div>
 

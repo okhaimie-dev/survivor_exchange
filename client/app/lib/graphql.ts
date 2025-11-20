@@ -1,4 +1,5 @@
 import { GraphQLClient, gql } from 'graphql-request';
+import * as starknet from 'starknet';
 
 const GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/bm/torii/graphql';
 
@@ -184,8 +185,7 @@ export function formatNFTs(tokens: ERC721Token[]): FormattedNFT[] {
 }
 
 /**
- * Converts felt252 (hex string) to readable string
- * Removes '0x' prefix and converts hex to ASCII
+ * Converts felt252 to readable string using Starknet library
  */
 export function felt252ToString(felt252: string): string {
   if (!felt252) return '';
@@ -195,20 +195,14 @@ export function felt252ToString(felt252: string): string {
     return felt252;
   }
   
-  // Remove '0x' prefix if present
-  const hex = felt252.startsWith('0x') ? felt252.slice(2) : felt252;
-  
-  // Convert hex to string
   try {
-    let result = '';
-    for (let i = 0; i < hex.length; i += 2) {
-      const byte = hex.substr(i, 2);
-      if (byte.length < 2) break;
-      const charCode = parseInt(byte, 16);
-      if (charCode === 0) break; // Stop at null terminator
-      result += String.fromCharCode(charCode);
-    }
-    return result.trim() || felt252; // Return original if conversion results in empty string
+    // Ensure the value has '0x' prefix for Starknet library
+    const hexValue = felt252.startsWith('0x') ? felt252 : `0x${felt252}`;
+    
+    // Use Starknet's shortString utilities to decode felt252 to string
+    // In Starknet.js, short strings are decoded using the shortString helper
+    const decoded = starknet.shortString.decodeShortString(hexValue);
+    return decoded || felt252; // Return original if decoding fails or is empty
   } catch {
     return felt252; // Return original if conversion fails
   }
@@ -269,7 +263,17 @@ export interface AuctionsResponse {
 
 const AUCTIONS_QUERY = gql`
   query MyQuery {
-    bm002AuctionModels {
+    bm002AuctionItemModels(order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          contract_address
+          item_index
+          token_id
+        }
+      }
+    }
+    bm002AuctionModels(order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -281,16 +285,6 @@ const AUCTIONS_QUERY = gql`
           seller
           starting_price
           status
-        }
-      }
-    }
-    bm002AuctionItemModels {
-      edges {
-        node {
-          auction_id
-          contract_address
-          item_index
-          token_id
         }
       }
     }

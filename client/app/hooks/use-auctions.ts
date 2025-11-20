@@ -29,7 +29,15 @@ export function useAuctions() {
 
   // Extract auctions and items from response
   const allAuctions: Auction[] = useMemo(() => {
-    return data?.bm002AuctionModels?.edges?.map((edge) => edge.node) || [];
+    const auctions = data?.bm002AuctionModels?.edges?.map((edge) => edge.node) || [];
+    // Sort by auction_id numerically descending (latest first) as fallback
+    // This ensures proper numeric ordering even if GraphQL returns string-ordered results
+    const sorted = [...auctions].sort((a, b) => {
+      const aId = parseInt(a.auction_id) || 0;
+      const bId = parseInt(b.auction_id) || 0;
+      return bId - aId; // DESC order
+    });
+    return sorted;
   }, [data]);
 
   const allAuctionItems: AuctionItem[] = useMemo(() => {
