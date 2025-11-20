@@ -5,13 +5,14 @@ import { clsx } from "../lib/utils";
 import Auction from "./auction";
 import Bids from "./bids";
 import MyListings from "./my-listings";
-import { FormattedNFT, Auction as AuctionType, AuctionItem } from "../lib/graphql";
+import { FormattedNFT, AuctionItem } from "../lib/graphql";
+import { AuctionWithNFTs } from "../hooks/use-auctions";
 
 interface BidAuctionMyListingsProps {
     nfts: FormattedNFT[];
     loading: boolean;
     error: Error | null;
-    auctions: AuctionType[];
+    auctions: AuctionWithNFTs[];
     auctionsLoading: boolean;
     auctionsError: Error | null;
     currentPage: number;

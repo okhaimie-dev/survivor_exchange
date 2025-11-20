@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState, useEffect } from "react";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
-import { Auction, AuctionItem, felt252ToString, truncateAddress } from "../lib/graphql";
+import { AuctionItem, felt252ToString, truncateAddress } from "../lib/graphql";
+import { AuctionWithNFTs } from "../hooks/use-auctions";
 
 type Collection = {
     id: string;
@@ -18,7 +19,7 @@ type Collection = {
 };
 
 interface BidsProps {
-    auctions: Auction[];
+    auctions: AuctionWithNFTs[];
     loading: boolean;
     error: Error | null;
     currentPage: number;
@@ -71,8 +72,9 @@ export default function Bids({
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
-        [selectedCollectionId],
+        [selectedCollectionId, collections],
     );
+
 
     const minimumBid = useMemo(() => {
         if (!selectedCollection) {
@@ -148,6 +150,7 @@ export default function Bids({
         );
     }
 
+
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
@@ -166,16 +169,68 @@ export default function Bids({
                 <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                     <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
-                            <div className="flex h-28 w-28 items-center justify-center rounded-2xl border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10">
-                                <Image
-                                    src={selectedCollection.image}
-                                    alt={selectedCollection.name}
-                                    width={112}
-                                    height={112}
-                                    draggable={false}
-                                    className="h-16 w-16 object-contain"
-                                />
-                            </div>
+                            {(() => {
+                                const auction = auctions.find(a => a.auction_id === selectedCollection.id);
+                                const nfts = auction?.nfts || [];
+                                
+                                if (nfts.length === 0) {
+                                    return (
+                                    <div className="flex h-28 w-28 items-center justify-center rounded-2xl border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10">
+                                        <Image
+                                            src="/logo.png"
+                                            alt={selectedCollection.name}
+                                            width={112}
+                                            height={112}
+                                            draggable={false}
+                                            className="h-16 w-16 object-contain"
+                                        />
+                                    </div>
+                                    );
+                                }
+                                
+                                return (
+                                    <div className="w-full">
+                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                            {nfts.map((nft) => {
+                                                const imageSrc = nft.metadata?.image 
+                                                    ? nft.metadata.image 
+                                                    : nft.imagePath 
+                                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                                    : "/logo.png";
+                                                const isBase64 = imageSrc.startsWith("data:");
+                                                
+                                                return (
+                                                    <div
+                                                        key={`${nft.contractAddress}-${nft.tokenId}`}
+                                                        className={`shrink-0 h-28 w-28 rounded-2xl overflow-hidden ${
+                                                            !isBase64 ? 'border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10' : ''
+                                                        }`}
+                                                    >
+                                                        {isBase64 ? (
+                                                            <img
+                                                                src={imageSrc}
+                                                                alt={nft.metadataName || `NFT ${nft.tokenId}`}
+                                                                draggable={false}
+                                                                className="h-full w-full object-contain"
+                                                            />
+                                                        ) : (
+                                                            <Image
+                                                                src={imageSrc}
+                                                                alt={nft.metadataName || `NFT ${nft.tokenId}`}
+                                                                width={112}
+                                                                height={112}
+                                                                draggable={false}
+                                                                className="h-full w-full object-contain"
+                                                                unoptimized
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             <h2 className="text-2xl font-orbitron uppercase tracking-[0.12em] text-white">
                                 {selectedCollection.name}
                             </h2>

@@ -69,7 +69,7 @@ export interface MyNFTsResponse {
 
 const MY_NFTS_QUERY = gql`
   query MyNFTS($accountAddress: String!) {
-    tokenBalances(accountAddress: $accountAddress) {
+    tokenBalances(limit: 1000000, accountAddress: $accountAddress) {
       edges {
         node {
           tokenMetadata {
@@ -263,7 +263,7 @@ export interface AuctionsResponse {
 
 const AUCTIONS_QUERY = gql`
   query MyQuery {
-    bm002AuctionItemModels(order: {direction: DESC, field: AUCTION_ID}) {
+    bm002AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -273,7 +273,7 @@ const AUCTIONS_QUERY = gql`
         }
       }
     }
-    bm002AuctionModels(order: {direction: DESC, field: AUCTION_ID}) {
+    bm002AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
