@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@apollo/client/react';
 import { useAccount } from '@starknet-react/core';
-import { fetchMyNFTs, MyNFTsResponse, ERC721Token, FormattedNFT, formatNFTs } from '../lib/graphql';
+import { MY_NFTS_QUERY, MyNFTsResponse, ERC721Token, FormattedNFT, formatNFTs } from '../lib/graphql';
 
 interface UseMyNFTsOptions {
   address?: string;
@@ -8,36 +8,16 @@ interface UseMyNFTsOptions {
 
 export function useMyNFTs(options?: UseMyNFTsOptions) {
   const { address: accountAddress } = useAccount();
-  const [data, setData] = useState<MyNFTsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  // Use the passed address or fall back to the connected account address
   const targetAddress = options?.address || accountAddress;
 
-  useEffect(() => {
-    if (!targetAddress) {
-      setData(null);
-      setError(null);
-      return;
-    }
-
-    const loadNFTs = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchMyNFTs(targetAddress);
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch NFTs'));
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadNFTs();
-  }, [targetAddress]);
+  const { data, loading, error } = useQuery<MyNFTsResponse>(MY_NFTS_QUERY, {
+    variables: { accountAddress: targetAddress },
+    skip: !targetAddress,
+    pollInterval: 1000, // Poll every second
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+    notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
+  });
 
   // Extract and flatten the NFTs from the response, then format them
   const rawNFTs: ERC721Token[] = data?.tokenBalances?.edges
@@ -49,7 +29,7 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
   return {
     nfts,
     loading,
-    error,
+    error: error ? new Error(error.message) : null,
     address: targetAddress,
   };
 }

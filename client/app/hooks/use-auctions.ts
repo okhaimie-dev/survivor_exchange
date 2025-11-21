@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
-import { fetchAuctions, AuctionsResponse, Auction, AuctionItem, fetchMyNFTs, formatNFTs, FormattedNFT, ERC721Token } from '../lib/graphql';
+import { useQuery, useApolloClient } from '@apollo/client/react';
+import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token } from '../lib/graphql';
 
 const PAGE_SIZE = 3;
 
@@ -61,29 +62,16 @@ export interface AuctionWithNFTs extends Auction {
 }
 
 export function useAuctions() {
-  const [data, setData] = useState<AuctionsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [auctionsWithNFTs, setAuctionsWithNFTs] = useState<AuctionWithNFTs[]>([]);
+  const apolloClient = useApolloClient();
 
-  useEffect(() => {
-    const loadAuctions = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await fetchAuctions();
-        setData(result);
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch auctions'));
-        setData(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadAuctions();
-  }, []);
+  const { data, loading, error } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
+    pollInterval: 1000, // Poll every second
+    fetchPolicy: 'cache-and-network',
+    errorPolicy: 'all',
+    notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
+  });
 
   // Extract auctions and items from response
   const allAuctions: Auction[] = useMemo(() => {
@@ -143,8 +131,12 @@ export function useAuctions() {
       
       for (const [seller, auctionsWithItems] of auctionsBySeller) {
         try {
-          // Make GraphQL call to fetch all NFTs for this seller
-          const response = await fetchMyNFTs(seller);
+          // Make GraphQL call to fetch all NFTs for this seller using Apollo Client
+          const { data: response } = await apolloClient.query<MyNFTsResponse>({
+            query: MY_NFTS_QUERY,
+            variables: { accountAddress: seller },
+            fetchPolicy: 'network-only',
+          });
           
           // Get all token IDs for all auctions from this seller and normalize them
           const allAuctionTokenIds = new Set<string>();
@@ -231,7 +223,7 @@ export function useAuctions() {
     };
 
     fetchAllAuctionNFTs();
-  }, [allAuctions, allAuctionItems, getAuctionItems]);
+  }, [allAuctions, allAuctionItems, getAuctionItems, apolloClient]);
 
   return {
     auctions: paginatedAuctions,

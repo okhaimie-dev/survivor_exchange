@@ -3,6 +3,7 @@ import { Orbitron } from "next/font/google";
 import "./globals.css";
 import Header from "./components/header";
 import { StarknetProvider } from "./providers/starknet-provider";
+import { ApolloGraphQLProvider } from "./providers/apollo-provider";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -27,12 +28,14 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} antialiased`}
       >
-        <StarknetProvider>
-          <>
-            <Header />
-            {children}
-          </>
-        </StarknetProvider>
+        <ApolloGraphQLProvider>
+          <StarknetProvider>
+            <>
+              <Header />
+              {children}
+            </>
+          </StarknetProvider>
+        </ApolloGraphQLProvider>
       </body>
     </html>
   );

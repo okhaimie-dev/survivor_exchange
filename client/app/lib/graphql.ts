@@ -1,9 +1,8 @@
-import { GraphQLClient, gql } from 'graphql-request';
+import { gql } from '@apollo/client';
 import * as starknet from 'starknet';
 
-const GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/bm/torii/graphql';
-
-const client = new GraphQLClient(GRAPHQL_ENDPOINT);
+// Re-export gql for Apollo Client compatibility
+export { gql };
 
 // Metadata attribute type
 export interface MetadataAttribute {
@@ -67,7 +66,7 @@ export interface MyNFTsResponse {
   };
 }
 
-const MY_NFTS_QUERY = gql`
+export const MY_NFTS_QUERY = gql`
   query MyNFTS($accountAddress: String!) {
     tokenBalances(limit: 1000000, accountAddress: $accountAddress) {
       edges {
@@ -91,13 +90,11 @@ const MY_NFTS_QUERY = gql`
   }
 `;
 
+// Backward compatibility function - can be removed once hooks are migrated
 export async function fetchMyNFTs(accountAddress: string): Promise<MyNFTsResponse> {
-  const variables = {
-    accountAddress,
-  };
-
-  const data = await client.request<MyNFTsResponse>(MY_NFTS_QUERY, variables);
-  return data;
+  // This is now handled by Apollo Client hooks
+  // Keeping for backward compatibility
+  throw new Error('Use Apollo Client hooks instead. See useMyNFTs hook.');
 }
 
 /**
@@ -261,7 +258,7 @@ export interface AuctionsResponse {
   };
 }
 
-const AUCTIONS_QUERY = gql`
+export const AUCTIONS_QUERY = gql`
   query MyQuery {
     bm002AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
@@ -291,9 +288,11 @@ const AUCTIONS_QUERY = gql`
   }
 `;
 
+// Backward compatibility function - can be removed once hooks are migrated
 export async function fetchAuctions(): Promise<AuctionsResponse> {
-  const data = await client.request<AuctionsResponse>(AUCTIONS_QUERY);
-  return data;
+  // This is now handled by Apollo Client hooks
+  // Keeping for backward compatibility
+  throw new Error('Use Apollo Client hooks instead. See useAuctions hook.');
 }
 
 // My Listings types
@@ -303,7 +302,7 @@ export interface MyListingsResponse {
   };
 }
 
-const MY_LISTINGS_QUERY = gql`
+export const MY_LISTINGS_QUERY = gql`
   query MyListings($seller: String!) {
     bm002AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
@@ -323,11 +322,92 @@ const MY_LISTINGS_QUERY = gql`
   }
 `;
 
+// Backward compatibility function - can be removed once hooks are migrated
 export async function fetchMyListings(seller: string): Promise<MyListingsResponse> {
-  const variables = {
-    seller,
-  };
-  const data = await client.request<MyListingsResponse>(MY_LISTINGS_QUERY, variables);
-  return data;
+  // This is now handled by Apollo Client hooks
+  // Keeping for backward compatibility
+  throw new Error('Use Apollo Client hooks instead. See useMyListings hook.');
 }
 
+// Consolidated query that fetches all data at once
+export const CONSOLIDATED_QUERY = gql`
+  query ConsolidatedQuery($accountAddress: String, $seller: String) {
+    myNFTs: tokenBalances(limit: 1000000, accountAddress: $accountAddress) @skip(if: $skipNFTs) {
+      edges {
+        node {
+          tokenMetadata {
+            ... on ERC721__Token {
+              metadataName
+              metadataDescription
+              contractAddress
+              imagePath
+              metadata
+              metadataAttributes
+              name
+              symbol
+              tokenId
+            }
+          }
+        }
+      }
+    }
+    auctionItems: bm002AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          contract_address
+          item_index
+          token_id
+        }
+      }
+    }
+    auctions: bm002AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          current_bid
+          end_time
+          highest_bidder
+          item_count
+          name
+          seller
+          starting_price
+          status
+        }
+      }
+    }
+    myListings: bm002AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) @skip(if: $skipListings) {
+      edges {
+        node {
+          auction_id
+          current_bid
+          end_time
+          highest_bidder
+          item_count
+          seller
+          name
+          starting_price
+          status
+        }
+      }
+    }
+  }
+`;
+
+// Consolidated query response interface
+export interface ConsolidatedDataResponse {
+  myNFTs?: {
+    tokenBalances: {
+      edges: TokenBalanceEdge[];
+    };
+  };
+  auctionItems?: {
+    edges: AuctionItemNode[];
+  };
+  auctions?: {
+    edges: AuctionNode[];
+  };
+  myListings?: {
+    edges: AuctionNode[];
+  };
+}
