@@ -189,7 +189,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 htmlFor="starting-price"
                                 className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
                             >
-                                Starting Price (ETH)
+                                Starting Price (SURVIVOR)
                             </label>
                             <input
                                 id="starting-price"

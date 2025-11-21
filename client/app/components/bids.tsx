@@ -30,7 +30,7 @@ interface BidsProps {
 
 const formatEth = (value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return `${numValue.toFixed(2)} ETH`;
+    return `${numValue.toFixed(2)} SURVIVOR`;
 };
 
 export default function Bids({ 

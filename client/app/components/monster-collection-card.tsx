@@ -17,18 +17,18 @@ type MonsterCollectionCardProps = {
 
 export default function MonsterCollectionCard({ collection, isSelected, onSelect, nfts = [] }: MonsterCollectionCardProps) {
     const highestBidDisplay =
-        collection.highestBid !== undefined ? `${collection.highestBid.toFixed(2)} ETH` : "No bids yet";
+        collection.highestBid !== undefined ? `${collection.highestBid.toFixed(2)} SURVIVOR` : "No bids yet";
 
     const stats = [
         {
             label: "Starting",
             value: collection.startingPrice.toFixed(2),
-            suffix: "ETH",
+            suffix: "SURVIVOR",
         },
         {
             label: "Current Bid",
             value: collection.highestBid !== undefined ? collection.highestBid.toFixed(2) : "—",
-            suffix: collection.highestBid !== undefined ? "ETH" : undefined,
+            suffix: collection.highestBid !== undefined ? "SURVIVOR" : undefined,
         },
     ];
 
