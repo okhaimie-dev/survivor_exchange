@@ -64,7 +64,9 @@ export default function Bids({
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
             const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
-            setBidAmount(minimum.toFixed(2));
+            // Set default to 10% higher than minimum or last bid
+            const defaultBid = minimum * 1.1;
+            setBidAmount(defaultBid.toFixed(2));
         }
     }, [selectedCollectionId, collections]);
 
@@ -87,7 +89,8 @@ export default function Bids({
 
     const isBidValid = useMemo(() => {
         const numericBid = parseFloat(bidAmount);
-        return !Number.isNaN(numericBid) && numericBid >= minimumBid;
+        // Bid must be strictly greater than minimum (not equal)
+        return !Number.isNaN(numericBid) && numericBid > minimumBid;
     }, [bidAmount, minimumBid]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
@@ -266,8 +269,8 @@ export default function Bids({
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_185px] sm:items-end">
-                                <div className="flex flex-col gap-3 w-full">
+                            <div className="flex gap-4 sm:items-start w-full">
+                                <div className="flex flex-[0.4] flex-col gap-3 w-full">
                                     <label
                                         htmlFor="bid-amount"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
@@ -277,10 +280,11 @@ export default function Bids({
                                     <input
                                         id="bid-amount"
                                         type="number"
-                                        min={minimumBid}
+                                        min={minimumBid * 1.0001}
                                         step="0.01"
                                         value={bidAmount}
                                         onChange={(event) => setBidAmount(event.target.value)}
+                                        placeholder={(minimumBid * 1.1).toFixed(2)}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
                                     <p className="text-xs text-[rgb(186,255,188)]/70">
@@ -304,6 +308,40 @@ export default function Bids({
                                         </button>
                                     </div>
                                 </div>
+                                
+                                {(() => {
+                                    const auction = auctions.find(a => a.auction_id === selectedCollection.id);
+                                    const nfts = auction?.nfts || [];
+                                    
+                                    // Calculate total power and average power
+                                    const totalPower = nfts.reduce((sum, nft) => {
+                                        const power = parseFloat(nft.power || '0');
+                                        return sum + (isNaN(power) ? 0 : power);
+                                    }, 0);
+                                    
+                                    const averagePower = nfts.length > 0 ? totalPower / nfts.length : 0;
+                                    
+                                    return (
+                                        <div className="flex-1 grid grid-cols-1 gap-3 text-sm text-white sm:grid-cols-2 w-full">
+                                            <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
+                                                <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
+                                                    Collection Power
+                                                </p>
+                                                <p className="font-orbitron text-lg tracking-[0.12em]">
+                                                    {totalPower.toFixed(1)}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
+                                                <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
+                                                    Collection Average Power
+                                                </p>
+                                                <p className="font-orbitron text-lg tracking-[0.12em]">
+                                                    {averagePower.toFixed(1)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     </div>
