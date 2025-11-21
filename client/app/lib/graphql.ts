@@ -296,3 +296,38 @@ export async function fetchAuctions(): Promise<AuctionsResponse> {
   return data;
 }
 
+// My Listings types
+export interface MyListingsResponse {
+  bm002AuctionModels: {
+    edges: AuctionNode[];
+  };
+}
+
+const MY_LISTINGS_QUERY = gql`
+  query MyListings($seller: String!) {
+    bm002AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          current_bid
+          end_time
+          highest_bidder
+          item_count
+          seller
+          name
+          starting_price
+          status
+        }
+      }
+    }
+  }
+`;
+
+export async function fetchMyListings(seller: string): Promise<MyListingsResponse> {
+  const variables = {
+    seller,
+  };
+  const data = await client.request<MyListingsResponse>(MY_LISTINGS_QUERY, variables);
+  return data;
+}
+

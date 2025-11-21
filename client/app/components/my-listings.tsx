@@ -1,52 +1,131 @@
 import Image from "next/image";
+import moment from "moment";
+import { FormattedListing } from "../hooks/use-my-listings";
 
-type Listing = {
-    id: string;
-    name: string;
-    tokenCount: number;
-    startingPrice: string;
-    highestBid: string;
-    status: "active" | "pending" | "sold";
-    createdAt: string;
+const formatEth = (value: number | null | undefined): string => {
+    if (value === null || value === undefined) return "—";
+    return `${value.toFixed(2)} ETH`;
 };
 
-const listings: Listing[] = [
-    {
-        id: "#1127",
-        name: "Abyssal Wraith Collective",
-        tokenCount: 12,
-        startingPrice: "3.25 ETH",
-        highestBid: "4.10 ETH",
-        status: "active",
-        createdAt: "Listed 2h ago",
-    },
-    {
-        id: "#0982",
-        name: "Crystal Spire Sentinels",
-        tokenCount: 8,
-        startingPrice: "1.90 ETH",
-        highestBid: "—",
-        status: "pending",
-        createdAt: "Queued 14h ago",
-    },
-    {
-        id: "#0544",
-        name: "Voidborne Choir",
-        tokenCount: 16,
-        startingPrice: "5.75 ETH",
-        highestBid: "6.40 ETH",
-        status: "sold",
-        createdAt: "Closed yesterday",
-    },
-];
-
-const statusStyles: Record<Listing["status"], string> = {
-    active: "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40",
-    pending: "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30",
-    sold: "bg-white/10 text-white border border-white/20",
+const formatTimeAgo = (timestamp: string): string => {
+    if (!timestamp) return "Unknown";
+    
+    try {
+        // Handle hex format (e.g., "0x691e5dc5") or decimal string
+        let timestampNum: number;
+        
+        // Check if it's a hex string (starts with 0x)
+        if (timestamp.startsWith('0x') || timestamp.startsWith('0X')) {
+            timestampNum = parseInt(timestamp, 16);
+        } else {
+            // Try parsing as decimal first
+            timestampNum = parseInt(timestamp, 10);
+        }
+        
+        // If timestamp is 0x0 or 0, return empty string to render nothing
+        if (timestampNum === 0) return "";
+        
+        if (isNaN(timestampNum)) return "Unknown";
+        
+        // Convert Unix timestamp to date string format: "2025-11-20 01:16:05"
+        const dateObj = new Date(timestampNum * 1000); // Convert seconds to milliseconds
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const hours = String(dateObj.getHours()).padStart(2, '0');
+        const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+        const seconds = String(dateObj.getSeconds()).padStart(2, '0');
+        const dateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        
+        // Use moment on the formatted date string
+        const date = moment(dateString, 'YYYY-MM-DD HH:mm:ss');
+        const fromNow = date.fromNow();
+        
+        console.log('timestamp:', timestamp);
+        console.log('decimal:', timestampNum);
+        console.log('moment:', fromNow);
+        
+        return fromNow;
+    } catch {
+        return "Unknown";
+    }
 };
 
-export default function MyListings() {
+const getStatusStyle = (status: string): string => {
+    // Handle numeric status codes
+    if (status == "1") {
+        return "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40";
+    }
+    if (status == "2") {
+        return "bg-white/10 text-white border border-white/20";
+    }
+    if (status === "pending" || status === "queued") {
+        return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    return "bg-white/10 text-white border border-white/20";
+};
+
+const getStatusLabel = (status: string): string => {
+    if (status == "1") return "ongoing";
+    if (status == "2") return "expired";
+    return status;
+};
+
+interface MyListingsProps {
+    listings: FormattedListing[];
+    loading: boolean;
+    error: Error | null;
+}
+
+export default function MyListings({ listings, loading, error }: MyListingsProps) {
+    if (loading) {
+        return (
+            <section className="flex w-full flex-col gap-6">
+                <header className="flex flex-col gap-2">
+                    <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">My Listings</h2>
+                    <p className="text-sm text-[rgb(186,255,188)]/70">
+                        Review and manage every collection you have introduced to the Loot Auction habitat.
+                    </p>
+                </header>
+                <div className="flex items-center justify-center py-12">
+                    <p className="text-[rgb(186,255,188)]/70">Loading listings...</p>
+                </div>
+            </section>
+        );
+    }
+
+    if (error) {
+        return (
+            <section className="flex w-full flex-col gap-6">
+                <header className="flex flex-col gap-2">
+                    <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">My Listings</h2>
+                    <p className="text-sm text-[rgb(186,255,188)]/70">
+                        Review and manage every collection you have introduced to the Loot Auction habitat.
+                    </p>
+                </header>
+                <div className="flex items-center justify-center py-12">
+                    <p className="text-red-400">Error loading listings: {error.message}</p>
+                </div>
+            </section>
+        );
+    }
+
+    if (listings.length === 0) {
+        return (
+            <section className="flex w-full flex-col gap-6">
+                <header className="flex flex-col gap-2">
+                    <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">My Listings</h2>
+                    <p className="text-sm text-[rgb(186,255,188)]/70">
+                        Review and manage every collection you have introduced to the Loot Auction habitat.
+                    </p>
+                </header>
+                <div className="flex items-center justify-center py-12">
+                    <p className="text-[rgb(186,255,188)]/70">No listings found. Create your first auction to get started!</p>
+                </div>
+            </section>
+        );
+    }
+
     return (
         <section className="flex w-full flex-col gap-6">
             <header className="flex flex-col gap-2">
@@ -80,7 +159,12 @@ export default function MyListings() {
                                 <h3 className="text-lg font-orbitron uppercase tracking-[0.2em] text-white">
                                     {listing.name}
                                 </h3>
-                                <p className="text-xs text-[rgb(186,255,188)]/70">{listing.createdAt}</p>
+                                {(() => {
+                                    const timeAgo = formatTimeAgo(listing.endTime);
+                                    return timeAgo ? (
+                                        <p className="text-xs text-[rgb(186,255,188)]/70">{timeAgo}</p>
+                                    ) : null;
+                                })()}
                             </div>
                         </div>
 
@@ -91,19 +175,19 @@ export default function MyListings() {
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Starting</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.startingPrice}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatEth(listing.startingPrice)}</p>
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Top Bid</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.highestBid}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatEth(listing.currentBid)}</p>
                             </div>
                         </div>
 
                         <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:items-end">
                             <span
-                                className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-orbitron uppercase tracking-[0.3em] ${statusStyles[listing.status]}`}
+                                className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-orbitron uppercase tracking-[0.3em] ${getStatusStyle(listing.status)}`}
                             >
-                                {listing.status}
+                                {getStatusLabel(listing.status)}
                             </span>
                             <button
                                 type="button"

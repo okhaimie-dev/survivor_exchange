@@ -7,6 +7,7 @@ import Bids from "./bids";
 import MyListings from "./my-listings";
 import { FormattedNFT, AuctionItem } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
+import { FormattedListing } from "../hooks/use-my-listings";
 
 interface BidAuctionMyListingsProps {
     nfts: FormattedNFT[];
@@ -19,6 +20,9 @@ interface BidAuctionMyListingsProps {
     totalPages: number;
     setCurrentPage: (page: number) => void;
     getAuctionItems: (auctionId: string) => AuctionItem[];
+    listings: FormattedListing[];
+    listingsLoading: boolean;
+    listingsError: Error | null;
 }
 
 export default function BidAuctionMyListingsRent({ 
@@ -31,7 +35,10 @@ export default function BidAuctionMyListingsRent({
     currentPage,
     totalPages,
     setCurrentPage,
-    getAuctionItems
+    getAuctionItems,
+    listings,
+    listingsLoading,
+    listingsError
 }: BidAuctionMyListingsProps) {
     const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
     return ( 
@@ -60,7 +67,13 @@ export default function BidAuctionMyListingsRent({
                     />
                 )}
                 {activeTab === "auction" && <Auction nfts={nfts} loading={loading} error={error} />}
-                {activeTab === "my-listings" && <MyListings />}
+                {activeTab === "my-listings" && (
+                    <MyListings 
+                        listings={listings}
+                        loading={listingsLoading}
+                        error={listingsError}
+                    />
+                )}
             </div>
         </div>
     )
