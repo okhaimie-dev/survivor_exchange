@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useAccount, useExplorer } from "@starknet-react/core";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import { FormattedNFT } from "../lib/graphql";
@@ -9,12 +10,19 @@ interface AuctionProps {
     error: Error | null;
 }
 
+// Contract address for the auction marketplace
+const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
+
 export default function Auction({ nfts, loading, error }: AuctionProps) {
+    const { account, address } = useAccount();
+    const explorer = useExplorer();
     const pageSize = 3;
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [txnHash, setTxnHash] = useState<string | undefined>();
 
     const toggleCardSelection = useCallback((nftId: string) => {
         setSelectedNFTIds((previouslySelected) => {
@@ -77,6 +85,87 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const handleClearSelection = useCallback(() => {
         setSelectedNFTIds([]);
     }, []);
+
+    const handleListSelection = useCallback(async () => {
+        if (!account || !address || !hasSelection || !startingPrice || !collectionName.trim()) {
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+
+            // Generate a unique auction_id (using timestamp + random for uniqueness)
+            const auctionId = Math.floor(Date.now() / 1000) % 0xFFFFFFFF; // Ensure it fits in u32
+
+            // Convert starting price to u8 (assuming it's in smallest units)
+            // Note: u8 only supports 0-255, so we'll convert the price appropriately
+            // If price is in SURVIVOR (wei-like), we might need to scale it
+            const priceNum = parseFloat(startingPrice);
+            const startingPriceU8 = Math.min(255, Math.max(0, Math.floor(priceNum * 100))); // Convert to cents, capped at 255
+
+            // Get selected NFTs with their data
+            const selectedNFTsData = selectedNFTs;
+
+            // Prepare token IDs and collection addresses
+            const tokenIds = selectedNFTsData.map(nft => parseInt(nft.tokenId, 10));
+            // Use user's wallet address as collection address (as per requirements)
+            const collectionAddresses = selectedNFTsData.map(() => address);
+
+            // Prepare multicall calls
+            const calls = [];
+
+            // First call: create_auction
+            // Note: The contract interface shows create_auction takes auction_id and starting_price
+            // The name is not passed to create_auction - it might be stored separately or handled differently
+            calls.push({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "create_auction",
+                calldata: [auctionId, startingPriceU8]
+            });
+
+            // Second call: add_item or add_items
+            if (selectedNFTsData.length === 1) {
+                // Single item - use add_item
+                calls.push({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "add_item",
+                    calldata: [auctionId, tokenIds[0], address]
+                });
+            } else {
+                // Multiple items - use add_items
+                // Format: auction_id, len(token_ids), token_ids..., len(collection_addresses), collection_addresses...
+                const calldata = [
+                    auctionId,
+                    tokenIds.length,
+                    ...tokenIds,
+                    collectionAddresses.length,
+                    ...collectionAddresses
+                ];
+                calls.push({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "add_items",
+                    calldata
+                });
+            }
+
+            // Execute multicall using account.execute
+            const response = await account.execute(calls);
+            
+            console.log("Transaction submitted:", response);
+            setTxnHash(response.transaction_hash);
+
+            // Clear form after successful submission
+            setCollectionName("");
+            setStartingPrice("");
+            setSelectedNFTIds([]);
+
+        } catch (err) {
+            console.error("Error listing selection:", err);
+            alert(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [account, address, hasSelection, startingPrice, collectionName, selectedNFTs]);
 
     if (loading) {
         return (
@@ -212,14 +301,15 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
-                                disabled={!hasSelection || !startingPrice || !collectionName.trim()}
+                                onClick={handleListSelection}
+                                disabled={!hasSelection || !startingPrice || !collectionName.trim() || !address || isSubmitting}
                                 className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                    hasSelection && startingPrice && collectionName.trim()
+                                    hasSelection && startingPrice && collectionName.trim() && address && !isSubmitting
                                         ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                                 }`}
                             >
-                                List Selection
+                                {isSubmitting ? "Submitting..." : "List Selection"}
                             </button>
                             <button
                                 type="button"
@@ -234,6 +324,21 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 Clear Selection
                             </button>
                         </div>
+                        {txnHash && (
+                            <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-3">
+                                <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                                    Transaction Submitted
+                                </p>
+                                <a
+                                    href={explorer.transaction(txnHash)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
+                                >
+                                    {txnHash}
+                                </a>
+                            </div>
+                        )}
                         <p className="text-xs text-[rgb(186,255,188)]/70">
                             Tip: You can list multiple NFTs together as a themed bundle. Buyers love cohesive collections with
                             complementary traits.
