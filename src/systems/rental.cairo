@@ -1,4 +1,4 @@
-use beast_marketplace::models::index::Rental;
+use survivor_exchange::models::index::Rental;
 
 // define the interface
 
@@ -30,11 +30,11 @@ pub trait IRentalMarketplace<TContractState> {
 // dojo decorator
 #[dojo::contract]
 pub mod rental_systems {
-    use beast_marketplace::constants::DEFAULT_NS;
-    use beast_marketplace::store::StoreTrait;
     use dojo::event::EventStorage;
     use dojo::model::ModelStorage;
     use starknet::{ContractAddress, get_caller_address};
+    use survivor_exchange::constants::DEFAULT_NS;
+    use survivor_exchange::store::StoreTrait;
     use super::{IRentalMarketplace, Rental};
 
     #[abi(embed_v0)]

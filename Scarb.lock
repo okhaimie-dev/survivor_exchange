@@ -2,15 +2,6 @@
 version = 1
 
 [[package]]
-name = "beast_marketplace"
-version = "1.8.0"
-dependencies = [
- "dojo",
- "dojo_cairo_test",
- "openzeppelin_token",
-]
-
-[[package]]
 name = "dojo"
 version = "1.8.0"
 source = "registry+https://scarbs.xyz/"
@@ -76,3 +67,12 @@ name = "openzeppelin_utils"
 version = "2.0.0"
 source = "registry+https://scarbs.xyz/"
 checksum = "sha256:bf799c794139837f397975ffdf6a7ed5032d198bbf70e87a8f44f144a9dfc505"
+
+[[package]]
+name = "survivor_exchange"
+version = "1.8.0"
+dependencies = [
+ "dojo",
+ "dojo_cairo_test",
+ "openzeppelin_token",
+]

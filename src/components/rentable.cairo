@@ -1,24 +1,14 @@
 #[starknet::component]
 pub mod RentableComponent {
-    // Starknet imports
-
-    // Dojo imports
-
-    // Internal imports
-
-    use beast_marketplace::models::rental::{Rental, RentalAssert, RentalTrait};
-    use beast_marketplace::store::StoreTrait;
-    use beast_marketplace::types::status::{RentalStatus, Status};
     use dojo::world::WorldStorage;
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
+    use survivor_exchange::models::rental::{Rental, RentalAssert, RentalTrait};
+    use survivor_exchange::store::StoreTrait;
+    use survivor_exchange::types::status::{AuctionStatus, RentalStatus};
     use crate::models::auction::Auction;
-
-    // Storage
 
     #[storage]
     pub struct Storage {}
-
-    // Events
 
     #[event]
     #[derive(Drop, starknet::Event)]

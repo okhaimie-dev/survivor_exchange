@@ -1,5 +1,5 @@
-use beast_marketplace::constants::Errors;
-pub use beast_marketplace::models::index::Rental;
+use survivor_exchange::constants::Errors;
+pub use survivor_exchange::models::index::Rental;
 
 #[generate_trait]
 pub impl RentalImpl of RentalTrait {

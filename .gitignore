@@ -1,6 +1,2 @@
 target
 dojo_mainnet.toml
-node_modules/
-**/node_modules/
-client/.next/
-.next/

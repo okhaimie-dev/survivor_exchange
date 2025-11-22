@@ -1,9 +1,9 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x26d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef",
-    "seed": "dojo_starter",
-    "name": "Dojo starter",
+    "address": "0x6465e6079436dc4810ec03a70bd2936fa6ce7f4611767d7df1e612788c373b8",
+    "seed": "bm_0_0_2",
+    "name": "Survivor Exchange",
     "entrypoints": [
       "uuid",
       "set_metadata",
@@ -33,14 +33,33 @@
   },
   "contracts": [
     {
-      "address": "0x1ae76ae877518f905b73b643d96731e71e6b848ba68824adb4f1a77760fc3c7",
-      "class_hash": "0x1e4e6be422f3800cb260624f990b0e0a8250217cbd3c79db6c90a8d0c8527a0",
+      "address": "0x51f7f8db893bf5d94a7cd000ef3ff4d0ba811bf1cdd5ace1d46cd4030b8a3cb",
+      "class_hash": "0x3b68414ac2e9f166a6bbbb4d78ac5961d121ec8e9351e646df9f3598360a210",
       "init_calldata": [],
-      "tag": "dojo_starter-actions",
-      "selector": "0x7a1c71029f2d0b38e3ac89b09931d08b6e48417e079c289ff19a8698d0cba33",
+      "tag": "bm_0_0_2-admin_systems",
+      "selector": "0x61ac3fef3fc58dcf3acf89f49af832f4a3a5c851c7fefc3a945ed1a65a9bd07",
       "systems": [
-        "spawn",
-        "move",
+        "dojo_init",
+        "add_supported_collection",
+        "remove_supported_collection",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x23886a55d413d1d85881ecb9a6fe14ac9e6c53690628f10de06f64a1ccedc5",
+      "class_hash": "0x3479d7f3e2c27c334cebbea44ee411dd4fb4e81902cc480b62804141d1e5a9f",
+      "init_calldata": [],
+      "tag": "bm_0_0_2-auction_systems",
+      "selector": "0x4a8c01bfa9d6ec54ff5df2121cb487c6a7e2392bc67d009fa979317d04e4b9a",
+      "systems": [
+        "create_auction",
+        "add_item",
+        "add_items",
+        "start_auction",
+        "bid",
+        "withdraw_bid",
+        "end_auction",
+        "settle_auction",
         "upgrade"
       ]
     }
@@ -50,99 +69,324 @@
     {
       "members": [
         {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress",
+          "name": "auction_id",
+          "type": "core::integer::u32",
           "key": true
         },
         {
-          "name": "directions",
-          "type": "core::array::Array::<dojo_starter::models::Direction>",
+          "name": "name",
+          "type": "core::felt252",
           "key": false
-        }
-      ],
-      "class_hash": "0x2559fd839331a03a9b36aa013a7a8b07d0c5f1ad5e011ff32e1f0d2d2c8bac0",
-      "tag": "dojo_starter-DirectionsAvailable",
-      "selector": "0x77844f1facb51e60e546a9832d56c6bd04fa23be4fd5b57290caae5e9a3c1e4"
-    },
-    {
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress",
-          "key": true
         },
         {
-          "name": "remaining",
+          "name": "starting_price",
           "type": "core::integer::u8",
           "key": false
         },
         {
-          "name": "last_direction",
-          "type": "core::option::Option::<dojo_starter::models::Direction>",
+          "name": "current_bid",
+          "type": "core::integer::u8",
           "key": false
         },
         {
-          "name": "can_move",
+          "name": "highest_bidder",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "status",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "item_count",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252",
+          "key": false
+        }
+      ],
+      "class_hash": "0x1bd933bbc6ce8d910d92ca515300e4923ee24a3d977dbc78c16af9201ba1643",
+      "tag": "bm_0_0_2-Auction",
+      "selector": "0x317a42ae2e7578b3e7aea317e947744b76320340554afe1ae598ebca943cca2"
+    },
+    {
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "item_index",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "token_id",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "contract_address",
+          "type": "core::felt252",
+          "key": false
+        }
+      ],
+      "class_hash": "0x15808374daa08ca6fe788d169f85b0212c14d804413171abfa5533241d4db96",
+      "tag": "bm_0_0_2-AuctionItem",
+      "selector": "0x17180f3a7f706b8259b27b7bd23cc2eb59fb26f58c1b0d2ae77b3f910bf97a1"
+    },
+    {
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "bidder",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u8",
+          "key": false
+        }
+      ],
+      "class_hash": "0x6a826a1cce93801d579b343f8ced88489aa1d022a481993aba5d140b462ddcd",
+      "tag": "bm_0_0_2-Bid",
+      "selector": "0x4e5f41af849dbefcddab70040e8f4f6814d84ce2a4823be408f27dabbe584bc"
+    },
+    {
+      "members": [
+        {
+          "name": "settings_id",
+          "type": "core::integer::u8",
+          "key": true
+        },
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16",
+          "key": false
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "admin",
+          "type": "core::felt252",
+          "key": false
+        }
+      ],
+      "class_hash": "0x31056dcf0242470c77dfab9918875bd690f8207e78464386c7f10102b8d9dd8",
+      "tag": "bm_0_0_2-ExchangeSettings",
+      "selector": "0x349c52b46c97d2beab02c37db98d52eb55a0fe43ed20df8b757a3acedba1269"
+    },
+    {
+      "members": [
+        {
+          "name": "token_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "rental_price",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "collateral",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "renter",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "start_time",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "rental_status",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "owner",
+          "type": "core::felt252",
+          "key": false
+        }
+      ],
+      "class_hash": "0x402bedbb7fc249f582ce4a4d35dd5356d5cf9120a46dbead84fc0bedfad10c2",
+      "tag": "bm_0_0_2-Rental",
+      "selector": "0xa09a2c662686c4fc3aa9271720af73c4b4ae7e5e0ef555eb587eaa983d07ce"
+    },
+    {
+      "members": [
+        {
+          "name": "collection_address",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "standard",
+          "type": "core::integer::u8",
+          "key": false
+        }
+      ],
+      "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
+      "tag": "bm_0_0_2-SupportedNFTCollection",
+      "selector": "0x54e8d21be0c631db91fea1d932e6383de474bda3ac8e7c4399235b22c98eb2a"
+    },
+    {
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x2e720496fde1ce54d91d25f317e923c86fd2dc26c9f1079f676f783af789784",
+      "tag": "bm_0_0_2-Vault",
+      "selector": "0x3434117478a27168fdde300c11dedb7ed6ff0217a943c04ac9ee80b152d7bdc"
+    },
+    {
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "user",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "claimed",
           "type": "core::bool",
           "key": false
-        }
-      ],
-      "class_hash": "0x6a76fa6031748b3832fd5916ce4b4e7124c39f523c8e7b5d83da40cc93fc63d",
-      "tag": "dojo_starter-Moves",
-      "selector": "0x2a29373f1af8348bd366a990eb3a342ef2cbe5e85160539eaca3441a673f468"
-    },
-    {
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress",
-          "key": true
         },
         {
-          "name": "vec",
-          "type": "dojo_starter::models::Vec2",
+          "name": "updated_at",
+          "type": "core::integer::u64",
           "key": false
         }
       ],
-      "class_hash": "0x1f7793c7abcd26a4fb648f883a947c8e6d74077b7161a008e1f1966b3b1f317",
-      "tag": "dojo_starter-Position",
-      "selector": "0x2ac8b4c190f7031b9fc44312e6b047a1dce0b3f2957c33a935ca7846a46dd5b"
-    },
-    {
-      "members": [
-        {
-          "name": "identity",
-          "type": "core::starknet::contract_address::ContractAddress",
-          "key": true
-        },
-        {
-          "name": "position",
-          "type": "core::array::Span::<(core::integer::u8, core::integer::u128)>",
-          "key": false
-        }
-      ],
-      "class_hash": "0x71686e5c13179d564fbb3fe4cf68ad197e2722a0869502cb3017e2cf70ffc3",
-      "tag": "dojo_starter-PositionCount",
-      "selector": "0x44e8e8c3aea54e97e01563cacc08abb4a8ce8c468cd4d3a332bca12bfc2290d"
+      "class_hash": "0x78503a10f5b7095dd3266a9653d03d53bb8964908c8ba99e65a4ed354732a34",
+      "tag": "bm_0_0_2-VaultShare",
+      "selector": "0x292f459c16ab52d22636100a0ab290bcfd9c98855bf95365b49e7cf28a3a440"
     }
   ],
   "events": [
     {
       "members": [
         {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress",
+          "name": "auction_id",
+          "type": "core::integer::u32",
           "key": true
         },
         {
-          "name": "direction",
-          "type": "dojo_starter::models::Direction",
+          "name": "status",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64",
           "key": false
         }
       ],
-      "class_hash": "0x1dc24a2235f0735e79b159a1ec312001651aee14281446b703b76b17b5dcf0c",
-      "tag": "dojo_starter-Moved",
-      "selector": "0x504403e5c02b6442527721fc464d9ea5fc8f1ee600ab5ccd5c0845d36fd45f1"
+      "class_hash": "0x50cf7a47be5469dae0c8904231c26bda24428131436ce5dee712a84c5e670d7",
+      "tag": "bm_0_0_2-AuctionEvent",
+      "selector": "0x50499027cf0ea9b33c253db4c9ea6577619dbb05ac46b8b22bee7b8cfb58445"
+    },
+    {
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "bidder",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u8",
+          "key": false
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64",
+          "key": false
+        }
+      ],
+      "class_hash": "0x2ddd3d853954e8371cf65c501d616bd34bff3265f4a5a490934f7b4ed48d028",
+      "tag": "bm_0_0_2-BidPlaced",
+      "selector": "0x127a6924e0fdc03860a1f4a5c29601f92baa5e6fad50508318048e0cb2789ce"
     }
   ],
   "external_contracts": [],
@@ -159,16 +403,6 @@
         {
           "name": "snapshot",
           "type": "@core::array::Array::<(core::felt252, dojo::meta::introspect::Ty)>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "core::array::Span::<(core::integer::u8, core::integer::u128)>",
-      "members": [
-        {
-          "name": "snapshot",
-          "type": "@core::array::Array::<(core::integer::u8, core::integer::u128)>"
         }
       ]
     },
@@ -194,11 +428,31 @@
     },
     {
       "type": "struct",
+      "name": "core::array::Span::<core::integer::u32>",
+      "members": [
+        {
+          "name": "snapshot",
+          "type": "@core::array::Array::<core::integer::u32>"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "core::array::Span::<core::integer::u8>",
       "members": [
         {
           "name": "snapshot",
           "type": "@core::array::Array::<core::integer::u8>"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "core::array::Span::<core::starknet::contract_address::ContractAddress>",
+      "members": [
+        {
+          "name": "snapshot",
+          "type": "@core::array::Array::<core::starknet::contract_address::ContractAddress>"
         }
       ]
     },
@@ -291,20 +545,6 @@
         {
           "name": "Some",
           "type": "core::integer::u32"
-        },
-        {
-          "name": "None",
-          "type": "()"
-        }
-      ]
-    },
-    {
-      "type": "enum",
-      "name": "core::option::Option::<dojo_starter::models::Direction>",
-      "variants": [
-        {
-          "name": "Some",
-          "type": "dojo_starter::models::Direction"
         },
         {
           "name": "None",
@@ -1987,256 +2227,12 @@
       "state_mutability": "view"
     },
     {
-      "type": "enum",
-      "name": "dojo_starter::models::Direction",
-      "variants": [
-        {
-          "name": "Left",
-          "type": "()"
-        },
-        {
-          "name": "Right",
-          "type": "()"
-        },
-        {
-          "name": "Up",
-          "type": "()"
-        },
-        {
-          "name": "Down",
-          "type": "()"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::DirectionsAvailable",
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "directions",
-          "type": "core::array::Array::<dojo_starter::models::Direction>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::DirectionsAvailableValue",
-      "members": [
-        {
-          "name": "directions",
-          "type": "core::array::Array::<dojo_starter::models::Direction>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::Moves",
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "remaining",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "last_direction",
-          "type": "core::option::Option::<dojo_starter::models::Direction>"
-        },
-        {
-          "name": "can_move",
-          "type": "core::bool"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::MovesValue",
-      "members": [
-        {
-          "name": "remaining",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "last_direction",
-          "type": "core::option::Option::<dojo_starter::models::Direction>"
-        },
-        {
-          "name": "can_move",
-          "type": "core::bool"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::Position",
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "vec",
-          "type": "dojo_starter::models::Vec2"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::PositionCount",
-      "members": [
-        {
-          "name": "identity",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "position",
-          "type": "core::array::Span::<(core::integer::u8, core::integer::u128)>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::PositionCountValue",
-      "members": [
-        {
-          "name": "position",
-          "type": "core::array::Span::<(core::integer::u8, core::integer::u128)>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::PositionValue",
-      "members": [
-        {
-          "name": "vec",
-          "type": "dojo_starter::models::Vec2"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::models::Vec2",
-      "members": [
-        {
-          "name": "x",
-          "type": "core::integer::u32"
-        },
-        {
-          "name": "y",
-          "type": "core::integer::u32"
-        }
-      ]
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::models::m_DirectionsAvailable::Event",
-      "kind": "enum",
-      "variants": []
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::models::m_Moves::Event",
-      "kind": "enum",
-      "variants": []
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::models::m_Position::Event",
-      "kind": "enum",
-      "variants": []
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::models::m_PositionCount::Event",
-      "kind": "enum",
-      "variants": []
-    },
-    {
-      "type": "interface",
-      "name": "dojo_starter::systems::actions::IActions",
-      "items": [
-        {
-          "type": "function",
-          "name": "spawn",
-          "inputs": [],
-          "outputs": [],
-          "state_mutability": "external"
-        },
-        {
-          "type": "function",
-          "name": "move",
-          "inputs": [
-            {
-              "name": "direction",
-              "type": "dojo_starter::models::Direction"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "external"
-        }
-      ]
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::systems::actions::actions::Event",
-      "kind": "enum",
-      "variants": [
-        {
-          "name": "UpgradeableEvent",
-          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
-          "kind": "nested"
-        },
-        {
-          "name": "WorldProviderEvent",
-          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
-          "kind": "nested"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::systems::actions::actions::Moved",
-      "members": [
-        {
-          "name": "player",
-          "type": "core::starknet::contract_address::ContractAddress"
-        },
-        {
-          "name": "direction",
-          "type": "dojo_starter::models::Direction"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "dojo_starter::systems::actions::actions::MovedValue",
-      "members": [
-        {
-          "name": "direction",
-          "type": "dojo_starter::models::Direction"
-        }
-      ]
-    },
-    {
-      "type": "event",
-      "name": "dojo_starter::systems::actions::actions::e_Moved::Event",
-      "kind": "enum",
-      "variants": []
-    },
-    {
       "type": "function",
       "name": "ensure_abi",
       "inputs": [
         {
           "name": "event",
-          "type": "dojo_starter::systems::actions::actions::Moved"
+          "type": "survivor_exchange::events::index::BidPlaced"
         }
       ],
       "outputs": [],
@@ -2255,11 +2251,748 @@
       "inputs": [
         {
           "name": "value",
-          "type": "dojo_starter::systems::actions::actions::MovedValue"
+          "type": "survivor_exchange::events::index::BidPlacedValue"
         }
       ],
       "outputs": [],
       "state_mutability": "view"
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::components::auctionable::AuctionableComponent::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::events::index::AuctionEvent",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::events::index::AuctionEventValue",
+      "members": [
+        {
+          "name": "status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::events::index::BidPlaced",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "bidder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::events::index::BidPlacedValue",
+      "members": [
+        {
+          "name": "bidder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "timestamp",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::events::index::e_AuctionEvent::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::events::index::e_BidPlaced::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::Auction",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "name",
+          "type": "core::felt252"
+        },
+        {
+          "name": "starting_price",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_bid",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_bidder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "item_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::AuctionItem",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "item_index",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "token_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "contract_address",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::AuctionItemValue",
+      "members": [
+        {
+          "name": "token_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "contract_address",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::AuctionValue",
+      "members": [
+        {
+          "name": "name",
+          "type": "core::felt252"
+        },
+        {
+          "name": "starting_price",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "current_bid",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "highest_bidder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "item_count",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "seller",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::Bid",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "bidder",
+          "type": "core::felt252"
+        },
+        {
+          "name": "amount",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::BidValue",
+      "members": [
+        {
+          "name": "amount",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::ExchangeSettings",
+      "members": [
+        {
+          "name": "settings_id",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16"
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252"
+        },
+        {
+          "name": "admin",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::ExchangeSettingsValue",
+      "members": [
+        {
+          "name": "platform_fee",
+          "type": "core::integer::u16"
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252"
+        },
+        {
+          "name": "admin",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::Rental",
+      "members": [
+        {
+          "name": "token_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "rental_price",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "collateral",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "renter",
+          "type": "core::felt252"
+        },
+        {
+          "name": "start_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "rental_status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "owner",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::RentalValue",
+      "members": [
+        {
+          "name": "rental_price",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "duration",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "collateral",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "renter",
+          "type": "core::felt252"
+        },
+        {
+          "name": "start_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "rental_status",
+          "type": "core::integer::u8"
+        },
+        {
+          "name": "owner",
+          "type": "core::felt252"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::SupportedNFTCollection",
+      "members": [
+        {
+          "name": "collection_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "standard",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::SupportedNFTCollectionValue",
+      "members": [
+        {
+          "name": "standard",
+          "type": "core::integer::u8"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::Vault",
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultShare",
+      "members": [
+        {
+          "name": "vault_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "user",
+          "type": "core::felt252"
+        },
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "claimed",
+          "type": "core::bool"
+        },
+        {
+          "name": "updated_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultShareValue",
+      "members": [
+        {
+          "name": "share_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "deposited_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "claimed",
+          "type": "core::bool"
+        },
+        {
+          "name": "updated_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::VaultValue",
+      "members": [
+        {
+          "name": "locked_amount",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "token_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "created_at",
+          "type": "core::integer::u64"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_Auction::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_AuctionItem::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_Bid::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_ExchangeSettings::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_Rental::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_SupportedNFTCollection::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_Vault::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_VaultShare::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "interface",
+      "name": "survivor_exchange::systems::admin::IMarketplaceAdmin",
+      "items": [
+        {
+          "type": "function",
+          "name": "add_supported_collection",
+          "inputs": [
+            {
+              "name": "collection_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "standard",
+              "type": "core::integer::u8"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "remove_supported_collection",
+          "inputs": [
+            {
+              "name": "collection_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::systems::admin::admin_systems::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "survivor_exchange::systems::auction::IAuctionMarketplace",
+      "items": [
+        {
+          "type": "function",
+          "name": "create_auction",
+          "inputs": [
+            {
+              "name": "name",
+              "type": "core::felt252"
+            },
+            {
+              "name": "starting_price",
+              "type": "core::integer::u8"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "add_item",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "token_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "collection_address",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "add_items",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "token_ids",
+              "type": "core::array::Span::<core::integer::u32>"
+            },
+            {
+              "name": "collection_addresses",
+              "type": "core::array::Span::<core::starknet::contract_address::ContractAddress>"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "start_auction",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "duration",
+              "type": "core::integer::u64"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "bid",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "bid_amount",
+              "type": "core::integer::u8"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "withdraw_bid",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "end_auction",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "settle_auction",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::systems::auction::auction_systems::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "AuctionableEvent",
+          "type": "survivor_exchange::components::auctionable::AuctionableComponent::Event",
+          "kind": "flat"
+        }
+      ]
     }
   ]
 }
