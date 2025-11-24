@@ -34,7 +34,7 @@ pub mod AuctionableComponent {
             items: Span<(u32, ContractAddress)>,
             duration: Option<u64>,
         ) {
-            assert(items.len() > 0, Errors::NO_ITEMS);
+            assert(items.len() >= 1 && items.len() <= 20, Errors::INVALID_ITEMS_COUNT);
 
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
@@ -43,24 +43,29 @@ pub mod AuctionableComponent {
             let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
             auction.auction_id = auction_id;
             store.set_auction(@auction);
-            store.auction_created(auction, get_block_timestamp());
 
-            let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET() };
-            for item_ref in items {
-                let (token_id, _) = *item_ref;
-                assert(
-                    seller == beast_dispatcher.owner_of(token_id.into()), Errors::NOT_BEAST_OWNER,
-                );
-            }
-
+            let mut item_index = 0;
             for item_ref in items {
                 let (token_id, collection) = *item_ref;
+                let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
+                assert(
+                    seller == collection_dispatcher.owner_of(token_id.into()),
+                    Errors::NOT_BEAST_OWNER,
+                );
+
+                // TODO: Rentals check: let rental = store.rental(token_id);
+                // rental.assert_not_active();
+
                 self.add_item(world, auction_id, token_id, collection);
+                item_index += 1;
             }
+
+            //store.auction_items_added(auction_id, item_index); // Post-items event
+            store.auction_created(auction, get_block_timestamp()); // Now with items
 
             if let Option::Some(dur) = duration {
                 self.start_auction(world, auction_id, dur);
-            };
+            }
         }
 
         fn add_item(
