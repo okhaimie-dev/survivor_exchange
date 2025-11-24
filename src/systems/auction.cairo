@@ -5,9 +5,7 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Initializes a draft auction (status=0, beast_count=0). Items must be added before starting.
     /// - `auction_id`: Unique ID for the auction (caller-generated or from counter).
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
-    fn create_auction(ref self: TContractState, name: felt252, starting_price: u8);
-
-    fn create_auction_with_items(
+    fn create_auction(
         ref self: TContractState,
         name: felt252,
         starting_price: u8,
@@ -86,22 +84,14 @@ pub mod auction_systems {
 
     #[abi(embed_v0)]
     impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
-        fn create_auction(ref self: ContractState, name: felt252, starting_price: u8) {
-            self.auctionable.create(self.world_default(), name, starting_price);
-        }
-
-        fn create_auction_with_items(
+        fn create_auction(
             ref self: ContractState,
             name: felt252,
             starting_price: u8,
             items: Span<(u32, ContractAddress)>,
             duration: Option<u64>,
         ) {
-            self
-                .auctionable
-                .create_auction_with_items(
-                    self.world_default(), name, starting_price, items, duration,
-                );
+            self.auctionable.create(self.world_default(), name, starting_price, items, duration);
         }
 
         fn add_item(

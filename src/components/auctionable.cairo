@@ -31,23 +31,6 @@ pub mod AuctionableComponent {
             world: WorldStorage,
             name: felt252,
             starting_price: u8,
-        ) {
-            let mut store = StoreTrait::new(world);
-            let seller = get_caller_address();
-
-            let auction_id: u32 = store.world.dispatcher.uuid();
-            let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
-            auction.auction_id = auction_id;
-
-            store.set_auction(@auction);
-            store.auction_created(auction, get_block_timestamp())
-        }
-
-        fn create_auction_with_items(
-            self: @ComponentState<TContractState>,
-            world: WorldStorage,
-            name: felt252,
-            starting_price: u8,
             items: Span<(u32, ContractAddress)>,
             duration: Option<u64>,
         ) {
@@ -57,22 +40,24 @@ pub mod AuctionableComponent {
             let seller = get_caller_address();
             let auction_id: u32 = store.world.dispatcher.uuid();
 
-            // Bootstrap initial draft auction
             let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
             auction.auction_id = auction_id;
             store.set_auction(@auction);
             store.auction_created(auction, get_block_timestamp());
 
-            // Batch add items using for-loop iteration (SpanTrait enables this)
-            let mut item_index = 0_u32;
+            let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET() };
             for item_ref in items {
-                let item = *item_ref;
-                let (token_id, collection) = item;
-                self.add_item(world, auction_id, token_id, collection);
-                item_index += 1;
+                let (token_id, _) = *item_ref;
+                assert(
+                    seller == beast_dispatcher.owner_of(token_id.into()), Errors::NOT_BEAST_OWNER,
+                );
             }
 
-            // Optional: auto-start the auction
+            for item_ref in items {
+                let (token_id, collection) = *item_ref;
+                self.add_item(world, auction_id, token_id, collection);
+            }
+
             if let Option::Some(dur) = duration {
                 self.start_auction(world, auction_id, dur);
             };
