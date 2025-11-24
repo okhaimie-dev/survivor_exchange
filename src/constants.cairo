@@ -27,4 +27,5 @@ pub mod Errors {
     pub const INVALID_CONTRACT: felt252 = 'Invalid contract address';
     pub const INVALID_TOKEN_ID: felt252 = 'Auction: invalid token ID';
     pub const NO_ITEMS: felt252 = 'Auction: no items';
+    pub const INSUFFICIENT_SHARES: felt252 = 'Vault: insufficient shares';
 }
