@@ -1,9 +1,12 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
+import { useAccount, useExplorer } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import { AuctionItem, felt252ToString, truncateAddress } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
+
+const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
 
 type Collection = {
     id: string;
@@ -40,6 +43,10 @@ export default function Bids({
     currentPage,
     totalPages,
     setCurrentPage}: BidsProps) {
+    const { account } = useAccount();
+    const explorer = useExplorer();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [txnHash, setTxnHash] = useState<string | undefined>();
     // Convert auctions to collections format
     const collections: Collection[] = useMemo(() => {
         return auctions.map((auction) => ({
@@ -92,6 +99,38 @@ export default function Bids({
         // Bid must be strictly greater than minimum (not equal)
         return !Number.isNaN(numericBid) && numericBid > minimumBid;
     }, [bidAmount, minimumBid]);
+
+    const handlePlaceBid = useCallback(async () => {
+        if (!account || !selectedCollectionId || !isBidValid) {
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+
+            const auctionId = parseInt(selectedCollectionId, 10);
+            const bidAmountNum = parseFloat(bidAmount);
+            const bidAmountU8 = Math.min(255, Math.max(1, Math.floor(bidAmountNum * 100)));
+
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "bid",
+                calldata: [
+                    auctionId.toString(),
+                    bidAmountU8.toString()
+                ]
+            });
+
+            setTxnHash(response.transaction_hash);
+            setBidAmount("");
+
+        } catch (err) {
+            console.error("Error placing bid:", err);
+            alert(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+        } finally {
+            setIsSubmitting(false);
+        }
+    }, [account, selectedCollectionId, bidAmount, isBidValid]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -294,18 +333,34 @@ export default function Bids({
                                         </span>
                                         .
                                     </p>
-                                    <div className="flex gap-2 w-full">
+                                    <div className="flex flex-col gap-2 w-full">
                                         <button
                                             type="button"
-                                            disabled={!isBidValid}
+                                            onClick={handlePlaceBid}
+                                            disabled={!isBidValid || !account || isSubmitting}
                                             className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                                isBidValid
+                                                isBidValid && account && !isSubmitting
                                                     ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                                     : "border border-white/12 text-[rgb(186,255,188)]/45"
                                             }`}
                                         >
-                                            Place Bid
+                                            {isSubmitting ? "Submitting..." : "Place Bid"}
                                         </button>
+                                        {txnHash && (
+                                            <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-3">
+                                                <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                                                    Transaction Submitted
+                                                </p>
+                                                <a
+                                                    href={explorer.transaction(txnHash)}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
+                                                >
+                                                    {txnHash}
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 

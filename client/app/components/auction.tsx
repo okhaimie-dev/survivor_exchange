@@ -3,6 +3,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import { FormattedNFT } from "../lib/graphql";
+import { cairo, CallData } from "starknet";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -10,7 +11,6 @@ interface AuctionProps {
     error: Error | null;
 }
 
-// Contract address for the auction marketplace
 const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
 
 export default function Auction({ nfts, loading, error }: AuctionProps) {
@@ -21,6 +21,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
+    const [endDateTime, setEndDateTime] = useState<string>("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
 
@@ -94,69 +95,41 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         try {
             setIsSubmitting(true);
 
-            // Generate a unique auction_id (using timestamp + random for uniqueness)
-            const auctionId = Math.floor(Date.now() / 1000) % 0xFFFFFFFF; // Ensure it fits in u32
+            const items = selectedNFTs.map(nft => cairo.tuple(parseInt(nft.tokenId, 10), address));
 
-            // Convert starting price to u8 (assuming it's in smallest units)
-            // Note: u8 only supports 0-255, so we'll convert the price appropriately
-            // If price is in SURVIVOR (wei-like), we might need to scale it
-            const priceNum = parseFloat(startingPrice);
-            const startingPriceU8 = Math.min(255, Math.max(0, Math.floor(priceNum * 100))); // Convert to cents, capped at 255
+            console.log({
+                items
+            })
 
-            // Get selected NFTs with their data
-            const selectedNFTsData = selectedNFTs;
-
-            // Prepare token IDs and collection addresses
-            const tokenIds = selectedNFTsData.map(nft => parseInt(nft.tokenId, 10));
-            // Use user's wallet address as collection address (as per requirements)
-            const collectionAddresses = selectedNFTsData.map(() => address);
-
-            // Prepare multicall calls
-            const calls = [];
-
-            // First call: create_auction
-            // Note: The contract interface shows create_auction takes auction_id and starting_price
-            // The name is not passed to create_auction - it might be stored separately or handled differently
-            calls.push({
-                contractAddress: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "create_auction",
-                calldata: [auctionId, startingPriceU8]
-            });
-
-            // Second call: add_item or add_items
-            if (selectedNFTsData.length === 1) {
-                // Single item - use add_item
-                calls.push({
-                    contractAddress: AUCTION_CONTRACT_ADDRESS,
-                    entrypoint: "add_item",
-                    calldata: [auctionId, tokenIds[0], address]
-                });
-            } else {
-                // Multiple items - use add_items
-                // Format: auction_id, len(token_ids), token_ids..., len(collection_addresses), collection_addresses...
-                const calldata = [
-                    auctionId,
-                    tokenIds.length,
-                    ...tokenIds,
-                    collectionAddresses.length,
-                    ...collectionAddresses
-                ];
-                calls.push({
-                    contractAddress: AUCTION_CONTRACT_ADDRESS,
-                    entrypoint: "add_items",
-                    calldata
-                });
+            let durationSeconds: number | null = null;
+            if (endDateTime) {
+                const selectedDate = new Date(endDateTime);
+                const now = new Date();
+                const diffSeconds = Math.floor((selectedDate.getTime() - now.getTime()) / 1000);
+                if (diffSeconds > 0) {
+                    durationSeconds = diffSeconds;
+                } else {
+                    throw new Error("End date/time must be in the future");
+                }
             }
 
-            // Execute multicall using account.execute
-            const response = await account.execute(calls);
-            
-            console.log("Transaction submitted:", response);
-            setTxnHash(response.transaction_hash);
+            const calldata = [
+                collectionName,
+                startingPrice,
+                items,
+                durationSeconds !== null ? [durationSeconds] : [0],
+            ];
 
-            // Clear form after successful submission
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "create_auction_with_items",
+                calldata
+            });
+
+            setTxnHash(response.transaction_hash);
             setCollectionName("");
             setStartingPrice("");
+            setEndDateTime("");
             setSelectedNFTIds([]);
 
         } catch (err) {
@@ -165,7 +138,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, address, hasSelection, startingPrice, collectionName, selectedNFTs]);
+    }, [account, address, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
 
     if (loading) {
         return (
@@ -290,12 +263,25 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 placeholder="0.00"
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label
+                                htmlFor="end-datetime"
+                                className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
+                            >
+                                End Date & Time (optional)
+                            </label>
+                            <input
+                                id="end-datetime"
+                                type="datetime-local"
+                                value={endDateTime}
+                                onChange={(event) => setEndDateTime(event.target.value)}
+                                min={new Date().toISOString().slice(0, 16)}
+                                className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                            />
                             <p className="text-xs text-[rgb(186,255,188)]/70">
-                                Choose a price that reflects rarity and combined power. You currently have{" "}
-                                <span className="font-orbitron tracking-[0.18em] text-white">
-                                    {selectedNFTs.length} {selectedNFTs.length === 1 ? "NFT" : "NFTs"}
-                                </span>{" "}
-                                selected.
+                                Leave empty to create a draft auction without an end time.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
