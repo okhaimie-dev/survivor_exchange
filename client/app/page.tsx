@@ -24,7 +24,7 @@ export default function Home() {
     listings, 
     loading: listingsLoading, 
     error: listingsError 
-  } = useMyListings({ seller: "0x643948eef68d67cbd9a1853b6181b83f15d06953724fd5347e922d40245b93c" });
+  } = useMyListings({ seller: address || undefined });
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center font-sans dark:bg-black"> 

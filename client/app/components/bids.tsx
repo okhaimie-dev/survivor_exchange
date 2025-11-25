@@ -126,7 +126,6 @@ export default function Bids({
 
         } catch (err) {
             console.error("Error placing bid:", err);
-            alert(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
         } finally {
             setIsSubmitting(false);
         }

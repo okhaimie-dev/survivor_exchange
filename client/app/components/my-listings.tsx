@@ -1,6 +1,10 @@
 import Image from "next/image";
 import moment from "moment";
+import { useAccount, useExplorer } from "@starknet-react/core";
+import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
+
+const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
 
 const formatEth = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return "—";
@@ -78,6 +82,32 @@ interface MyListingsProps {
 }
 
 export default function MyListings({ listings, loading, error }: MyListingsProps) {
+    const { account } = useAccount();
+    const explorer = useExplorer();
+    const [isEndingAuction, setIsEndingAuction] = useState<string | null>(null);
+    const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
+
+    const handleEndAuction = useCallback(async (auctionId: string) => {
+        if (!account) {
+            return;
+        }
+
+        try {
+            setIsEndingAuction(auctionId);
+
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "end_auction",
+                calldata: [auctionId]
+            });
+
+            setTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
+        } catch (err) {
+            console.error("Error ending auction:", err);
+        } finally {
+            setIsEndingAuction(null);
+        }
+    }, [account]);
     if (loading) {
         return (
             <section className="flex w-full flex-col gap-6">
@@ -193,10 +223,22 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             </span>
                             <button
                                 type="button"
-                                className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black"
+                                onClick={() => handleEndAuction(listing.auctionId)}
+                                disabled={!account || isEndingAuction === listing.auctionId}
+                                className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Remove Collection
+                                {isEndingAuction === listing.id ? "Ending..." : "Remove Collection"}
                             </button>
+                            {txnHashes[listing.auctionId] && (
+                                <a
+                                    href={explorer.transaction(txnHashes[listing.auctionId])}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
+                                >
+                                    View Transaction
+                                </a>
+                            )}
                         </div>
                     </article>
                 ))}

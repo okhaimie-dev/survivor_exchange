@@ -95,35 +95,22 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         try {
             setIsSubmitting(true);
 
-            const items = selectedNFTs.map(nft => cairo.tuple(parseInt(nft.tokenId, 10), address));
+            const items = selectedNFTs.map(nft => cairo.tuple(parseInt(nft.tokenId, 10), nft.contractAddress));
+            const duration = endDateTime ? new Date(endDateTime).getTime() - new Date().getTime() : 3;
 
             console.log({
-                items
+                duration
             })
-
-            let durationSeconds: number | null = null;
-            if (endDateTime) {
-                const selectedDate = new Date(endDateTime);
-                const now = new Date();
-                const diffSeconds = Math.floor((selectedDate.getTime() - now.getTime()) / 1000);
-                if (diffSeconds > 0) {
-                    durationSeconds = diffSeconds;
-                } else {
-                    throw new Error("End date/time must be in the future");
-                }
-            }
-
-            const calldata = [
-                collectionName,
-                startingPrice,
-                items,
-                durationSeconds !== null ? [durationSeconds] : [0],
-            ];
 
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "create_auction_with_items",
-                calldata
+                calldata: CallData.compile([
+                    collectionName,
+                    startingPrice,
+                    items,
+                    1
+                ])
             });
 
             setTxnHash(response.transaction_hash);
@@ -134,11 +121,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
         } catch (err) {
             console.error("Error listing selection:", err);
-            alert(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, address, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
+    }, [account, address, hasSelection, startingPrice, collectionName, selectedNFTs, endDateTime]);
 
     if (loading) {
         return (
