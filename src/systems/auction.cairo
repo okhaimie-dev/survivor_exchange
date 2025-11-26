@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use survivor_exchange::models::auction::Auction;
 
 #[starknet::interface]
 pub trait IAuctionMarketplace<TContractState> {
@@ -57,6 +58,8 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Settles an ended auction: transfers token to highest bidder, funds to owner.
     /// - `token_id`: The auction's token ID.
     fn settle_auction(ref self: TContractState, auction_id: u32);
+
+    fn get_auction(self: @TContractState, auction_id: u32) -> Auction;
 }
 
 // dojo decorator
@@ -65,7 +68,8 @@ pub mod auction_systems {
     use starknet::ContractAddress;
     use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
-    use super::IAuctionMarketplace;
+    use survivor_exchange::store::StoreTrait;
+    use super::{Auction, IAuctionMarketplace};
 
     component!(path: AuctionableComponent, storage: auctionable, event: AuctionableEvent);
     impl AuctionableImpl = AuctionableComponent::InternalImpl<ContractState>;
@@ -148,6 +152,11 @@ pub mod auction_systems {
         // - Transfer funds to owner (current_bid)
         // - Update status to 2 (settled)
         // - Emit event
+        }
+
+        fn get_auction(self: @ContractState, auction_id: u32) -> Auction {
+            let store = StoreTrait::new(self.world_default());
+            store.auction(auction_id)
         }
     }
 

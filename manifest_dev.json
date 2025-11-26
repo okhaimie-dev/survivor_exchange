@@ -47,7 +47,7 @@
     },
     {
       "address": "0x23886a55d413d1d85881ecb9a6fe14ac9e6c53690628f10de06f64a1ccedc5",
-      "class_hash": "0x7b21d1c7726da622bffd3d06b41bdad248ffb24168855a4e9b39857a2d05791",
+      "class_hash": "0x755133aeb79c3e54c15351d4012b20f359d5635526bc6856549bca039dad9a0",
       "init_calldata": [],
       "tag": "bm_0_0_2-auction_systems",
       "selector": "0x4a8c01bfa9d6ec54ff5df2121cb487c6a7e2392bc67d009fa979317d04e4b9a",
@@ -457,16 +457,6 @@
         {
           "name": "snapshot",
           "type": "@core::array::Array::<core::integer::u8>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
-      "name": "core::array::Span::<core::starknet::contract_address::ContractAddress>",
-      "members": [
-        {
-          "name": "snapshot",
-          "type": "@core::array::Array::<core::starknet::contract_address::ContractAddress>"
         }
       ]
     },
@@ -2949,8 +2939,8 @@
               "type": "core::array::Span::<core::integer::u32>"
             },
             {
-              "name": "collection_addresses",
-              "type": "core::array::Span::<core::starknet::contract_address::ContractAddress>"
+              "name": "collection_address",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ],
           "outputs": [],
@@ -3023,6 +3013,22 @@
           ],
           "outputs": [],
           "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_auction",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "survivor_exchange::models::index::Auction"
+            }
+          ],
+          "state_mutability": "view"
         }
       ]
     },
