@@ -9,7 +9,8 @@ pub trait IAuctionMarketplace<TContractState> {
         ref self: TContractState,
         name: felt252,
         starting_price: u8,
-        items: Span<(u32, ContractAddress)>,
+        items: Span<u32>,
+        collection: ContractAddress,
         duration: Option<u64>,
     );
 
@@ -88,10 +89,13 @@ pub mod auction_systems {
             ref self: ContractState,
             name: felt252,
             starting_price: u8,
-            items: Span<(u32, ContractAddress)>,
+            items: Span<u32>,
+            collection: ContractAddress,
             duration: Option<u64>,
         ) {
-            self.auctionable.create(self.world_default(), name, starting_price, items, duration);
+            self
+                .auctionable
+                .create(self.world_default(), name, starting_price, items, collection, duration);
         }
 
         fn add_item(

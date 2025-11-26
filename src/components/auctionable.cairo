@@ -31,7 +31,8 @@ pub mod AuctionableComponent {
             world: WorldStorage,
             name: felt252,
             starting_price: u8,
-            items: Span<(u32, ContractAddress)>,
+            items: Span<u32>,
+            collection: ContractAddress,
             duration: Option<u64>,
         ) {
             assert(items.len() >= 1 && items.len() <= 20, Errors::INVALID_ITEMS_COUNT);
@@ -45,18 +46,17 @@ pub mod AuctionableComponent {
             store.set_auction(@auction);
 
             let mut item_index = 0;
-            for item_ref in items {
-                let (token_id, collection) = *item_ref;
-                let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
+            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
+            for token_id in items {
                 assert(
-                    seller == collection_dispatcher.owner_of(token_id.into()),
+                    seller == collection_dispatcher.owner_of((*token_id).into()),
                     Errors::NOT_BEAST_OWNER,
                 );
 
-                // TODO: Rentals check: let rental = store.rental(token_id);
+                // TODO: Rentals check: let rental = store.rental(*token_id);
                 // rental.assert_not_active();
 
-                self.add_item(world, auction_id, token_id, collection);
+                self.add_item(world, auction_id, *token_id, collection);
                 item_index += 1;
             }
 
