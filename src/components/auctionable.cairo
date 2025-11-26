@@ -136,7 +136,7 @@ pub mod AuctionableComponent {
                 let diff = new_scaled - prev_scaled;
                 let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
                 let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-                vault_dispatcher.deposit(auction.auction_id, diff);
+                vault_dispatcher.deposit(auction.auction_id, diff, bidder);
             }
 
             let mut bid = prev_bid;

@@ -11,3 +11,7 @@ pub fn SURVIVOR_ADDRESS_MAINNET() -> ContractAddress {
 pub fn WBTC_ADDRESS_MAINNET() -> ContractAddress {
     0x03Fe2b97C1Fd336E750087D68B9b867997Fd64a2661fF3ca5A7C771641e8e7AC.try_into().unwrap()
 }
+
+pub fn TREASURY_ADDRESS_MAINNET() -> ContractAddress {
+    0x04dc934EAE2fBC336cd4752378c9d2843F2171699Fa2e96500086591A0F543de.try_into().unwrap()
+}

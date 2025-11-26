@@ -3,7 +3,7 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IVault<TContractState> {
     fn create_vault(ref self: TContractState, vault_id: u32);
-    fn deposit(ref self: TContractState, vault_id: u32, amount: u256);
+    fn deposit(ref self: TContractState, vault_id: u32, amount: u256, depositor: ContractAddress);
     fn withdraw(ref self: TContractState, vault_id: u32, to: ContractAddress, amount: u256);
     fn balance_of(self: @TContractState, vault_id: u32) -> u256;
     fn get_owner(self: @TContractState) -> ContractAddress;
@@ -13,10 +13,10 @@ pub trait IVault<TContractState> {
 pub mod vault_systems {
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
     use starknet::{get_block_timestamp, get_caller_address};
-    use survivor_exchange::constants::{DEFAULT_NS, TEN_POW_18};
+    use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
-    use survivor_exchange::utils::SURVIVOR_ADDRESS_MAINNET;
+    use survivor_exchange::utils::{SURVIVOR_ADDRESS_MAINNET, TREASURY_ADDRESS_MAINNET};
     use super::{ContractAddress, IVault};
 
     fn dojo_init(ref self: ContractState) {}
@@ -34,8 +34,10 @@ pub mod vault_systems {
             store.set_vault(@vault);
         }
 
-        fn deposit(ref self: ContractState, vault_id: u32, amount: u256) {
-            let caller = get_caller_address();
+        fn deposit(
+            ref self: ContractState, vault_id: u32, amount: u256, depositor: ContractAddress,
+        ) {
+            //let caller = get_caller_address();
             let mut store = StoreTrait::new(self.world_default());
             // TODO: Vault assert
 
@@ -43,19 +45,10 @@ pub mod vault_systems {
                 contract_address: SURVIVOR_ADDRESS_MAINNET(),
             };
 
-            // TODO: calculate the diff between bidder balance and bid amount to transfer.
-            let scaled_amount = (amount * TEN_POW_18);
-            // Transfer funds to vault.
-            survivor_dispatcher
-                .transfer_from(
-                    get_caller_address(),
-                    0x04dc934EAE2fBC336cd4752378c9d2843F2171699Fa2e96500086591A0F543de
-                        .try_into()
-                        .unwrap(),
-                    scaled_amount,
-                );
+            // TODO: calculate the diff between depositor balance and bid amount to transfer.
+            survivor_dispatcher.transfer_from(depositor, TREASURY_ADDRESS_MAINNET(), amount);
 
-            let mut share = store.vault_share(vault_id, caller.into());
+            let mut share = store.vault_share(vault_id, depositor.into());
             let add_amount: u64 = amount.try_into().expect('amount too large'); // TODO: u256 models
             share.deposited_amount += add_amount;
             share.share_amount += add_amount;
