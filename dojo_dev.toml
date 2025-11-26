@@ -23,4 +23,4 @@ private_key = ""
 # world_address = "0x026d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef"
 
 [writers]
-"bm_0_0_2" = ["bm_0_0_2-auction_systems", "bm_0_0_2-admin_systems"]
+"bm_0_0_2" = ["bm_0_0_2-auction_systems", "bm_0_0_2-admin_systems", "bm_0_0_2-vault_systems"]

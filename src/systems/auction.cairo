@@ -33,7 +33,7 @@ pub trait IAuctionMarketplace<TContractState> {
         ref self: TContractState,
         auction_id: u32,
         token_ids: Span<u32>,
-        collection_addresses: Span<ContractAddress>,
+        collection_address: ContractAddress,
     );
 
     /// Starts an active auction (sets end_time, status=1; requires beast_count > 0; owner only).
@@ -113,7 +113,7 @@ pub mod auction_systems {
             ref self: ContractState,
             auction_id: u32,
             token_ids: Span<u32>,
-            collection_addresses: Span<ContractAddress>,
+            collection_address: ContractAddress,
         ) {}
 
         fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {
