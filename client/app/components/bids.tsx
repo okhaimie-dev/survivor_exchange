@@ -3,8 +3,15 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
-import { AuctionItem, felt252ToString, truncateAddress } from "../lib/graphql";
+import { AuctionItem, truncateAddress } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
+
+// Helper function to truncate string with ellipsis after 20 characters
+const truncateWithEllipsis = (str: string, maxLength: number = 20): string => {
+    if (!str) return '';
+    if (str.length <= maxLength) return str;
+    return str.slice(0, maxLength) + '...';
+};
 
 const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
 
@@ -51,7 +58,7 @@ export default function Bids({
     const collections: Collection[] = useMemo(() => {
         return auctions.map((auction) => ({
             id: auction.auction_id,
-            name: felt252ToString(auction.name),
+            name: truncateWithEllipsis(auction.name),
             totalMonsters: parseInt(auction.item_count) || 0,
             startingPrice: parseFloat(auction.starting_price) || 0,
             highestBid: auction.current_bid ? parseFloat(auction.current_bid) : undefined,

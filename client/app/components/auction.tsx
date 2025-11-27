@@ -3,7 +3,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import { FormattedNFT } from "../lib/graphql";
-import { cairo, CallData } from "starknet";
+import { cairo, CallData, shortString } from "starknet";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -21,7 +21,13 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
-    const [endDateTime, setEndDateTime] = useState<string>("");
+    // Default to 30 minutes from now
+    const getDefaultDateTime = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 30);
+        return now.toISOString().slice(0, 16);
+    };
+    const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
 
@@ -88,43 +94,45 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     }, []);
 
     const handleListSelection = useCallback(async () => {
-        if (!account || !address || !hasSelection || !startingPrice || !collectionName.trim()) {
+        if (!account || !hasSelection || !startingPrice || !collectionName.trim() || !endDateTime) return;
+    
+        const selectedDate = new Date(endDateTime);
+        const now = new Date();
+        const durationSeconds = Math.floor((selectedDate.getTime() - now.getTime()) / 1000);
+    
+        if (durationSeconds < 1800) {
+            alert("End date must be at least 30 minutes from now");
             return;
         }
-
+    
         try {
             setIsSubmitting(true);
-
-            const items = selectedNFTs.map(nft => cairo.tuple(parseInt(nft.tokenId, 10), nft.contractAddress));
-            const duration = endDateTime ? new Date(endDateTime).getTime() - new Date().getTime() : 3;
-
-            console.log({
-                duration
-            })
-
+        
+            const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
+            const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
+        
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "create_auction_with_items",
-                calldata: CallData.compile([
+                entrypoint: "create_auction",
+                calldata: [
                     collectionName,
                     startingPrice,
-                    items,
-                    1
-                ])
+                    token_ids.length,
+                    ...token_ids,
+                    "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4",
+                    0,
+                    duration_seconds
+                ]
             });
-
+        
             setTxnHash(response.transaction_hash);
-            setCollectionName("");
-            setStartingPrice("");
-            setEndDateTime("");
-            setSelectedNFTIds([]);
-
         } catch (err) {
-            console.error("Error listing selection:", err);
+            console.error(err);
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, address, hasSelection, startingPrice, collectionName, selectedNFTs, endDateTime]);
+
+    }, [account, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
 
     if (loading) {
         return (
@@ -256,27 +264,31 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 htmlFor="end-datetime"
                                 className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
                             >
-                                End Date & Time (optional)
+                                End Date & Time
                             </label>
                             <input
                                 id="end-datetime"
                                 type="datetime-local"
                                 value={endDateTime}
                                 onChange={(event) => setEndDateTime(event.target.value)}
-                                min={new Date().toISOString().slice(0, 16)}
+                                min={(() => {
+                                    const now = new Date();
+                                    now.setMinutes(now.getMinutes() + 30);
+                                    return now.toISOString().slice(0, 16);
+                                })()}
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
                             />
                             <p className="text-xs text-[rgb(186,255,188)]/70">
-                                Leave empty to create a draft auction without an end time.
+                                Minimum duration is 30 minutes from now.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <button
                                 type="button"
                                 onClick={handleListSelection}
-                                disabled={!hasSelection || !startingPrice || !collectionName.trim() || !address || isSubmitting}
+                                disabled={!hasSelection || !startingPrice || !collectionName.trim() || !address || !endDateTime || isSubmitting}
                                 className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                    hasSelection && startingPrice && collectionName.trim() && address && !isSubmitting
+                                    hasSelection && startingPrice && collectionName.trim() && address && endDateTime && !isSubmitting
                                         ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                                 }`}
