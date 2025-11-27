@@ -2,8 +2,8 @@
 #[dojo::model]
 pub struct Auction {
     #[key]
-    pub status: u8,
     pub auction_id: u32,
+    pub status: u8,
     pub starting_price: u32,
     pub current_bid: u32,
     pub item_count: u32,

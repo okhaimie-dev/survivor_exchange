@@ -13,13 +13,13 @@ pub impl AuctionImpl of AuctionTrait {
         AuctionAssert::assert_valid_name(name);
         Auction {
             auction_id: 0,
-            name,
+            status: AuctionStatus::Draft.into(),
             starting_price,
             current_bid: 0,
-            highest_bidder: 0x0,
-            status: AuctionStatus::Draft.into(),
             end_time: 0,
             item_count: 0,
+            name,
+            highest_bidder: 0x0,
             seller,
         }
     }
