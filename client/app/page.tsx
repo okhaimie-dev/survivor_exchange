@@ -7,7 +7,6 @@ import { useAccount } from "@starknet-react/core";
 import { useMyNFTs } from "./hooks/use-my-nfts";
 import { useAuctions } from "./hooks/use-auctions";
 import { useMyListings } from "./hooks/use-my-listings";
-import { CallData } from "starknet";
 
 export default function Home() {
   const { address } = useAccount();
@@ -27,10 +26,6 @@ export default function Home() {
     error: listingsError 
   } = useMyListings({ seller: address || undefined });
 
-  console.log("Duration test:", CallData.compile({
-    duration: { Some: BigInt(8884) }
-  }));
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center font-sans dark:bg-black"> 
       <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
@@ -41,7 +36,7 @@ export default function Home() {
           error={error}
           auctions={auctions}
           auctionsLoading={auctionsLoading}
-          auctionsError={auctionsError}
+          auctionsError={auctionsError || null}
           currentPage={currentPage}
           totalPages={totalPages}
           setCurrentPage={setCurrentPage}

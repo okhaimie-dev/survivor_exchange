@@ -43,9 +43,8 @@ const client = new ApolloClient({
       notifyOnNetworkStatusChange: false,
     },
     query: {
-      fetchPolicy: 'cache-and-network',
+      fetchPolicy: 'network-only',
       errorPolicy: 'all',
-      notifyOnNetworkStatusChange: false,
     },
   },
 });

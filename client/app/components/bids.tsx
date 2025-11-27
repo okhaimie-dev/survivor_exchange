@@ -254,7 +254,7 @@ export default function Bids({
                                                 return (
                                                     <div
                                                         key={`${nft.contractAddress}-${nft.tokenId}`}
-                                                        className={`shrink-0 h-28 w-28 rounded-2xl overflow-hidden ${
+                                                        className={`shrink-0 h-28 w-fit overflow-hidden ${
                                                             !isBase64 ? 'border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10' : ''
                                                         }`}
                                                     >

@@ -57,7 +57,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             <div className="flex flex-col items-center gap-4 text-center">
                 <div className="h-24 w-24">
                     {nfts.length === 0 ? (
-                        <div className="flex h-full w-full items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
+                        <div className="flex h-full w-full items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
                             <Image
                                 src={collection.image}
                                 alt={collection.name}
@@ -68,7 +68,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                             />
                         </div>
                     ) : nfts.length === 1 ? (
-                        <div className="h-full w-full overflow-hidden rounded-3xl">
+                        <div className="h-full w-full overflow-hidden">
                             {(() => {
                                 const nft = nfts[0];
                                 const imageSrc = nft.metadata?.image 
@@ -109,7 +109,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
                                 return (
-                                    <div key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} className="h-full w-1/2 overflow-hidden rounded-3xl">
+                                    <div key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} className="h-full w-1/2 overflow-hidden">
                                         {isBase64 ? (
                                             <img
                                                 src={imageSrc}
@@ -146,7 +146,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 return (
                                     <div 
                                         key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} 
-                                        className="overflow-hidden rounded-3xl"
+                                        className="aspect-square overflow-hidden"
                                     >
                                         {isBase64 ? (
                                             <img
@@ -171,7 +171,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                             })}
                             {/* Bottom left: 3rd NFT */}
                             {nfts.length >= 3 && (
-                                <div className="overflow-hidden rounded-3xl">
+                                <div className="aspect-square overflow-hidden">
                                     {(() => {
                                         const nft = nfts[2];
                                         const imageSrc = nft.metadata?.image 
@@ -204,7 +204,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                             )}
                             {/* Bottom right: "+X more" if 4+ NFTs, otherwise empty */}
                             {nfts.length > 3 ? (
-                                <div className="flex items-center justify-center rounded-3xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12 text-[10px] font-orbitron uppercase tracking-widest text-[rgb(50,255,52)]">
+                                <div className="aspect-square flex items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12 text-[10px] font-orbitron uppercase tracking-widest text-[rgb(50,255,52)]">
                                     +{nfts.length - 3} more
                                 </div>
                             ) : null}
