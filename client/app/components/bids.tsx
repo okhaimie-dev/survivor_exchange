@@ -108,7 +108,7 @@ export default function Bids({
     }, [bidAmount, minimumBid]);
 
     const handlePlaceBid = useCallback(async () => {
-        if (!account || !selectedCollectionId || !isBidValid) {
+        if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid) {
             return;
         }
 
@@ -150,9 +150,15 @@ export default function Bids({
 
     const handleSelectCollection = useCallback(
         (collection: Collection) => {
-            updateSelection(collection);
+            // Toggle selection: if already selected, deselect it
+            if (selectedCollectionId === collection.id) {
+                setSelectedCollectionId("");
+                setBidAmount("");
+            } else {
+                updateSelection(collection);
+            }
         },
-        [updateSelection],
+        [selectedCollectionId, updateSelection],
     );
 
     const handlePageChange = useCallback(

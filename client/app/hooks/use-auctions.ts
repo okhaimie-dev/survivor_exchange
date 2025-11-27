@@ -75,7 +75,7 @@ export function useAuctions() {
 
   // Extract auctions and items from response
   const allAuctions: Auction[] = useMemo(() => {
-    const auctions = data?.bm002AuctionModels?.edges?.map((edge) => edge.node) || [];
+    const auctions = data?.bm006AuctionModels?.edges?.map((edge) => edge.node) || [];
     // Sort by auction_id numerically descending (latest first) as fallback
     // This ensures proper numeric ordering even if GraphQL returns string-ordered results
     const sorted = [...auctions].sort((a, b) => {
@@ -87,7 +87,7 @@ export function useAuctions() {
   }, [data]);
 
   const allAuctionItems: AuctionItem[] = useMemo(() => {
-    return data?.bm002AuctionItemModels?.edges?.map((edge) => edge.node) || [];
+    return data?.bm006AuctionItemModels?.edges?.map((edge) => edge.node) || [];
   }, [data]);
 
   // Paginate auctions with NFTs

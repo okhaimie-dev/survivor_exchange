@@ -30,9 +30,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   });
 
   const listings: FormattedListing[] = useMemo(() => {
-    if (!data?.bm002AuctionModels?.edges) return [];
+    if (!data?.bm006AuctionModels?.edges) return [];
 
-    const auctions: Auction[] = data.bm002AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
+    const auctions: Auction[] = data.bm006AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
 
     return auctions.map((auction) => {
       // Decode the name from felt252

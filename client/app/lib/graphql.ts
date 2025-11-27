@@ -250,17 +250,17 @@ export interface AuctionNode {
 }
 
 export interface AuctionsResponse {
-  bm002AuctionModels: {
+  bm006AuctionModels: {
     edges: AuctionNode[];
   };
-  bm002AuctionItemModels: {
+  bm006AuctionItemModels: {
     edges: AuctionItemNode[];
   };
 }
 
 export const AUCTIONS_QUERY = gql`
   query MyQuery {
-    bm002AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm006AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -270,7 +270,7 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
-    bm002AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm006AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -297,14 +297,14 @@ export async function fetchAuctions(): Promise<AuctionsResponse> {
 
 // My Listings types
 export interface MyListingsResponse {
-  bm002AuctionModels: {
+  bm006AuctionModels: {
     edges: AuctionNode[];
   };
 }
 
 export const MY_LISTINGS_QUERY = gql`
   query MyListings($seller: String!) {
-    bm002AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
+    bm006AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -351,7 +351,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctionItems: bm002AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctionItems: bm006AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -361,7 +361,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctions: bm002AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctions: bm006AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -376,7 +376,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    myListings: bm002AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) @skip(if: $skipListings) {
+    myListings: bm006AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) @skip(if: $skipListings) {
       edges {
         node {
           auction_id

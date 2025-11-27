@@ -45,10 +45,6 @@ const formatTimeAgo = (timestamp: string): string => {
         const date = moment(dateString, 'YYYY-MM-DD HH:mm:ss');
         const fromNow = date.fromNow();
         
-        console.log('timestamp:', timestamp);
-        console.log('decimal:', timestampNum);
-        console.log('moment:', fromNow);
-        
         return fromNow;
     } catch {
         return "Unknown";
