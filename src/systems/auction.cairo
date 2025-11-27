@@ -9,7 +9,7 @@ pub trait IAuctionMarketplace<TContractState> {
     fn create_auction(
         ref self: TContractState,
         name: felt252,
-        starting_price: u8,
+        starting_price: u32,
         items: Span<u32>,
         collection: ContractAddress,
         duration: Option<u64>,
@@ -45,7 +45,7 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Places a bid in an active English auction (must exceed current_bid).
     /// - `token_id`: The auction's token ID.
     /// - `bid_amount`: The new bid value (transfers ETH/token to escrow).
-    fn bid(ref self: TContractState, auction_id: u32, bid_amount: u8);
+    fn bid(ref self: TContractState, auction_id: u32, bid_amount: u32);
 
     /// Withdraws a non-winning bid from an active auction (refunds from escrow; caller only).
     /// - `auction_id`: The active auction ID.
@@ -92,7 +92,7 @@ pub mod auction_systems {
         fn create_auction(
             ref self: ContractState,
             name: felt252,
-            starting_price: u8,
+            starting_price: u32,
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
@@ -124,7 +124,7 @@ pub mod auction_systems {
             self.auctionable.start_auction(self.world_default(), auction_id, duration);
         }
 
-        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u8) {
+        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u32) {
             self.auctionable.bid(self.world_default(), auction_id, bid_amount);
         }
 

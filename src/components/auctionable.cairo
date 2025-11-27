@@ -30,7 +30,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             name: felt252,
-            starting_price: u8,
+            starting_price: u32,
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
@@ -120,7 +120,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
-            bid_amount: u8,
+            bid_amount: u32,
         ) {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();

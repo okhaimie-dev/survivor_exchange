@@ -15,6 +15,6 @@ pub struct BidPlaced {
     #[key]
     pub auction_id: u32,
     pub bidder: felt252,
-    pub amount: u8,
+    pub amount: u32,
     pub timestamp: u64,
 }

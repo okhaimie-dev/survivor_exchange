@@ -7,7 +7,7 @@ pub mod errors {}
 #[generate_trait]
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
-    fn new(name: felt252, starting_price: u8, seller: felt252) -> Auction {
+    fn new(name: felt252, starting_price: u32, seller: felt252) -> Auction {
         AuctionAssert::assert_valid_starting_price(starting_price);
         AuctionAssert::assert_valid_seller(seller);
         AuctionAssert::assert_valid_name(name);
@@ -46,7 +46,7 @@ pub impl AuctionImpl of AuctionTrait {
     }
 
     #[inline]
-    fn update_bid(ref self: Auction, bidder: felt252, amount: u8, current_time: u64) {
+    fn update_bid(ref self: Auction, bidder: felt252, amount: u32, current_time: u64) {
         assert(self.is_active(), Errors::AUCTION_NOT_ACTIVE);
         self.assert_not_expired(current_time);
         self.assert_bid_not_low(amount);
@@ -114,7 +114,7 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_valid_starting_price(starting_price: u8) {
+    fn assert_valid_starting_price(starting_price: u32) {
         assert(starting_price != 0, Errors::INVALID_STARTING_PRICE);
     }
 
@@ -124,7 +124,7 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_bid_not_low(self: @Auction, bid_amount: u8) {
+    fn assert_bid_not_low(self: @Auction, bid_amount: u32) {
         assert(
             bid_amount > *self.current_bid && bid_amount >= *self.starting_price,
             Errors::BID_TOO_LOW,
@@ -139,7 +139,7 @@ mod tests {
 
     // Constants
     const NAME: felt252 = 7265849240828751573555476048407354681602097;
-    const STARTING_PRICE: u8 = 100;
+    const STARTING_PRICE: u32 = 100;
     const CONTRACT_ADDR: felt252 = 0x1234_felt252;
     const CURRENT_TIMESTAMP: u64 = 0x0;
 
@@ -220,7 +220,7 @@ mod tests {
     #[test]
     fn test_update_bid_valid() {
         let mut auction = setup_active_auction(3600, 100);
-        let amount = 150_u8;
+        let amount = 150;
         auction.update_bid(CONTRACT_ADDR, amount, 200);
         assert_eq!(auction.current_bid, amount);
         assert_eq!(auction.highest_bidder, CONTRACT_ADDR);

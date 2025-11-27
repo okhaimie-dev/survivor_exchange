@@ -2,14 +2,14 @@
 #[dojo::model]
 pub struct Auction {
     #[key]
-    pub auction_id: u32,
-    pub name: felt252,
-    pub starting_price: u8,
-    pub current_bid: u8,
-    pub highest_bidder: felt252,
     pub status: u8,
-    pub end_time: u64,
+    pub auction_id: u32,
+    pub starting_price: u32,
+    pub current_bid: u32,
     pub item_count: u32,
+    pub end_time: u64,
+    pub name: felt252,
+    pub highest_bidder: felt252,
     pub seller: felt252,
 }
 
@@ -31,7 +31,7 @@ pub struct Bid {
     pub auction_id: u32,
     #[key]
     pub bidder: felt252,
-    pub amount: u8,
+    pub amount: u32,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]
@@ -39,13 +39,13 @@ pub struct Bid {
 pub struct Rental {
     #[key]
     pub token_id: u32,
+    pub rental_status: u8,
     pub rental_price: u8,
     pub duration: u64,
     pub collateral: u64,
-    pub renter: felt252,
     pub start_time: u64,
     pub end_time: u64,
-    pub rental_status: u8,
+    pub renter: felt252,
     pub owner: felt252,
 }
 
@@ -74,8 +74,8 @@ pub struct Vault {
     #[key]
     pub vault_id: u32,
     pub locked_amount: u64,
-    pub token_address: felt252,
     pub created_at: u64,
+    pub token_address: felt252,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]

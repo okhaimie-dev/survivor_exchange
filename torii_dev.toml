@@ -1,4 +1,4 @@
-world_address = "0x06465e6079436dc4810ec03a70bd2936fa6ce7f4611767d7df1e612788c373b8"
+world_address = "0x04f39a12e9ba053ee1019b5779dca85aaf0537210b46557b887bf11893d24570"
 rpc = "https://api.cartridge.gg/x/starknet/mainnet"
 
 [events]
@@ -12,4 +12,4 @@ contracts = [
   "erc721:0x046dA8955829ADF2bDa310099A0063451923f02E648cF25A1203aac6335CF0e4", # BEAST NFT
 ]
 [sql]
-historical = ["bm_0_0_2-Auction"]
+historical = ["bm_0_0_5-Auction"]
