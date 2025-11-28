@@ -42,7 +42,7 @@ export default function BidAuctionMyListingsRent({
 }: BidAuctionMyListingsProps) {
     const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
     return ( 
-        <div className="flex flex-col items-center justify-center gap-4 w-full space-y-4 xl:max-w-2xl 2xl:max-w-6xl">
+        <div className="flex flex-col items-center justify-center gap-4 w-full space-y-4 xl:max-w-6xl">
             <div className="flex flex-row items-center justify-center gap-4 w-full">
                 <div className={clsx("hover:cursor-pointer hover:text-[rgb(50,255,52)] hover:font-bold", activeTab === "bid" ? "text-[rgb(50,255,52)] font-bold" : "")} onClick={() => setActiveTab("bid")}>
                     Bid on a collection of monsters
