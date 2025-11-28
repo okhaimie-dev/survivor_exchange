@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
-import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token } from '../lib/graphql';
+import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token, felt252ToString } from '../lib/graphql';
 
 const PAGE_SIZE = 3;
 
@@ -75,7 +75,14 @@ export function useAuctions() {
 
   // Extract auctions and items from response
   const allAuctions: Auction[] = useMemo(() => {
-    const auctions = data?.bm006AuctionModels?.edges?.map((edge) => edge.node) || [];
+    const auctions = data?.bm006AuctionModels?.edges?.map((edge) => {
+      const auction = edge.node;
+      // Convert name from felt252 to string
+      return {
+        ...auction,
+        name: felt252ToString(auction.name) || auction.name,
+      };
+    }) || [];
     // Sort by auction_id numerically descending (latest first) as fallback
     // This ensures proper numeric ordering even if GraphQL returns string-ordered results
     const sorted = [...auctions].sort((a, b) => {
@@ -191,7 +198,7 @@ export function useAuctions() {
               return matchesTokenId && matchesContract;
             });
 
-            // Add NFT metadata to auction data
+            // Add NFT metadata to auction data (name already converted in allAuctions)
             auctionsWithNFTsData.push({
               ...auction,
               nfts: matchedNFTs,
@@ -208,7 +215,7 @@ export function useAuctions() {
         }
       }
 
-      // Add auctions that don't have items (no NFTs to fetch)
+      // Add auctions that don't have items (no NFTs to fetch) (name already converted in allAuctions)
       for (const auction of allAuctions) {
         const items = getAuctionItems(auction.auction_id);
         if (items.length === 0) {

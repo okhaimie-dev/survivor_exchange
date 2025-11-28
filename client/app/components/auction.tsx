@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
+import { shortString } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import { FormattedNFT } from "../lib/graphql";
@@ -110,12 +111,14 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             const startingPriceWhole = Math.floor(parseFloat(startingPrice) || 0);
+            // Convert collection name from string to felt252
+            const collectionNameFelt = shortString.encodeShortString(collectionName.trim());
         
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "create_auction",
                 calldata: [
-                    collectionName,
+                    collectionNameFelt,
                     startingPriceWhole,
                     token_ids.length,
                     ...token_ids,
