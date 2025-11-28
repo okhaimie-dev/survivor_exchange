@@ -5,11 +5,15 @@ rpc = "https://api.cartridge.gg/x/starknet/mainnet"
 raw = true
 
 [indexing]
+namespaces = ["bm_0_0_6"]
 pending = true
+world_block = 2210150
 contracts = [
-  "erc20:0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B", # SURVIVOR fee token
-  "erc20:0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d", # STRK fee token
   "erc721:0x046dA8955829ADF2bDa310099A0063451923f02E648cF25A1203aac6335CF0e4", # BEAST NFT
 ]
-[sql]
-historical = ["bm_0_0_6-Auction"]
+
+# Performance tuning
+events_chunk_size = 1024
+blocks_chunk_size = 10240
+polling_interval = 500
+max_concurrent_tasks = 100
