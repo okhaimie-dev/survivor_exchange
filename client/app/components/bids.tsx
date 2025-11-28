@@ -5,6 +5,7 @@ import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import { AuctionItem, truncateAddress } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
+import { CallData, uint256 } from "starknet";
 
 // Helper function to truncate string with ellipsis after 20 characters
 const truncateWithEllipsis = (str: string, maxLength: number = 20): string => {
@@ -14,6 +15,7 @@ const truncateWithEllipsis = (str: string, maxLength: number = 20): string => {
 };
 
 const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
+const SURVIVOR_ADDRESS_MAINNET = "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B";
 
 type Collection = {
     id: string;
@@ -40,7 +42,8 @@ interface BidsProps {
 
 const formatEth = (value: number | string) => {
     const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return `${numValue.toFixed(2)} SURVIVOR`;
+    const wholeNumber = Math.floor(numValue);
+    return `${wholeNumber} SURVIVOR`;
 };
 
 export default function Bids({ 
@@ -60,8 +63,8 @@ export default function Bids({
             id: auction.auction_id,
             name: truncateWithEllipsis(auction.name),
             totalMonsters: parseInt(auction.item_count) || 0,
-            startingPrice: parseFloat(auction.starting_price) || 0,
-            highestBid: auction.current_bid ? parseFloat(auction.current_bid) : undefined,
+            startingPrice: Math.floor(parseFloat(auction.starting_price) || 0),
+            highestBid: auction.current_bid ? Math.floor(parseFloat(auction.current_bid)) : undefined,
             image: "/logo.png", // Placeholder since image not in data
             status: auction.status,
             endTime: auction.end_time,
@@ -78,9 +81,9 @@ export default function Bids({
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
             const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
-            // Set default to 10% higher than minimum or last bid
-            const defaultBid = minimum * 1.1;
-            setBidAmount(defaultBid.toFixed(2));
+            // Set default to minimum + 10
+            const defaultBid = minimum + 10;
+            setBidAmount(defaultBid.toString());
         }
     }, [selectedCollectionId, collections]);
 
@@ -103,8 +106,9 @@ export default function Bids({
 
     const isBidValid = useMemo(() => {
         const numericBid = parseFloat(bidAmount);
-        // Bid must be strictly greater than minimum (not equal)
-        return !Number.isNaN(numericBid) && numericBid > minimumBid;
+        // Bid must be a whole number and strictly greater than minimum (not equal)
+        const isWholeNumber = !Number.isNaN(numericBid) && numericBid % 1 === 0 && numericBid > 0;
+        return isWholeNumber && numericBid > minimumBid;
     }, [bidAmount, minimumBid]);
 
     const handlePlaceBid = useCallback(async () => {
@@ -116,17 +120,26 @@ export default function Bids({
             setIsSubmitting(true);
 
             const auctionId = parseInt(selectedCollectionId, 10);
-            const bidAmountNum = parseFloat(bidAmount);
-            const bidAmountU8 = Math.min(255, Math.max(1, Math.floor(bidAmountNum * 100)));
+            const bidAmountNum = Math.floor(parseFloat(bidAmount));
 
-            const response = await account.execute({
-                contractAddress: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "bid",
-                calldata: [
-                    auctionId.toString(),
-                    bidAmountU8.toString()
-                ]
-            });
+            const response = await account.execute([
+                {
+                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
+                    entrypoint: "approve",
+                    calldata: [
+                        "0x04615c6e9eab6efe299cb2a07107e0b712a6b3bab73bc8cb4886e15f1e6356d5",
+                        uint256.bnToUint256(bidAmountNum + 1)
+                    ]
+                },
+                {
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "bid",
+                    calldata: [
+                        auctionId,
+                        bidAmountNum
+                    ]
+                }
+            ]);
 
             setTxnHash(response.transaction_hash);
             setBidAmount("");
@@ -145,7 +158,8 @@ export default function Bids({
 
         setSelectedCollectionId(collection.id);
         const nextMinimum = Math.max(collection.startingPrice, collection.highestBid ?? collection.startingPrice);
-        setBidAmount(nextMinimum.toFixed(2));
+        const defaultBid = nextMinimum + 10;
+        setBidAmount(defaultBid.toString());
     }, []);
 
     const handleSelectCollection = useCallback(
@@ -331,11 +345,22 @@ export default function Bids({
                                     <input
                                         id="bid-amount"
                                         type="number"
-                                        min={minimumBid * 1.0001}
-                                        step="0.01"
+                                        min={minimumBid + 1}
+                                        step="1"
                                         value={bidAmount}
-                                        onChange={(event) => setBidAmount(event.target.value)}
-                                        placeholder={(minimumBid * 1.1).toFixed(2)}
+                                        onChange={(event) => {
+                                            const value = event.target.value;
+                                            // Only allow whole numbers
+                                            if (value === '' || value === '-') {
+                                                setBidAmount(value);
+                                            } else {
+                                                const num = parseFloat(value);
+                                                if (!isNaN(num) && num >= 0) {
+                                                    setBidAmount(Math.floor(num).toString());
+                                                }
+                                            }
+                                        }}
+                                        placeholder={(minimumBid + 10).toString()}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
                                     <p className="text-xs text-[rgb(186,255,188)]/70">
@@ -358,21 +383,6 @@ export default function Bids({
                                         >
                                             {isSubmitting ? "Submitting..." : "Place Bid"}
                                         </button>
-                                        {txnHash && (
-                                            <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-3">
-                                                <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
-                                                    Transaction Submitted
-                                                </p>
-                                                <a
-                                                    href={explorer.transaction(txnHash)}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
-                                                >
-                                                    {txnHash}
-                                                </a>
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                                 
@@ -410,6 +420,22 @@ export default function Bids({
                                     );
                                 })()}
                             </div>
+
+                            {txnHash && (
+                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-3 w-full">
+                                    <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                                        Transaction Submitted
+                                    </p>
+                                    <a
+                                        href={explorer.transaction(txnHash)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all w-full"
+                                    >
+                                        {txnHash}
+                                    </a>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </section>

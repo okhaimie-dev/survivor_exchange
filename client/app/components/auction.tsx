@@ -3,7 +3,6 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import { FormattedNFT } from "../lib/graphql";
-import { cairo, CallData, shortString } from "starknet";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -110,13 +109,14 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         
             const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
+            const startingPriceWhole = Math.floor(parseFloat(startingPrice) || 0);
         
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "create_auction",
                 calldata: [
                     collectionName,
-                    startingPrice,
+                    startingPriceWhole,
                     token_ids.length,
                     ...token_ids,
                     "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4",
@@ -250,11 +250,22 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                             <input
                                 id="starting-price"
                                 type="number"
-                                min="0"
-                                step="0.01"
+                                min="1"
+                                step="1"
                                 value={startingPrice}
-                                onChange={(event) => setStartingPrice(event.target.value)}
-                                placeholder="0.00"
+                                onChange={(event) => {
+                                    const value = event.target.value;
+                                    // Only allow whole numbers
+                                    if (value === '' || value === '-') {
+                                        setStartingPrice(value);
+                                    } else {
+                                        const num = parseFloat(value);
+                                        if (!isNaN(num) && num >= 0) {
+                                            setStartingPrice(Math.floor(num).toString());
+                                        }
+                                    }
+                                }}
+                                placeholder="0"
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                         </div>

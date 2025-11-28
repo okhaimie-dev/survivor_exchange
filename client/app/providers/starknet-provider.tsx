@@ -40,6 +40,17 @@ const policies = {
           entrypoint: "end_auction",
         }
       ]
+    },
+    "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B": {
+      namespace: "Survivor",
+      description: "The native token of the Survivor game",
+      methods: [
+        {
+          name: "Approve",
+          description: "Approve a spender to spend your tokens",
+          entrypoint: "approve",
+        }
+      ]
     }
   }
 }
