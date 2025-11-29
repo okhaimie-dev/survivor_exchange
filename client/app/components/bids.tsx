@@ -5,17 +5,13 @@ import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import { AuctionItem, truncateAddress } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
-import { CallData, uint256 } from "starknet";
-
-// Helper function to truncate string with ellipsis after 20 characters
-const truncateWithEllipsis = (str: string, maxLength: number = 20): string => {
-    if (!str) return '';
-    if (str.length <= maxLength) return str;
-    return str.slice(0, maxLength) + '...';
-};
+import { uint256 } from "starknet";
+import { truncateWithEllipsis } from "../lib/utils";
 
 const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
 const SURVIVOR_ADDRESS_MAINNET = "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B";
+const VAULT_CONTRACT_ADDRESS = "0x79d67ca9bb8736dbb44e08489480e44939103fe9d9a1e8de4c94edadfb62373";
+const TEN_POW_18 = BigInt("1000000000000000000"); 
 
 type Collection = {
     id: string;
@@ -57,7 +53,7 @@ export default function Bids({
     const explorer = useExplorer();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
-    // Convert auctions to collections format
+    
     const collections: Collection[] = useMemo(() => {
         return auctions.map((auction) => ({
             id: auction.auction_id,
@@ -65,7 +61,7 @@ export default function Bids({
             totalMonsters: parseInt(auction.item_count) || 0,
             startingPrice: Math.floor(parseFloat(auction.starting_price) || 0),
             highestBid: auction.current_bid ? Math.floor(parseFloat(auction.current_bid)) : undefined,
-            image: "/logo.png", // Placeholder since image not in data
+            image: "/logo.png",
             status: auction.status,
             endTime: auction.end_time,
             seller: truncateAddress(auction.seller),
@@ -76,7 +72,6 @@ export default function Bids({
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
     const [bidAmount, setBidAmount] = useState<string>("");
 
-    // Update bid amount when collection changes
     useEffect(() => {
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
@@ -106,7 +101,6 @@ export default function Bids({
 
     const isBidValid = useMemo(() => {
         const numericBid = parseFloat(bidAmount);
-        // Bid must be a whole number and strictly greater than minimum (not equal)
         const isWholeNumber = !Number.isNaN(numericBid) && numericBid % 1 === 0 && numericBid > 0;
         return isWholeNumber && numericBid > minimumBid;
     }, [bidAmount, minimumBid]);
@@ -121,14 +115,16 @@ export default function Bids({
 
             const auctionId = parseInt(selectedCollectionId, 10);
             const bidAmountNum = Math.floor(parseFloat(bidAmount));
+            
+            const scaledAmount = BigInt(bidAmountNum + 1) * TEN_POW_18;
 
             const response = await account.execute([
                 {
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
                     calldata: [
-                        "0x04615c6e9eab6efe299cb2a07107e0b712a6b3bab73bc8cb4886e15f1e6356d5",
-                        uint256.bnToUint256(bidAmountNum + 1)
+                        VAULT_CONTRACT_ADDRESS, // Approve the vault contract, not the auction contract
+                        uint256.bnToUint256(scaledAmount)
                     ]
                 },
                 {
