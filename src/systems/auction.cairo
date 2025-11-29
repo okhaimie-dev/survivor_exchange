@@ -1,11 +1,19 @@
 use starknet::ContractAddress;
+use survivor_exchange::models::auction::Auction;
 
 #[starknet::interface]
 pub trait IAuctionMarketplace<TContractState> {
     /// Initializes a draft auction (status=0, beast_count=0). Items must be added before starting.
     /// - `auction_id`: Unique ID for the auction (caller-generated or from counter).
     /// - `starting_price`: Minimum initial bid (u8 for small units; consider u128 if scaling).
-    fn create_auction(ref self: TContractState, name: felt252, starting_price: u8);
+    fn create_auction(
+        ref self: TContractState,
+        name: felt252,
+        starting_price: u8,
+        items: Span<u32>,
+        collection: ContractAddress,
+        duration: Option<u64>,
+    );
 
     /// Adds a single item to a draft auction (convenience; status must be 0; owner only).
     /// - `auction_id`: The draft auction ID.
@@ -26,7 +34,7 @@ pub trait IAuctionMarketplace<TContractState> {
         ref self: TContractState,
         auction_id: u32,
         token_ids: Span<u32>,
-        collection_addresses: Span<ContractAddress>,
+        collection_address: ContractAddress,
     );
 
     /// Starts an active auction (sets end_time, status=1; requires beast_count > 0; owner only).
@@ -50,6 +58,8 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Settles an ended auction: transfers token to highest bidder, funds to owner.
     /// - `token_id`: The auction's token ID.
     fn settle_auction(ref self: TContractState, auction_id: u32);
+
+    fn get_auction(self: @TContractState, auction_id: u32) -> Auction;
 }
 
 // dojo decorator
@@ -58,7 +68,8 @@ pub mod auction_systems {
     use starknet::ContractAddress;
     use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
-    use super::IAuctionMarketplace;
+    use survivor_exchange::store::StoreTrait;
+    use super::{Auction, IAuctionMarketplace};
 
     component!(path: AuctionableComponent, storage: auctionable, event: AuctionableEvent);
     impl AuctionableImpl = AuctionableComponent::InternalImpl<ContractState>;
@@ -78,8 +89,17 @@ pub mod auction_systems {
 
     #[abi(embed_v0)]
     impl AuctionMarketplaceImpl of IAuctionMarketplace<ContractState> {
-        fn create_auction(ref self: ContractState, name: felt252, starting_price: u8) {
-            self.auctionable.create(self.world_default(), name, starting_price);
+        fn create_auction(
+            ref self: ContractState,
+            name: felt252,
+            starting_price: u8,
+            items: Span<u32>,
+            collection: ContractAddress,
+            duration: Option<u64>,
+        ) {
+            self
+                .auctionable
+                .create(self.world_default(), name, starting_price, items, collection, duration);
         }
 
         fn add_item(
@@ -97,7 +117,7 @@ pub mod auction_systems {
             ref self: ContractState,
             auction_id: u32,
             token_ids: Span<u32>,
-            collection_addresses: Span<ContractAddress>,
+            collection_address: ContractAddress,
         ) {}
 
         fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {
@@ -132,6 +152,11 @@ pub mod auction_systems {
         // - Transfer funds to owner (current_bid)
         // - Update status to 2 (settled)
         // - Emit event
+        }
+
+        fn get_auction(self: @ContractState, auction_id: u32) -> Auction {
+            let store = StoreTrait::new(self.world_default());
+            store.auction(auction_id)
         }
     }
 

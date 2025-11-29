@@ -1,7 +1,6 @@
 #[starknet::component]
 pub mod AuctionableComponent {
-    use dojo::world::{IWorldDispatcherTrait, WorldStorage};
-    use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
+    use dojo::world::{IWorldDispatcherTrait, WorldStorage, WorldStorageTrait};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use survivor_exchange::constants::{Errors, TEN_POW_18};
@@ -11,8 +10,10 @@ pub mod AuctionableComponent {
     use survivor_exchange::models::bid::{AssertTrait, BidAssert, BidTrait};
     use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
+    use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
+
 
     #[storage]
     pub struct Storage {}
@@ -30,16 +31,41 @@ pub mod AuctionableComponent {
             world: WorldStorage,
             name: felt252,
             starting_price: u8,
+            items: Span<u32>,
+            collection: ContractAddress,
+            duration: Option<u64>,
         ) {
+            assert(items.len() >= 1 && items.len() <= 20, Errors::INVALID_ITEMS_COUNT);
+
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
-
             let auction_id: u32 = store.world.dispatcher.uuid();
+
             let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
             auction.auction_id = auction_id;
-
             store.set_auction(@auction);
-            store.auction_created(auction, get_block_timestamp())
+
+            let mut item_index = 0;
+            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
+            for token_id in items {
+                assert(
+                    seller == collection_dispatcher.owner_of((*token_id).into()),
+                    Errors::NOT_BEAST_OWNER,
+                );
+
+                // TODO: Rentals check: let rental = store.rental(*token_id);
+                // rental.assert_not_active();
+
+                self.add_item(world, auction_id, *token_id, collection);
+                item_index += 1;
+            }
+
+            //store.auction_items_added(auction_id, item_index); // Post-items event
+            store.auction_created(auction, get_block_timestamp()); // Now with items
+
+            if let Option::Some(dur) = duration {
+                self.start_auction(world, auction_id, dur);
+            }
         }
 
         fn add_item(
@@ -100,30 +126,21 @@ pub mod AuctionableComponent {
             let current_time = get_block_timestamp();
             let mut auction = store.auction(auction_id);
 
-            // Assert auction exists and is active
             auction.assert_does_exist();
             let bidder = get_caller_address();
 
-            // TODO: Check no active rentals on items (query if needed)
-            // TODO: Transfer bid_amount to escrow (e.g., via ERC20 dispatcher for real currency)
-            //       E.g., eth_dispatcher.transfer(escrow_address, bid_amount.into());
+            let mut prev_bid = store.bid(auction_id, bidder.into());
+            let prev_scaled = prev_bid.amount.into() * TEN_POW_18;
+            let new_scaled = bid_amount.into() * TEN_POW_18;
+            if new_scaled > prev_scaled {
+                let diff = new_scaled - prev_scaled;
+                let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
+                let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
+                vault_dispatcher.deposit(auction.auction_id, diff, bidder);
+            }
 
-            let survivor_dispatcher = IERC20Dispatcher {
-                contract_address: SURVIVOR_ADDRESS_MAINNET(),
-            };
-
-            // TODO: calculate the diff between bidder balance and bid amount to transfer.
-            let scaled_amount = (bid_amount.into() * TEN_POW_18);
-            // Transfer funds to vault.
-            survivor_dispatcher
-                .transfer_from(
-                    get_caller_address(),
-                    0x04dc934EAE2fBC336cd4752378c9d2843F2171699Fa2e96500086591A0F543de
-                        .try_into()
-                        .unwrap(),
-                    scaled_amount,
-                );
-
+            let mut bid = prev_bid;
+            bid.amount = bid_amount;
             let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
             store.set_bid(@bid);
 

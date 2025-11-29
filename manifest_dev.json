@@ -47,7 +47,7 @@
     },
     {
       "address": "0x23886a55d413d1d85881ecb9a6fe14ac9e6c53690628f10de06f64a1ccedc5",
-      "class_hash": "0x3479d7f3e2c27c334cebbea44ee411dd4fb4e81902cc480b62804141d1e5a9f",
+      "class_hash": "0x4d506bc4827b4aa5cf5f945bcc8fb2edaf3724a7136c85bcbb1d6b3ea0b59f6",
       "init_calldata": [],
       "tag": "bm_0_0_2-auction_systems",
       "selector": "0x4a8c01bfa9d6ec54ff5df2121cb487c6a7e2392bc67d009fa979317d04e4b9a",
@@ -60,6 +60,20 @@
         "withdraw_bid",
         "end_auction",
         "settle_auction",
+        "upgrade"
+      ]
+    },
+    {
+      "address": "0x79d67ca9bb8736dbb44e08489480e44939103fe9d9a1e8de4c94edadfb62373",
+      "class_hash": "0x3653d4816ee78a2df8f8c5729bc3910d988510fae155dcaa2fb3a7b23bfbac1",
+      "init_calldata": [],
+      "tag": "bm_0_0_2-vault_systems",
+      "selector": "0x1cf3f7c199ab965c047bcdfda1cbd98d0b41bfaa0e6028263189b29fc0445c",
+      "systems": [
+        "dojo_init",
+        "create_vault",
+        "deposit",
+        "withdraw",
         "upgrade"
       ]
     }
@@ -448,16 +462,6 @@
     },
     {
       "type": "struct",
-      "name": "core::array::Span::<core::starknet::contract_address::ContractAddress>",
-      "members": [
-        {
-          "name": "snapshot",
-          "type": "@core::array::Array::<core::starknet::contract_address::ContractAddress>"
-        }
-      ]
-    },
-    {
-      "type": "struct",
       "name": "core::array::Span::<dojo::meta::introspect::Member>",
       "members": [
         {
@@ -539,12 +543,40 @@
       ]
     },
     {
+      "type": "struct",
+      "name": "core::integer::u256",
+      "members": [
+        {
+          "name": "low",
+          "type": "core::integer::u128"
+        },
+        {
+          "name": "high",
+          "type": "core::integer::u128"
+        }
+      ]
+    },
+    {
       "type": "enum",
       "name": "core::option::Option::<core::integer::u32>",
       "variants": [
         {
           "name": "Some",
           "type": "core::integer::u32"
+        },
+        {
+          "name": "None",
+          "type": "()"
+        }
+      ]
+    },
+    {
+      "type": "enum",
+      "name": "core::option::Option::<core::integer::u64>",
+      "variants": [
+        {
+          "name": "Some",
+          "type": "core::integer::u64"
         },
         {
           "name": "None",
@@ -2224,7 +2256,7 @@
       "name": "dojo_init",
       "inputs": [],
       "outputs": [],
-      "state_mutability": "view"
+      "state_mutability": "external"
     },
     {
       "type": "function",
@@ -2857,6 +2889,18 @@
             {
               "name": "starting_price",
               "type": "core::integer::u8"
+            },
+            {
+              "name": "items",
+              "type": "core::array::Span::<core::integer::u32>"
+            },
+            {
+              "name": "collection",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "duration",
+              "type": "core::option::Option::<core::integer::u64>"
             }
           ],
           "outputs": [],
@@ -2895,8 +2939,8 @@
               "type": "core::array::Span::<core::integer::u32>"
             },
             {
-              "name": "collection_addresses",
-              "type": "core::array::Span::<core::starknet::contract_address::ContractAddress>"
+              "name": "collection_address",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ],
           "outputs": [],
@@ -2969,6 +3013,22 @@
           ],
           "outputs": [],
           "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "get_auction",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "survivor_exchange::models::index::Auction"
+            }
+          ],
+          "state_mutability": "view"
         }
       ]
     },
@@ -2991,6 +3051,108 @@
           "name": "AuctionableEvent",
           "type": "survivor_exchange::components::auctionable::AuctionableComponent::Event",
           "kind": "flat"
+        }
+      ]
+    },
+    {
+      "type": "interface",
+      "name": "survivor_exchange::systems::vault::IVault",
+      "items": [
+        {
+          "type": "function",
+          "name": "create_vault",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "deposit",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "amount",
+              "type": "core::integer::u256"
+            },
+            {
+              "name": "depositor",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "withdraw",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "to",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "amount",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
+        },
+        {
+          "type": "function",
+          "name": "balance_of",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::integer::u256"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "get_owner",
+          "inputs": [],
+          "outputs": [
+            {
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
+          "state_mutability": "view"
+        }
+      ]
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::systems::vault::vault_systems::Event",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "UpgradeableEvent",
+          "type": "dojo::contract::components::upgradeable::upgradeable_cpt::Event",
+          "kind": "nested"
+        },
+        {
+          "name": "WorldProviderEvent",
+          "type": "dojo::contract::components::world_provider::world_provider_cpt::Event",
+          "kind": "nested"
         }
       ]
     }
