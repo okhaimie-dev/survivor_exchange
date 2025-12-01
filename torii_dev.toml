@@ -17,3 +17,7 @@ events_chunk_size = 1024
 blocks_chunk_size = 10240
 polling_interval = 500
 max_concurrent_tasks = 100
+
+[erc]
+async_metadata_updates = true
+metadata_updates_only_at_head = true
