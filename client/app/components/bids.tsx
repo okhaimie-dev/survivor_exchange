@@ -263,7 +263,7 @@ export default function Bids({
                                                 const imageSrc = nft.metadata?.image 
                                                     ? nft.metadata.image 
                                                     : nft.imagePath 
-                                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
                                                     : "/logo.png";
                                                 const isBase64 = imageSrc.startsWith("data:");
                                                 

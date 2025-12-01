@@ -5,8 +5,6 @@ type PaginationProps = {
 };
 
 export default function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-    const pages = Array.from({ length: totalPages }, (_, index) => index + 1);
-
     const handlePrevious = () => {
         if (currentPage > 1) {
             onPageChange(currentPage - 1);
@@ -18,6 +16,34 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
             onPageChange(currentPage + 1);
         }
     };
+
+    // Calculate which 3 pages to show
+    const getVisiblePages = () => {
+        if (totalPages <= 3) {
+            // If 3 or fewer pages, show all
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        // Show 3 pages centered around current page when possible
+        let startPage = Math.max(1, currentPage - 1);
+        let endPage = Math.min(totalPages, currentPage + 1);
+
+        // Adjust if we're near the beginning
+        if (currentPage <= 2) {
+            startPage = 1;
+            endPage = 3;
+        }
+
+        // Adjust if we're near the end
+        if (currentPage >= totalPages - 1) {
+            startPage = totalPages - 2;
+            endPage = totalPages;
+        }
+
+        return Array.from({ length: endPage - startPage + 1 }, (_, index) => startPage + index);
+    };
+
+    const visiblePages = getVisiblePages();
 
     return (
         <nav className="flex items-center gap-3 text-sm font-orbitron uppercase tracking-wide text-white">
@@ -34,7 +60,7 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
                 Previous
             </button>
             <ul className="flex items-center gap-2">
-                {pages.map((page) => (
+                {visiblePages.map((page) => (
                     <li key={page}>
                         <button
                             type="button"

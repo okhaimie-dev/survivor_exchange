@@ -74,7 +74,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -104,7 +104,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -139,7 +139,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -177,7 +177,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                         const imageSrc = nft.metadata?.image 
                                             ? nft.metadata.image 
                                             : nft.imagePath 
-                                            ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+                                            ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
                                             : collection.image;
                                         const isBase64 = imageSrc.startsWith("data:");
                                         

@@ -29,7 +29,7 @@ export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProp
     const imageSrc = nft.metadata?.image 
         ? nft.metadata.image // Base64 data URI (e.g., "data:image/svg+xml;base64,...")
         : nft.imagePath 
-        ? `https://api.cartridge.gg/x/bm/torii/${nft.imagePath}`
+        ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
         : "/logo.png";
 
     // Format token ID for display

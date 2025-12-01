@@ -4,7 +4,7 @@ import React from 'react';
 import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 
-const GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/bm/torii/graphql';
+const GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/tt/torii/graphql';
 
 const httpLink = createHttpLink({
   uri: GRAPHQL_ENDPOINT,
