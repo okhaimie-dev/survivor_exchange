@@ -20,7 +20,7 @@ const provider = jsonRpcProvider({
 
 const policies = {
   contracts: {
-    "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5": {
+    "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6": {
       namespace: "Survivor Exchange",
       description: "A place where you can auction your Loot Survivor game monsters",
       methods: [

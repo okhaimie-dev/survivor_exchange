@@ -4,7 +4,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 
-const AUCTION_CONTRACT_ADDRESS = "0x0023886A55d413d1D85881eCb9a6fE14ac9e6c53690628f10de06F64a1CCedc5";
+const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
 
 const formatEth = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return "—";
