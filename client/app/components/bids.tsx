@@ -10,8 +10,7 @@ import { truncateWithEllipsis } from "../lib/utils";
 
 const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
 const SURVIVOR_ADDRESS_MAINNET = "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B";
-const VAULT_CONTRACT_ADDRESS = "0x79d67ca9bb8736dbb44e08489480e44939103fe9d9a1e8de4c94edadfb62373";
-const TEN_POW_18 = BigInt("1000000000000000000"); 
+const VAULT_CONTRACT_ADDRESS = "0x04615c6e9eab6efe299cb2a07107e0b712a6b3bab73bc8cb4886e15f1e6356d5"; 
 
 type Collection = {
     id: string;
@@ -116,7 +115,8 @@ export default function Bids({
             const auctionId = parseInt(selectedCollectionId, 10);
             const bidAmountNum = Math.floor(parseFloat(bidAmount));
             
-            const scaledAmount = BigInt(bidAmountNum + 1) * TEN_POW_18;
+            const MAX_UINT256 = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
+            const scaledAmount = MAX_UINT256;
 
             const response = await account.execute([
                 {
