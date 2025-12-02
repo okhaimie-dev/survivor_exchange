@@ -91,7 +91,7 @@ export const MY_NFTS_QUERY = gql`
 `;
 
 // Backward compatibility function - can be removed once hooks are migrated
-export async function fetchMyNFTs(accountAddress: string): Promise<MyNFTsResponse> {
+export async function fetchMyNFTs(_accountAddress: string): Promise<MyNFTsResponse> {
   // This is now handled by Apollo Client hooks
   // Keeping for backward compatibility
   throw new Error('Use Apollo Client hooks instead. See useMyNFTs hook.');
@@ -323,7 +323,7 @@ export const MY_LISTINGS_QUERY = gql`
 `;
 
 // Backward compatibility function - can be removed once hooks are migrated
-export async function fetchMyListings(seller: string): Promise<MyListingsResponse> {
+export async function fetchMyListings(_seller: string): Promise<MyListingsResponse> {
   // This is now handled by Apollo Client hooks
   // Keeping for backward compatibility
   throw new Error('Use Apollo Client hooks instead. See useMyListings hook.');

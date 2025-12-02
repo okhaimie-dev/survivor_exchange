@@ -9,10 +9,7 @@ import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
 import { truncateWithEllipsis } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-
-const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
-const SURVIVOR_ADDRESS_MAINNET = "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B";
-const VAULT_CONTRACT_ADDRESS = "0x04615c6e9eab6efe299cb2a07107e0b712a6b3bab73bc8cb4886e15f1e6356d5"; 
+import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants"; 
 
 type Collection = {
     id: string;
@@ -71,7 +68,6 @@ export default function Bids({
         tokenIdSort: "",
     });
     
-    const PAGE_SIZE = 3;
     const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
 
     // Apply filters to auctions
@@ -81,13 +77,13 @@ export default function Bids({
 
     // Calculate pagination for filtered auctions
     const totalFilteredPages = useMemo(() => {
-        return Math.max(1, Math.ceil(filteredAuctions.length / PAGE_SIZE));
+        return Math.max(1, Math.ceil(filteredAuctions.length / DEFAULT_PAGE_SIZE));
     }, [filteredAuctions.length]);
 
     // Get paginated filtered auctions
     const paginatedFilteredAuctions = useMemo(() => {
-        const startIndex = (localCurrentPage - 1) * PAGE_SIZE;
-        return filteredAuctions.slice(startIndex, startIndex + PAGE_SIZE);
+        const startIndex = (localCurrentPage - 1) * DEFAULT_PAGE_SIZE;
+        return filteredAuctions.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
     }, [filteredAuctions, localCurrentPage]);
 
     // Reset to page 1 when filters change
@@ -162,7 +158,6 @@ export default function Bids({
             const auctionId = parseInt(selectedCollectionId, 10);
             const bidAmountNum = Math.floor(parseFloat(bidAmount));
             
-            const MAX_UINT256 = BigInt("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");
             const scaledAmount = MAX_UINT256;
 
             const response = await account.execute([
@@ -320,7 +315,7 @@ export default function Bids({
                                                 const imageSrc = nft.metadata?.image 
                                                     ? nft.metadata.image 
                                                     : nft.imagePath 
-                                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+                                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
                                                     : "/logo.png";
                                                 const isBase64 = imageSrc.startsWith("data:");
                                                 

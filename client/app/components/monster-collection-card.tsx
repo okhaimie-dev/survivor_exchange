@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { FormattedNFT } from "../lib/graphql";
+import { IMAGE_BASE_URL } from "../lib/constants";
 
 type MonsterCollectionCardProps = {
     collection: {
@@ -74,7 +75,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -104,7 +105,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -139,7 +140,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
                                     : nft.imagePath 
-                                    ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
                                     : collection.image;
                                 const isBase64 = imageSrc.startsWith("data:");
                                 
@@ -177,7 +178,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                         const imageSrc = nft.metadata?.image 
                                             ? nft.metadata.image 
                                             : nft.imagePath 
-                                            ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+                                            ? `${IMAGE_BASE_URL}/${nft.imagePath}`
                                             : collection.image;
                                         const isBase64 = imageSrc.startsWith("data:");
                                         

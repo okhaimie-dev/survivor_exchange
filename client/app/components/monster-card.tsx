@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { FormattedNFT } from "../lib/graphql";
+import { IMAGE_BASE_URL } from "../lib/constants";
 
 type MonsterCardProps = {
     nft: FormattedNFT;
@@ -29,7 +30,7 @@ export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProp
     const imageSrc = nft.metadata?.image 
         ? nft.metadata.image // Base64 data URI (e.g., "data:image/svg+xml;base64,...")
         : nft.imagePath 
-        ? `https://api.cartridge.gg/x/tt/torii/${nft.imagePath}`
+        ? `${IMAGE_BASE_URL}/${nft.imagePath}`
         : "/logo.png";
 
     // Format token ID for display

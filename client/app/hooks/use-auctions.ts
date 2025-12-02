@@ -1,8 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
 import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token, felt252ToString } from '../lib/graphql';
-
-const PAGE_SIZE = 3;
+import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
 /**
  * Normalizes token ID to padded hex format (0x + 64 hex chars)
@@ -67,7 +66,7 @@ export function useAuctions() {
   const apolloClient = useApolloClient();
 
   const { data, loading, error } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
-    pollInterval: 1000, // Poll every second
+    pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
@@ -99,12 +98,12 @@ export function useAuctions() {
 
   // Paginate auctions with NFTs
   const paginatedAuctions = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return auctionsWithNFTs.slice(startIndex, startIndex + PAGE_SIZE);
+    const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
+    return auctionsWithNFTs.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
   }, [auctionsWithNFTs, currentPage]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(auctionsWithNFTs.length / PAGE_SIZE));
+    return Math.max(1, Math.ceil(auctionsWithNFTs.length / DEFAULT_PAGE_SIZE));
   }, [auctionsWithNFTs.length]);
 
   // Helper function to get items for a specific auction
@@ -161,11 +160,19 @@ export function useAuctions() {
             });
           }
           
-          // Filter tokenBalances directly by tokenId (normalized)
+          // Filter tokenBalances by tokenId (normalized) and contract address
+          const targetContractNormalized = normalizeContractAddress(BEASTS_NFT_CONTRACT_ADDRESS).toLowerCase();
           const filteredEdges = response?.tokenBalances?.edges?.filter((edge) => {
             const tokenMetadata = edge.node.tokenMetadata;
             if (!tokenMetadata || !('tokenId' in tokenMetadata)) return false;
             
+            // First check contract address - only include NFTs from the beasts contract
+            const nftContractAddress = tokenMetadata.contractAddress;
+            if (!nftContractAddress) return false;
+            const nftContractNormalized = normalizeContractAddress(nftContractAddress).toLowerCase();
+            if (nftContractNormalized !== targetContractNormalized) return false;
+            
+            // Then check token ID
             const nftTokenId = tokenMetadata.tokenId;
             const normalizedNftTokenId = normalizeTokenId(nftTokenId).toLowerCase();
             return normalizedNftTokenId && allAuctionTokenIds.has(normalizedNftTokenId);
@@ -204,7 +211,7 @@ export function useAuctions() {
               nfts: matchedNFTs,
             });
           }
-        } catch (err) {
+        } catch (_err) {
           // Still add auctions without NFTs if fetch fails
           for (const { auction } of auctionsWithItems) {
             auctionsWithNFTsData.push({

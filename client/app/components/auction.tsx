@@ -6,6 +6,7 @@ import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import { FormattedNFT } from "../lib/graphql";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
+import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES } from "../lib/constants";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -13,20 +14,17 @@ interface AuctionProps {
     error: Error | null;
 }
 
-const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
-
 export default function Auction({ nfts, loading, error }: AuctionProps) {
     const { account, address } = useAccount();
     const explorer = useExplorer();
-    const pageSize = 3;
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
-    // Default to 30 minutes from now
+    // Default to DEFAULT_AUCTION_DURATION_MINUTES minutes from now
     const getDefaultDateTime = () => {
         const now = new Date();
-        now.setMinutes(now.getMinutes() + 30);
+        now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
         return now.toISOString().slice(0, 16);
     };
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
@@ -69,12 +67,12 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         setCurrentPage(1);
     }, [filters]);
 
-    const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / pageSize)), [filteredNFTs.length, pageSize]);
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / DEFAULT_PAGE_SIZE)), [filteredNFTs.length]);
 
     const visibleNFTs = useMemo(() => {
-        const startIndex = (currentPage - 1) * pageSize;
-        return filteredNFTs.slice(startIndex, startIndex + pageSize);
-    }, [currentPage, pageSize, filteredNFTs]);
+        const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
+        return filteredNFTs.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
+    }, [currentPage, filteredNFTs]);
 
     const selectedNFTs = useMemo(
         () => filteredNFTs.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
@@ -128,8 +126,9 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         const now = new Date();
         const durationSeconds = Math.floor((selectedDate.getTime() - now.getTime()) / 1000);
     
-        if (durationSeconds < 1800) {
-            alert("End date must be at least 30 minutes from now");
+        const minimumDurationSeconds = DEFAULT_AUCTION_DURATION_MINUTES * 60;
+        if (durationSeconds < minimumDurationSeconds) {
+            alert(`End date must be at least ${DEFAULT_AUCTION_DURATION_MINUTES} minutes from now`);
             return;
         }
     
@@ -326,13 +325,13 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 onChange={(event) => setEndDateTime(event.target.value)}
                                 min={(() => {
                                     const now = new Date();
-                                    now.setMinutes(now.getMinutes() + 30);
+                                    now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
                                     return now.toISOString().slice(0, 16);
                                 })()}
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
                             />
                             <p className="text-xs text-[rgb(186,255,188)]/70">
-                                Minimum duration is 30 minutes from now.
+                                Minimum duration is {DEFAULT_AUCTION_DURATION_MINUTES} minutes from now.
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2">

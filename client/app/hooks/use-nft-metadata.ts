@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchMyNFTs, formatNFTs, FormattedNFT, ERC721Token } from '../lib/graphql';
+import { BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
 interface UseNFTMetadataOptions {
   sellerAddress: string;
@@ -30,14 +31,31 @@ export function useNFTMetadata({ sellerAddress, tokenIds, contractAddress }: Use
         
         const allNfts = formatNFTs(rawNFTs);
         
-        // Filter NFTs by token IDs (and optionally contract address)
+        // Normalize contract address for comparison
+        const normalizeContractAddress = (addr: string | null | undefined): string => {
+          if (!addr) return '';
+          const addrStr = String(addr);
+          if (!addrStr) return '';
+          let hexPart: string;
+          if (addrStr.length >= 2 && addrStr[0] === '0' && (addrStr[1] === 'x' || addrStr[1] === 'X')) {
+            hexPart = addrStr.slice(2);
+          } else {
+            hexPart = addrStr;
+          }
+          const padded = hexPart.toLowerCase().padStart(64, '0');
+          return `0x${padded}`;
+        };
+        
+        // Filter NFTs by token IDs and contract address (default to beasts contract)
+        const targetContract = contractAddress || BEASTS_NFT_CONTRACT_ADDRESS;
+        const targetContractNormalized = normalizeContractAddress(targetContract).toLowerCase();
+        
         const filteredNfts = allNfts.filter((nft) => {
           const matchesTokenId = tokenIds.some(
             (id) => nft.tokenId?.toLowerCase() === id.toLowerCase()
           );
-          const matchesContract = contractAddress 
-            ? nft.contractAddress?.toLowerCase() === contractAddress.toLowerCase()
-            : true;
+          const nftContractNormalized = normalizeContractAddress(nft.contractAddress).toLowerCase();
+          const matchesContract = nftContractNormalized === targetContractNormalized;
           
           return matchesTokenId && matchesContract;
         });

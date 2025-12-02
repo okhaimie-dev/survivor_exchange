@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
 import { MY_LISTINGS_QUERY, MyListingsResponse, Auction, felt252ToString } from '../lib/graphql';
+import { DEFAULT_POLL_INTERVAL } from '../lib/constants';
 
 export interface FormattedListing {
   id: string;
@@ -23,7 +24,7 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   const { data, loading, error } = useQuery<MyListingsResponse>(MY_LISTINGS_QUERY, {
     variables: { seller: seller || '' },
     skip: !seller,
-    pollInterval: 1000, // Poll every second
+    pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes

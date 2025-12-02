@@ -4,23 +4,24 @@ import { sepolia, mainnet } from "@starknet-react/chains";
 import { StarknetConfig, jsonRpcProvider, cartridge } from "@starknet-react/core";
 
 import { ControllerConnector } from "@cartridge/connector";
+import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET } from "../lib/constants";
 
 const provider = jsonRpcProvider({
   rpc: (chain) => {
     switch (chain.id) {
       case mainnet.id:
-        return { nodeUrl: "https://api.cartridge.gg/x/starknet/mainnet" };
+        return { nodeUrl: MAINNET_RPC_URL };
       case sepolia.id:
-        return { nodeUrl: "https://api.cartridge.gg/x/starknet/sepolia" };
+        return { nodeUrl: SEPOLIA_RPC_URL };
       default:
-        return { nodeUrl: "https://api.cartridge.gg/x/starknet/mainnet" };
+        return { nodeUrl: MAINNET_RPC_URL };
     }
   },
 });
 
 const policies = {
   contracts: {
-    "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6": {
+    [AUCTION_CONTRACT_ADDRESS]: {
       namespace: "Survivor Exchange",
       description: "A place where you can auction your Loot Survivor game monsters",
       methods: [
@@ -41,7 +42,7 @@ const policies = {
         }
       ]
     },
-    "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B": {
+    [SURVIVOR_ADDRESS_MAINNET]: {
       namespace: "Survivor",
       description: "The native token of the Survivor game",
       methods: [

@@ -3,8 +3,7 @@ import moment from "moment";
 import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
-
-const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
+import { AUCTION_CONTRACT_ADDRESS } from "../lib/constants";
 
 const formatEth = (value: number | null | undefined): string => {
     if (value === null || value === undefined) return "—";
