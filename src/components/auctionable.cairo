@@ -34,7 +34,7 @@ pub mod AuctionableComponent {
             collection: ContractAddress,
             duration: Option<u64>,
         ) {
-            assert(items.len() >= 1 && items.len() <= 20, Errors::INVALID_ITEMS_COUNT);
+            assert(items.len() >= 1 && items.len() <= 75, Errors::INVALID_ITEMS_COUNT);
 
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();

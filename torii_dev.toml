@@ -9,7 +9,6 @@ namespaces = ["bm_0_0_6"]
 pending = true
 world_block = 2210150
 contracts = [
-  "erc721:0x046dA8955829ADF2bDa310099A0063451923f02E648cF25A1203aac6335CF0e4", # BEAST NFT
 ]
 
 # Performance tuning
@@ -17,7 +16,3 @@ events_chunk_size = 1024
 blocks_chunk_size = 10240
 polling_interval = 500
 max_concurrent_tasks = 100
-
-[erc]
-metadata_updates = true
-# async_metadata_updates = true
