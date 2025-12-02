@@ -16,7 +16,7 @@ export const VAULT_CONTRACT_ADDRESS = '0x04615c6e9eab6efe299cb2a07107e0b712a6b3b
 export const BEASTS_NFT_CONTRACT_ADDRESS = '0x46da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4';
 
 // Pagination
-export const DEFAULT_PAGE_SIZE = 3;
+export const DEFAULT_PAGE_SIZE = 9;
 
 // GraphQL Query Limits
 export const GRAPHQL_QUERY_LIMIT = 1000000;

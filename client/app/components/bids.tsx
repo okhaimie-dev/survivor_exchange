@@ -263,30 +263,42 @@ export default function Bids({
     }
 
 
-    return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-            <Filters filters={filters} onFiltersChange={setFilters} />
-            
-            <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-                {collections.map((collection) => {
-                    const auction = paginatedFilteredAuctions.find(a => a.auction_id === collection.id);
-                    const nfts = auction?.nfts || [];
-                    
-                    return (
-                        <div key={collection.id} className="flex h-full w-full">
-                            <MonsterCollectionCard
-                                collection={collection}
-                                isSelected={collection.id === selectedCollectionId}
-                                onSelect={() => handleSelectCollection(collection)}
-                                nfts={nfts}
-                            />
-                        </div>
-                    );
-                })}
-            </div>
+    // Split collections into rows: 1-3, 4-6, 7-9
+    const row1 = collections.slice(0, 3);
+    const row2 = collections.slice(3, 6);
+    const row3 = collections.slice(6, 9);
 
-            {selectedCollection && (
-                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
+    // Helper to render a row of cards
+    const renderRow = (rowCollections: Collection[]) => (
+        <div className="flex w-full gap-6">
+            {rowCollections.map((collection) => {
+                const auction = paginatedFilteredAuctions.find(a => a.auction_id === collection.id);
+                const nfts = auction?.nfts || [];
+                
+                return (
+                    <div key={collection.id} className="flex-1">
+                        <MonsterCollectionCard
+                            collection={collection}
+                            isSelected={collection.id === selectedCollectionId}
+                            onSelect={() => handleSelectCollection(collection)}
+                            nfts={nfts}
+                        />
+                    </div>
+                );
+            })}
+            {/* Fill empty slots if row has less than 3 cards */}
+            {Array.from({ length: 3 - rowCollections.length }).map((_, idx) => (
+                <div key={`empty-${idx}`} className="flex-1" />
+            ))}
+        </div>
+    );
+
+    // Helper to render selected collection details
+    const renderSelectedDetails = () => {
+        if (!selectedCollection) return null;
+
+        return (
+            <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                     <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                             {(() => {
@@ -487,7 +499,36 @@ export default function Bids({
                         </div>
                     </div>
                 </section>
-            )}
+        );
+    };
+
+    // Determine which row contains the selected collection
+    const selectedRow = row1.some(c => c.id === selectedCollectionId) ? 1 
+        : row2.some(c => c.id === selectedCollectionId) ? 2 
+        : row3.some(c => c.id === selectedCollectionId) ? 3 
+        : null;
+
+    return (
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
+            <Filters filters={filters} onFiltersChange={setFilters} />
+            
+            {/* Row 1: Cards 1-3 */}
+            {renderRow(row1)}
+            
+            {/* Selected Collection Details after Row 1 (only if selected is in row 1) */}
+            {selectedCollection && selectedRow === 1 && renderSelectedDetails()}
+            
+            {/* Row 2: Cards 4-6 */}
+            {renderRow(row2)}
+            
+            {/* Selected Collection Details after Row 2 (only if selected is in row 2) */}
+            {selectedCollection && selectedRow === 2 && renderSelectedDetails()}
+            
+            {/* Row 3: Cards 7-9 */}
+            {renderRow(row3)}
+            
+            {/* Selected Collection Details after Row 3 (only if selected is in row 3) */}
+            {selectedCollection && selectedRow === 3 && renderSelectedDetails()}
 
             <div className="flex justify-center">
                 <Pagination currentPage={localCurrentPage} totalPages={totalFilteredPages} onPageChange={handlePageChange} />
