@@ -2,7 +2,6 @@ use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IVault<TContractState> {
-    fn create_vault(ref self: TContractState, vault_id: u32);
     fn deposit(ref self: TContractState, vault_id: u32, amount: u256, depositor: ContractAddress);
     fn withdraw(ref self: TContractState, vault_id: u32, to: ContractAddress, amount: u256);
     fn balance_of(self: @TContractState, vault_id: u32) -> u256;
@@ -15,7 +14,6 @@ pub mod vault_systems {
     use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
     use survivor_exchange::constants::{DEFAULT_NS, Errors};
     use survivor_exchange::models::auction::AuctionAssert;
-    use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::SURVIVOR_ADDRESS_MAINNET;
@@ -25,17 +23,6 @@ pub mod vault_systems {
 
     #[abi(embed_v0)]
     impl VaultImpl of IVault<ContractState> {
-        fn create_vault(ref self: ContractState, vault_id: u32) {
-            // Sync with Dojo: Create Vault model entry
-            let mut store = StoreTrait::new(self.world_default());
-            let mut vault: Vault = VaultTrait::new(
-                vault_id, 0, SURVIVOR_ADDRESS_MAINNET().into(), starknet::get_block_timestamp(),
-            );
-            // TODO: Set vault.vault_address = deployed_vault_contract_address (hardcode or pass as
-            // param)
-            store.set_vault(@vault);
-        }
-
         fn deposit(
             ref self: ContractState, vault_id: u32, amount: u256, depositor: ContractAddress,
         ) {
