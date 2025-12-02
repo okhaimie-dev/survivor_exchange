@@ -9,7 +9,6 @@ type MonsterCardProps = {
 };
 
 export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProps) {
-    // Get attribute values
     const getAttribute = (traitType: string) => {
         const attr = nft.attributes.find((a) => a.trait_type === traitType);
         return attr ? String(attr.value) : undefined;
@@ -23,17 +22,14 @@ export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProp
     const prefix = getAttribute("Prefix");
     const suffix = getAttribute("Suffix");
     
-    // Build epithet from prefix and suffix if available
     const epithet = prefix && suffix ? `${prefix} ${suffix}` : prefix || suffix || "";
 
-    // Get image - prioritize base64 from metadata, then imagePath, then fallback
     const imageSrc = nft.metadata?.image 
-        ? nft.metadata.image // Base64 data URI (e.g., "data:image/svg+xml;base64,...")
+        ? nft.metadata.image
         : nft.imagePath 
         ? `${IMAGE_BASE_URL}/${nft.imagePath}`
         : "/logo.png";
 
-    // Format token ID for display
     const tokenIdDisplay = `#${parseInt(nft.tokenId, 16).toString()}`;
 
     const stats = [

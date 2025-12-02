@@ -2,28 +2,18 @@ import { FormattedNFT } from "./graphql";
 import { FilterState } from "../components/filters";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 
-/**
- * Gets an attribute value from NFT attributes array
- */
 function getAttributeValue(nft: FormattedNFT, traitType: string): string | undefined {
     const attr = nft.attributes.find((a) => a.trait_type === traitType);
     return attr ? String(attr.value) : undefined;
 }
 
-/**
- * Checks if a string matches a search query (case-insensitive)
- */
 function matchesSearch(text: string | undefined, search: string): boolean {
     if (!search) return true;
     if (!text) return false;
     return text.toLowerCase().includes(search.toLowerCase());
 }
 
-/**
- * Filters a single NFT based on filter criteria
- */
 export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
-    // Search filter
     if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const matchesName = matchesSearch(nft.metadataName, filters.search);
@@ -31,7 +21,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         const tokenIdNum = parseInt(nft.tokenId, 16).toString();
         const matchesTokenId = tokenIdNum.includes(searchLower);
         
-        // Check all attributes
         const matchesAttributes = nft.attributes.some(attr => 
             String(attr.value).toLowerCase().includes(searchLower)
         );
@@ -41,14 +30,12 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Beast filter
     if (filters.beast) {
         if (nft.beastName !== filters.beast) {
             return false;
         }
     }
 
-    // Type filter
     if (filters.type) {
         const nftType = nft.beastType || getAttributeValue(nft, "Type");
         if (nftType !== filters.type) {
@@ -56,7 +43,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Tier filter
     if (filters.tier) {
         const nftTier = nft.tier || getAttributeValue(nft, "Tier");
         if (nftTier !== filters.tier) {
@@ -64,7 +50,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Level range filter
     if (filters.levelMin || filters.levelMax) {
         const nftLevel = parseInt(nft.level || getAttributeValue(nft, "Level") || "0");
         const min = filters.levelMin ? parseInt(filters.levelMin) : 1;
@@ -74,7 +59,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Power range filter
     if (filters.powerMin || filters.powerMax) {
         const nftPower = parseFloat(nft.power || getAttributeValue(nft, "Power") || "0");
         const min = filters.powerMin ? parseFloat(filters.powerMin) : 1;
@@ -84,7 +68,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Rank range filter
     if (filters.rankMin || filters.rankMax) {
         const nftRank = parseInt(nft.rank || getAttributeValue(nft, "Rank") || "0");
         const min = filters.rankMin ? parseInt(filters.rankMin) : 1;
@@ -94,7 +77,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         }
     }
 
-    // Shiny filter - check attributes for "Shiny" trait
     if (filters.shiny) {
         const shinyValue = getAttributeValue(nft, "Shiny");
         const isShiny = shinyValue?.toLowerCase() === "true" || shinyValue === "1" || shinyValue?.toLowerCase() === "yes";
@@ -102,7 +84,6 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
         if (filters.shiny === "false" && isShiny) return false;
     }
 
-    // Animated filter - check attributes for "Animated" trait
     if (filters.animated) {
         const animatedValue = getAttributeValue(nft, "Animated");
         const isAnimated = animatedValue?.toLowerCase() === "true" || animatedValue === "1" || animatedValue?.toLowerCase() === "yes";
@@ -113,14 +94,9 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
     return true;
 }
 
-/**
- * Sorts NFTs based on sort criteria
- */
 export function sortNFTs(nfts: FormattedNFT[], filters: FilterState): FormattedNFT[] {
     let sorted = [...nfts];
 
-    // Price sort (for auctions, this would be starting price - handled in auction component)
-    // Token ID sort
     if (filters.tokenIdSort) {
         sorted.sort((a, b) => {
             const aId = parseInt(a.tokenId, 16);
@@ -132,20 +108,12 @@ export function sortNFTs(nfts: FormattedNFT[], filters: FilterState): FormattedN
     return sorted;
 }
 
-/**
- * Filters and sorts NFTs
- */
 export function applyFiltersToNFTs(nfts: FormattedNFT[], filters: FilterState): FormattedNFT[] {
     const filtered = nfts.filter(nft => filterNFT(nft, filters));
     return sortNFTs(filtered, filters);
 }
 
-/**
- * Filters auctions based on their NFT properties
- * For bids: searches collection names and filters by any NFT in the collection
- */
 export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState): AuctionWithNFTs[] {
-    // Check if any filters are active
     const hasFilters = filters.search || filters.beast || filters.type || filters.tier || 
         filters.levelMin || filters.levelMax || filters.powerMin || filters.powerMax ||
         filters.rankMin || filters.rankMax || filters.shiny || filters.animated;
@@ -155,40 +123,30 @@ export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState
     }
 
     return auctions.filter(auction => {
-        // Search: Primary focus on collection name (auction.name)
         let matchesCollectionSearch = true;
         if (filters.search) {
             matchesCollectionSearch = matchesSearch(auction.name, filters.search);
         }
 
-        // If auction has no NFTs
         if (auction.nfts.length === 0) {
-            // If only search is active, return based on collection name match
             if (filters.search && !filters.beast && !filters.type && !filters.tier && 
                 !filters.levelMin && !filters.levelMax && !filters.powerMin && !filters.powerMax &&
                 !filters.rankMin && !filters.rankMax && !filters.shiny && !filters.animated) {
                 return matchesCollectionSearch;
             }
-            // If other filters are active, exclude auctions without NFTs
             return false;
         }
 
-        // Filters: Check if ANY NFT in the collection matches the filter criteria
-        // Create filter state without search (search is handled separately for collection names)
         const nftFilters: FilterState = {
             ...filters,
-            search: "", // Search is for collection names only
+            search: "",
         };
         const matchesNFTFilters = auction.nfts.some(nft => filterNFT(nft, nftFilters));
 
-        // Collection matches if: collection name matches search AND any NFT matches filters
         return matchesCollectionSearch && matchesNFTFilters;
     });
 }
 
-/**
- * Sorts auctions based on price
- */
 export function sortAuctions(auctions: AuctionWithNFTs[], filters: FilterState): AuctionWithNFTs[] {
     let sorted = [...auctions];
 
@@ -200,7 +158,6 @@ export function sortAuctions(auctions: AuctionWithNFTs[], filters: FilterState):
         });
     }
 
-    // Token ID sort (sort by first NFT's token ID in auction)
     if (filters.tokenIdSort && !filters.priceSort) {
         sorted.sort((a, b) => {
             const aFirstNft = a.nfts[0];
@@ -215,9 +172,6 @@ export function sortAuctions(auctions: AuctionWithNFTs[], filters: FilterState):
     return sorted;
 }
 
-/**
- * Applies filters and sorting to auctions
- */
 export function applyFiltersToAuctions(auctions: AuctionWithNFTs[], filters: FilterState): AuctionWithNFTs[] {
     const filtered = filterAuctions(auctions, filters);
     return sortAuctions(filtered, filters);

@@ -3,18 +3,12 @@ import { useQuery, useApolloClient } from '@apollo/client/react';
 import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token, felt252ToString } from '../lib/graphql';
 import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
-/**
- * Normalizes token ID to padded hex format (0x + 64 hex chars)
- * Handles decimal numbers, hex strings, and already padded hex strings
- */
 function normalizeTokenId(tokenId: string | number | null | undefined): string {
   if (tokenId === null || tokenId === undefined) return '';
   
-  // Convert to string
   const tokenIdStr = String(tokenId);
   if (!tokenIdStr) return '';
   
-  // Check if it starts with 0x or 0X (check first two characters)
   let hexPart: string;
   if (tokenIdStr.length >= 2 && tokenIdStr[0] === '0' && (tokenIdStr[1] === 'x' || tokenIdStr[1] === 'X')) {
     hexPart = tokenIdStr.slice(2);
@@ -22,27 +16,21 @@ function normalizeTokenId(tokenId: string | number | null | undefined): string {
     hexPart = tokenIdStr;
   }
   
-  // If it's a decimal number, convert to hex
   if (/^\d+$/.test(hexPart)) {
     const num = parseInt(hexPart, 10);
     hexPart = num.toString(16);
   }
   
-  // Pad to 64 hex characters and add 0x prefix
   const padded = hexPart.toLowerCase().padStart(64, '0');
   return `0x${padded}`;
 }
 
-/**
- * Normalizes contract address to padded hex format (0x + 64 hex chars)
- */
 function normalizeContractAddress(address: string | null | undefined): string {
   if (!address) return '';
   
   const addrStr = String(address);
   if (!addrStr) return '';
   
-  // Remove 0x prefix if present
   let hexPart: string;
   if (addrStr.length >= 2 && addrStr[0] === '0' && (addrStr[1] === 'x' || addrStr[1] === 'X')) {
     hexPart = addrStr.slice(2);
@@ -50,12 +38,10 @@ function normalizeContractAddress(address: string | null | undefined): string {
     hexPart = addrStr;
   }
   
-  // Pad to 64 hex characters and add 0x prefix
   const padded = hexPart.toLowerCase().padStart(64, '0');
   return `0x${padded}`;
 }
 
-// Extended Auction type with NFT metadata
 export interface AuctionWithNFTs extends Auction {
   nfts: FormattedNFT[];
 }
@@ -69,25 +55,21 @@ export function useAuctions() {
     pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
-    notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
+    notifyOnNetworkStatusChange: false,
   });
 
-  // Extract auctions and items from response
   const allAuctions: Auction[] = useMemo(() => {
     const auctions = data?.bm006AuctionModels?.edges?.map((edge) => {
       const auction = edge.node;
-      // Convert name from felt252 to string
       return {
         ...auction,
         name: felt252ToString(auction.name) || auction.name,
       };
     }) || [];
-    // Sort by auction_id numerically descending (latest first) as fallback
-    // This ensures proper numeric ordering even if GraphQL returns string-ordered results
     const sorted = [...auctions].sort((a, b) => {
       const aId = parseInt(a.auction_id) || 0;
       const bId = parseInt(b.auction_id) || 0;
-      return bId - aId; // DESC order
+      return bId - aId;
     });
     return sorted;
   }, [data]);
@@ -96,7 +78,6 @@ export function useAuctions() {
     return data?.bm006AuctionItemModels?.edges?.map((edge) => edge.node) || [];
   }, [data]);
 
-  // Paginate auctions with NFTs
   const paginatedAuctions = useMemo(() => {
     const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
     return auctionsWithNFTs.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
@@ -106,19 +87,16 @@ export function useAuctions() {
     return Math.max(1, Math.ceil(auctionsWithNFTs.length / DEFAULT_PAGE_SIZE));
   }, [auctionsWithNFTs.length]);
 
-  // Helper function to get items for a specific auction
   const getAuctionItems = useMemo(() => {
     return (auctionId: string): AuctionItem[] => {
       return allAuctionItems.filter((item) => item.auction_id === auctionId);
     };
   }, [allAuctionItems]);
 
-  // Fetch NFT metadata for each auction's items using GraphQL
   useEffect(() => {
     if (!allAuctions.length || !allAuctionItems.length) return;
 
     const fetchAllAuctionNFTs = async () => {
-      // Group auctions by seller to batch GraphQL queries
       const auctionsBySeller = new Map<string, { auction: Auction; items: AuctionItem[] }[]>();
       
       for (const auction of allAuctions) {
@@ -132,19 +110,16 @@ export function useAuctions() {
         auctionsBySeller.get(seller)!.push({ auction, items });
       }
 
-      // Fetch NFTs for each unique seller using GraphQL
       const auctionsWithNFTsData: AuctionWithNFTs[] = [];
       
       for (const [seller, auctionsWithItems] of auctionsBySeller) {
         try {
-          // Make GraphQL call to fetch all NFTs for this seller using Apollo Client
           const { data: response } = await apolloClient.query<MyNFTsResponse>({
             query: MY_NFTS_QUERY,
             variables: { accountAddress: seller },
             fetchPolicy: 'network-only',
           });
           
-          // Get all token IDs for all auctions from this seller and normalize them
           const allAuctionTokenIds = new Set<string>();
           const tokenIdToContract = new Map<string, string>();
           
@@ -160,19 +135,16 @@ export function useAuctions() {
             });
           }
           
-          // Filter tokenBalances by tokenId (normalized) and contract address
           const targetContractNormalized = normalizeContractAddress(BEASTS_NFT_CONTRACT_ADDRESS).toLowerCase();
           const filteredEdges = response?.tokenBalances?.edges?.filter((edge) => {
             const tokenMetadata = edge.node.tokenMetadata;
             if (!tokenMetadata || !('tokenId' in tokenMetadata)) return false;
             
-            // First check contract address - only include NFTs from the beasts contract
             const nftContractAddress = tokenMetadata.contractAddress;
             if (!nftContractAddress) return false;
             const nftContractNormalized = normalizeContractAddress(nftContractAddress).toLowerCase();
             if (nftContractNormalized !== targetContractNormalized) return false;
             
-            // Then check token ID
             const nftTokenId = tokenMetadata.tokenId;
             const normalizedNftTokenId = normalizeTokenId(nftTokenId).toLowerCase();
             return normalizedNftTokenId && allAuctionTokenIds.has(normalizedNftTokenId);
@@ -184,9 +156,7 @@ export function useAuctions() {
           
           const sellerNFTs = formatNFTs(rawNFTs);
 
-          // Group NFTs by auction based on token IDs
           for (const { auction, items } of auctionsWithItems) {
-            // Normalize auction token IDs and contract addresses for comparison
             const auctionTokenIds = new Set(
               items.map((item) => normalizeTokenId(item.token_id).toLowerCase()).filter(Boolean)
             );
@@ -194,7 +164,6 @@ export function useAuctions() {
               items.map((item) => normalizeContractAddress(item.contract_address).toLowerCase()).filter(Boolean)
             );
 
-            // Filter seller's NFTs by this auction's token IDs (normalize NFT token IDs and contract addresses too)
             const matchedNFTs = sellerNFTs.filter((nft) => {
               const nftTokenIdNormalized = normalizeTokenId(nft.tokenId).toLowerCase();
               const nftContractNormalized = normalizeContractAddress(nft.contractAddress).toLowerCase();
@@ -205,14 +174,12 @@ export function useAuctions() {
               return matchesTokenId && matchesContract;
             });
 
-            // Add NFT metadata to auction data (name already converted in allAuctions)
             auctionsWithNFTsData.push({
               ...auction,
               nfts: matchedNFTs,
             });
           }
         } catch (_err) {
-          // Still add auctions without NFTs if fetch fails
           for (const { auction } of auctionsWithItems) {
             auctionsWithNFTsData.push({
               ...auction,
@@ -222,7 +189,6 @@ export function useAuctions() {
         }
       }
 
-      // Add auctions that don't have items (no NFTs to fetch) (name already converted in allAuctions)
       for (const auction of allAuctions) {
         const items = getAuctionItems(auction.auction_id);
         if (items.length === 0) {

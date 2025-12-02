@@ -14,24 +14,19 @@ const formatTimeAgo = (timestamp: string): string => {
     if (!timestamp) return "Unknown";
     
     try {
-        // Handle hex format (e.g., "0x691e5dc5") or decimal string
         let timestampNum: number;
         
-        // Check if it's a hex string (starts with 0x)
         if (timestamp.startsWith('0x') || timestamp.startsWith('0X')) {
             timestampNum = parseInt(timestamp, 16);
         } else {
-            // Try parsing as decimal first
             timestampNum = parseInt(timestamp, 10);
         }
         
-        // If timestamp is 0x0 or 0, return empty string to render nothing
         if (timestampNum === 0) return "";
         
         if (isNaN(timestampNum)) return "Unknown";
         
-        // Convert Unix timestamp to date string format: "2025-11-20 01:16:05"
-        const dateObj = new Date(timestampNum * 1000); // Convert seconds to milliseconds
+        const dateObj = new Date(timestampNum * 1000);
         const year = dateObj.getFullYear();
         const month = String(dateObj.getMonth() + 1).padStart(2, '0');
         const day = String(dateObj.getDate()).padStart(2, '0');
@@ -40,7 +35,6 @@ const formatTimeAgo = (timestamp: string): string => {
         const seconds = String(dateObj.getSeconds()).padStart(2, '0');
         const dateString = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         
-        // Use moment on the formatted date string
         const date = moment(dateString, 'YYYY-MM-DD HH:mm:ss');
         const fromNow = date.fromNow();
         
@@ -51,7 +45,6 @@ const formatTimeAgo = (timestamp: string): string => {
 };
 
 const getStatusStyle = (status: string): string => {
-    // Handle numeric status codes
     if (status == "1") {
         return "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40";
     }

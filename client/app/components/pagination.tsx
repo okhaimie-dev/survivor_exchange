@@ -17,24 +17,19 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
         }
     };
 
-    // Calculate which 3 pages to show
     const getVisiblePages = () => {
         if (totalPages <= 3) {
-            // If 3 or fewer pages, show all
             return Array.from({ length: totalPages }, (_, index) => index + 1);
         }
 
-        // Show 3 pages centered around current page when possible
         let startPage = Math.max(1, currentPage - 1);
         let endPage = Math.min(totalPages, currentPage + 1);
 
-        // Adjust if we're near the beginning
         if (currentPage <= 2) {
             startPage = 1;
             endPage = 3;
         }
 
-        // Adjust if we're near the end
         if (currentPage >= totalPages - 1) {
             startPage = totalPages - 2;
             endPage = totalPages;

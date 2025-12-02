@@ -21,7 +21,6 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPrice, setStartingPrice] = useState<string>("");
-    // Default to DEFAULT_AUCTION_DURATION_MINUTES minutes from now
     const getDefaultDateTime = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
@@ -57,12 +56,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         });
     }, []);
 
-    // Apply filters to NFTs
     const filteredNFTs = useMemo(() => {
         return applyFiltersToNFTs(nfts, filters);
     }, [nfts, filters]);
 
-    // Reset to page 1 when filters change
     useEffect(() => {
         setCurrentPage(1);
     }, [filters]);
@@ -138,7 +135,6 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             const startingPriceWhole = Math.floor(parseFloat(startingPrice) || 0);
-            // Convert collection name from string to felt252
             const collectionNameFelt = shortString.encodeShortString(collectionName.trim());
         
             const response = await account.execute({
@@ -164,62 +160,57 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     }, [account, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
 
-    // Always show filters, regardless of loading/error state
     const renderContent = () => {
-        if (loading) {
-            return (
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                    <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
-                </div>
-            );
+    if (loading) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-red-400">Error loading NFTs: {error.message}</p>
+            </div>
+        );
+    }
+
+    if (nfts.length === 0) {
+        return (
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
+            </div>
+        );
         }
 
-        if (error) {
-            return (
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                    <p className="text-red-400">Error loading NFTs: {error.message}</p>
-                </div>
-            );
-        }
-
-        if (nfts.length === 0) {
-            return (
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                    <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
-                </div>
-            );
-        }
-
-    // Split NFTs into rows: 1-3, 4-6, 7-9
     const row1 = visibleNFTs.slice(0, 3);
     const row2 = visibleNFTs.slice(3, 6);
     const row3 = visibleNFTs.slice(6, 9);
 
-    // Helper to render a row of cards
     const renderRow = (rowNFTs: FormattedNFT[]) => (
         <div className="flex w-full gap-6">
             {rowNFTs.map((nft) => (
                 <div key={nft.tokenId} className="flex-1">
-                    <MonsterCard
-                        nft={nft}
-                        selected={selectedNFTIds.includes(nft.tokenId)}
-                        onToggle={() => toggleCardSelection(nft.tokenId)}
-                    />
+                        <MonsterCard
+                            nft={nft}
+                            selected={selectedNFTIds.includes(nft.tokenId)}
+                            onToggle={() => toggleCardSelection(nft.tokenId)}
+                        />
                 </div>
             ))}
-            {/* Fill empty slots if row has less than 3 cards */}
             {Array.from({ length: 3 - rowNFTs.length }).map((_, idx) => (
                 <div key={`empty-${idx}`} className="flex-1" />
             ))}
-        </div>
+                </div>
     );
 
-    // Helper to render selected NFTs summary
     const renderSelectedSummary = () => {
         if (!hasSelection) return null;
 
         return (
-            <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
+                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                 <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                     <div className="flex flex-col gap-4">
                         <div>
@@ -302,7 +293,6 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 value={startingPrice}
                                 onChange={(event) => {
                                     const value = event.target.value;
-                                    // Only allow whole numbers
                                     if (value === '' || value === '-') {
                                         setStartingPrice(value);
                                     } else {
@@ -391,7 +381,6 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         );
     };
 
-        // Render the main content with NFTs
         return (
             <>
                 {filteredNFTs.length === 0 && nfts.length > 0 && (
@@ -402,25 +391,21 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                 {filteredNFTs.length > 0 && (
                     <>
-                        {/* Row 1: Cards 1-3 */}
                         {renderRow(row1)}
                         
-                        {/* Row 2: Cards 4-6 */}
                         {renderRow(row2)}
                         
-                        {/* Row 3: Cards 7-9 */}
                         {renderRow(row3)}
                         
-                        {/* Selected NFTs Summary after all rows (only once) */}
                         {hasSelection && renderSelectedSummary()}
                     </>
-                )}
+            )}
 
-                {filteredNFTs.length > 0 && (
-                    <div className="flex justify-center">
-                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-                    </div>
-                )}
+            {filteredNFTs.length > 0 && (
+                <div className="flex justify-center">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                </div>
+            )}
             </>
         );
     };

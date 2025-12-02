@@ -70,28 +70,23 @@ export default function Bids({
     
     const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
 
-    // Apply filters to auctions
     const filteredAuctions = useMemo(() => {
         return applyFiltersToAuctions(auctions, filters);
     }, [auctions, filters]);
 
-    // Calculate pagination for filtered auctions
     const totalFilteredPages = useMemo(() => {
         return Math.max(1, Math.ceil(filteredAuctions.length / DEFAULT_PAGE_SIZE));
     }, [filteredAuctions.length]);
 
-    // Get paginated filtered auctions
     const paginatedFilteredAuctions = useMemo(() => {
         const startIndex = (localCurrentPage - 1) * DEFAULT_PAGE_SIZE;
         return filteredAuctions.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
     }, [filteredAuctions, localCurrentPage]);
 
-    // Reset to page 1 when filters change
     useEffect(() => {
         setLocalCurrentPage(1);
     }, [filters]);
 
-    // Sync with parent currentPage when it changes externally
     useEffect(() => {
         setLocalCurrentPage(currentPage);
     }, [currentPage]);
@@ -118,7 +113,6 @@ export default function Bids({
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
             const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
-            // Set default to minimum + 10
             const defaultBid = minimum + 10;
             setBidAmount(defaultBid.toString());
         }
@@ -165,7 +159,7 @@ export default function Bids({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
                     calldata: [
-                        VAULT_CONTRACT_ADDRESS, // Approve the vault contract, not the auction contract
+                        VAULT_CONTRACT_ADDRESS,
                         uint256.bnToUint256(scaledAmount)
                     ]
                 },
@@ -202,7 +196,6 @@ export default function Bids({
 
     const handleSelectCollection = useCallback(
         (collection: Collection) => {
-            // Toggle selection: if already selected, deselect it
             if (selectedCollectionId === collection.id) {
                 setSelectedCollectionId("");
                 setBidAmount("");
@@ -222,7 +215,6 @@ export default function Bids({
 
             setLocalCurrentPage(nextPage);
             setCurrentPage(nextPage);
-            // Select first collection on new page
             const firstOnPage = collections[0];
             if (firstOnPage) {
                 updateSelection(firstOnPage);
@@ -231,7 +223,6 @@ export default function Bids({
         [localCurrentPage, totalFilteredPages, setCurrentPage, updateSelection, collections],
     );
 
-    // Always show filters, regardless of loading/error state
     const renderContent = () => {
     if (loading) {
         return (
@@ -262,12 +253,10 @@ export default function Bids({
         }
 
 
-    // Split collections into rows: 1-3, 4-6, 7-9
     const row1 = collections.slice(0, 3);
     const row2 = collections.slice(3, 6);
     const row3 = collections.slice(6, 9);
 
-    // Helper to render a row of cards
     const renderRow = (rowCollections: Collection[]) => (
         <div className="flex w-full gap-6">
             {rowCollections.map((collection) => {
@@ -285,14 +274,12 @@ export default function Bids({
                         </div>
                     );
                 })}
-            {/* Fill empty slots if row has less than 3 cards */}
             {Array.from({ length: 3 - rowCollections.length }).map((_, idx) => (
                 <div key={`empty-${idx}`} className="flex-1" />
             ))}
             </div>
     );
 
-    // Helper to render selected collection details
     const renderSelectedDetails = () => {
         if (!selectedCollection) return null;
 
@@ -409,7 +396,6 @@ export default function Bids({
                                         value={bidAmount}
                                         onChange={(event) => {
                                             const value = event.target.value;
-                                            // Only allow whole numbers
                                             if (value === '' || value === '-') {
                                                 setBidAmount(value);
                                             } else {
@@ -449,7 +435,6 @@ export default function Bids({
                                     const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
                                     const nfts = auction?.nfts || [];
                                     
-                                    // Calculate total power and average power
                                     const totalPower = nfts.reduce((sum, nft) => {
                                         const power = parseFloat(nft.power || '0');
                                         return sum + (isNaN(power) ? 0 : power);
@@ -501,31 +486,23 @@ export default function Bids({
         );
     };
 
-    // Determine which row contains the selected collection
     const selectedRow = row1.some(c => c.id === selectedCollectionId) ? 1 
         : row2.some(c => c.id === selectedCollectionId) ? 2 
         : row3.some(c => c.id === selectedCollectionId) ? 3 
         : null;
 
-        // Render the main content with collections
         return (
             <>
-                {/* Row 1: Cards 1-3 */}
                 {renderRow(row1)}
                 
-                {/* Selected Collection Details after Row 1 (only if selected is in row 1) */}
                 {selectedCollection && selectedRow === 1 && renderSelectedDetails()}
                 
-                {/* Row 2: Cards 4-6 */}
                 {renderRow(row2)}
                 
-                {/* Selected Collection Details after Row 2 (only if selected is in row 2) */}
                 {selectedCollection && selectedRow === 2 && renderSelectedDetails()}
                 
-                {/* Row 3: Cards 7-9 */}
                 {renderRow(row3)}
                 
-                {/* Selected Collection Details after Row 3 (only if selected is in row 3) */}
                 {selectedCollection && selectedRow === 3 && renderSelectedDetails()}
 
                 <div className="flex justify-center">

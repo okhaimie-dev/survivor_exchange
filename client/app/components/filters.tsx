@@ -65,7 +65,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
 
     return (
         <div className="w-full">
-            {/* Search Bar */}
             <div className="mb-4">
                 <input
                     type="text"
@@ -76,7 +75,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                 />
             </div>
 
-            {/* Filter Toggle Button */}
             <div className="mb-4 flex items-center justify-between">
                 <button
                     type="button"
@@ -101,11 +99,9 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                 )}
             </div>
 
-            {/* Expanded Filters */}
             {isExpanded && (
                 <div className="rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 p-6 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {/* Beast Filter */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Beast
@@ -124,7 +120,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Type Filter */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Type
@@ -143,7 +138,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Tier Filter */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Tier
@@ -162,7 +156,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Level Range */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Level Range
@@ -189,7 +182,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </div>
                         </div>
 
-                        {/* Power Range */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Power Range
@@ -218,7 +210,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </div>
                         </div>
 
-                        {/* Rank Range */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Rank Range
@@ -245,7 +236,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </div>
                         </div>
 
-                        {/* Shiny Filter */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Shiny
@@ -261,7 +251,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Animated Filter */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Animated
@@ -277,7 +266,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Price Sort - Only for Bids (auctions) */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Sort by Price
@@ -293,7 +281,6 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
                             </select>
                         </div>
 
-                        {/* Token ID Sort */}
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Sort by Token ID

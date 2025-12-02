@@ -24,10 +24,8 @@ export default function RootLayout({
       setIsSmallScreen(window.innerWidth < 1024);
     };
 
-    // Check on mount
     checkScreenSize();
 
-    // Check on resize
     window.addEventListener("resize", checkScreenSize);
 
     return () => window.removeEventListener("resize", checkScreenSize);

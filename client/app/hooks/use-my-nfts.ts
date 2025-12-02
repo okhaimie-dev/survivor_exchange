@@ -18,10 +18,9 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
     pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
-    notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
+    notifyOnNetworkStatusChange: false,
   });
 
-  // Normalize contract address for comparison
   const normalizeContractAddress = (address: string | null | undefined): string => {
     if (!address) return '';
     const addrStr = String(address);
@@ -36,13 +35,11 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
     return `0x${padded}`;
   };
 
-  // Extract and flatten the NFTs from the response, then format them
   const rawNFTs: ERC721Token[] = useMemo(() => {
     const allNFTs = data?.tokenBalances?.edges
       ?.map((edge) => edge.node.tokenMetadata)
       .filter((metadata): metadata is ERC721Token => metadata !== null && metadata !== undefined) || [];
     
-    // Filter by contract address - only include NFTs from the beasts contract
     const targetContractNormalized = normalizeContractAddress(BEASTS_NFT_CONTRACT_ADDRESS).toLowerCase();
     return allNFTs.filter((nft) => {
       if (!nft.contractAddress) return false;

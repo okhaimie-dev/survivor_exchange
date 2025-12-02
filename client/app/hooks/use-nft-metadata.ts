@@ -31,7 +31,6 @@ export function useNFTMetadata({ sellerAddress, tokenIds, contractAddress }: Use
         
         const allNfts = formatNFTs(rawNFTs);
         
-        // Normalize contract address for comparison
         const normalizeContractAddress = (addr: string | null | undefined): string => {
           if (!addr) return '';
           const addrStr = String(addr);
@@ -46,7 +45,6 @@ export function useNFTMetadata({ sellerAddress, tokenIds, contractAddress }: Use
           return `0x${padded}`;
         };
         
-        // Filter NFTs by token IDs and contract address (default to beasts contract)
         const targetContract = contractAddress || BEASTS_NFT_CONTRACT_ADDRESS;
         const targetContractNormalized = normalizeContractAddress(targetContract).toLowerCase();
         

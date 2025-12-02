@@ -5,7 +5,6 @@ import { ApolloClient, InMemoryCache, createHttpLink, split } from '@apollo/clie
 import { ApolloProvider } from '@apollo/client/react';
 import { MARKETPLACE_GRAPHQL_ENDPOINT, BEASTS_GRAPHQL_ENDPOINT, APOLLO_DEFAULT_FETCH_POLICY, APOLLO_QUERY_FETCH_POLICY, APOLLO_ERROR_POLICY } from '../lib/constants';
 
-// Create links for both endpoints
 const marketplaceLink = createHttpLink({
   uri: MARKETPLACE_GRAPHQL_ENDPOINT,
 });
@@ -14,10 +13,8 @@ const beastsLink = createHttpLink({
   uri: BEASTS_GRAPHQL_ENDPOINT,
 });
 
-// Split link: route NFT/token queries to beasts endpoint, everything else to marketplace
 const splitLink = split(
   ({ operationName, query }) => {
-    // Check if the query is related to NFTs/tokens/beasts
     const queryString = query?.loc?.source?.body || '';
     const isNFTQuery = 
       queryString.includes('tokenBalances') ||
@@ -28,8 +25,8 @@ const splitLink = split(
     
     return isNFTQuery;
   },
-  beastsLink,    // Use beasts endpoint for NFT/token queries
-  marketplaceLink // Use marketplace endpoint for everything else
+  beastsLink,
+  marketplaceLink
 );
 
 const client = new ApolloClient({
@@ -38,7 +35,6 @@ const client = new ApolloClient({
     typePolicies: {
       Query: {
         fields: {
-          // Merge policies to prevent unnecessary re-renders
           tokenBalances: {
             merge(existing, incoming) {
               return incoming;

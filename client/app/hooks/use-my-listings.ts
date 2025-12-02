@@ -27,7 +27,7 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
-    notifyOnNetworkStatusChange: false, // Prevent re-renders on network status changes
+    notifyOnNetworkStatusChange: false,
   });
 
   const listings: FormattedListing[] = useMemo(() => {
@@ -36,10 +36,8 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     const auctions: Auction[] = data.bm006AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
 
     return auctions.map((auction) => {
-      // Decode the name from felt252
       const decodedName = felt252ToString(auction.name);
       
-      // Parse numeric values
       const startingPrice = parseFloat(auction.starting_price) || 0;
       const currentBid = auction.current_bid ? parseFloat(auction.current_bid) : null;
       const tokenCount = parseInt(auction.item_count, 10) || 0;
