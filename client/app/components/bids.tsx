@@ -231,6 +231,8 @@ export default function Bids({
         [localCurrentPage, totalFilteredPages, setCurrentPage, updateSelection, collections],
     );
 
+    // Always show filters, regardless of loading/error state
+    const renderContent = () => {
     if (loading) {
         return (
             <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
@@ -247,10 +249,8 @@ export default function Bids({
         );
     }
 
-    if (collections.length === 0 && !loading) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-                <Filters filters={filters} onFiltersChange={setFilters} />
+        if (collections.length === 0 && !loading) {
+            return (
                 <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
                     <p className="text-[rgb(186,255,188)]/70">
                         {auctions.length === 0 
@@ -258,9 +258,8 @@ export default function Bids({
                             : "No auctions match your filters. Try adjusting your search criteria."}
                     </p>
                 </div>
-            </div>
-        );
-    }
+            );
+        }
 
 
     // Split collections into rows: 1-3, 4-6, 7-9
@@ -272,25 +271,25 @@ export default function Bids({
     const renderRow = (rowCollections: Collection[]) => (
         <div className="flex w-full gap-6">
             {rowCollections.map((collection) => {
-                const auction = paginatedFilteredAuctions.find(a => a.auction_id === collection.id);
-                const nfts = auction?.nfts || [];
-                
-                return (
+                    const auction = paginatedFilteredAuctions.find(a => a.auction_id === collection.id);
+                    const nfts = auction?.nfts || [];
+                    
+                    return (
                     <div key={collection.id} className="flex-1">
-                        <MonsterCollectionCard
-                            collection={collection}
-                            isSelected={collection.id === selectedCollectionId}
-                            onSelect={() => handleSelectCollection(collection)}
-                            nfts={nfts}
-                        />
-                    </div>
-                );
-            })}
+                            <MonsterCollectionCard
+                                collection={collection}
+                                isSelected={collection.id === selectedCollectionId}
+                                onSelect={() => handleSelectCollection(collection)}
+                                nfts={nfts}
+                            />
+                        </div>
+                    );
+                })}
             {/* Fill empty slots if row has less than 3 cards */}
             {Array.from({ length: 3 - rowCollections.length }).map((_, idx) => (
                 <div key={`empty-${idx}`} className="flex-1" />
             ))}
-        </div>
+            </div>
     );
 
     // Helper to render selected collection details
@@ -298,7 +297,7 @@ export default function Bids({
         if (!selectedCollection) return null;
 
         return (
-            <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
+                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                     <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                             {(() => {
@@ -508,31 +507,38 @@ export default function Bids({
         : row3.some(c => c.id === selectedCollectionId) ? 3 
         : null;
 
+        // Render the main content with collections
+        return (
+            <>
+                {/* Row 1: Cards 1-3 */}
+                {renderRow(row1)}
+                
+                {/* Selected Collection Details after Row 1 (only if selected is in row 1) */}
+                {selectedCollection && selectedRow === 1 && renderSelectedDetails()}
+                
+                {/* Row 2: Cards 4-6 */}
+                {renderRow(row2)}
+                
+                {/* Selected Collection Details after Row 2 (only if selected is in row 2) */}
+                {selectedCollection && selectedRow === 2 && renderSelectedDetails()}
+                
+                {/* Row 3: Cards 7-9 */}
+                {renderRow(row3)}
+                
+                {/* Selected Collection Details after Row 3 (only if selected is in row 3) */}
+                {selectedCollection && selectedRow === 3 && renderSelectedDetails()}
+
+                <div className="flex justify-center">
+                    <Pagination currentPage={localCurrentPage} totalPages={totalFilteredPages} onPageChange={handlePageChange} />
+                </div>
+            </>
+        );
+    };
+
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <Filters filters={filters} onFiltersChange={setFilters} />
-            
-            {/* Row 1: Cards 1-3 */}
-            {renderRow(row1)}
-            
-            {/* Selected Collection Details after Row 1 (only if selected is in row 1) */}
-            {selectedCollection && selectedRow === 1 && renderSelectedDetails()}
-            
-            {/* Row 2: Cards 4-6 */}
-            {renderRow(row2)}
-            
-            {/* Selected Collection Details after Row 2 (only if selected is in row 2) */}
-            {selectedCollection && selectedRow === 2 && renderSelectedDetails()}
-            
-            {/* Row 3: Cards 7-9 */}
-            {renderRow(row3)}
-            
-            {/* Selected Collection Details after Row 3 (only if selected is in row 3) */}
-            {selectedCollection && selectedRow === 3 && renderSelectedDetails()}
-
-            <div className="flex justify-center">
-                <Pagination currentPage={localCurrentPage} totalPages={totalFilteredPages} onPageChange={handlePageChange} />
-            </div>
+            {renderContent()}
         </div>
     );
 }

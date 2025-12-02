@@ -164,29 +164,31 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     }, [account, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
 
-    if (loading) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
-            </div>
-        );
-    }
+    // Always show filters, regardless of loading/error state
+    const renderContent = () => {
+        if (loading) {
+            return (
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                    <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
+                </div>
+            );
+        }
 
-    if (error) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-red-400">Error loading NFTs: {error.message}</p>
-            </div>
-        );
-    }
+        if (error) {
+            return (
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                    <p className="text-red-400">Error loading NFTs: {error.message}</p>
+                </div>
+            );
+        }
 
-    if (nfts.length === 0) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
-            </div>
-        );
-    }
+        if (nfts.length === 0) {
+            return (
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                    <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
+                </div>
+            );
+        }
 
     // Split NFTs into rows: 1-3, 4-6, 7-9
     const row1 = visibleNFTs.slice(0, 3);
@@ -389,37 +391,44 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         );
     };
 
+        // Render the main content with NFTs
+        return (
+            <>
+                {filteredNFTs.length === 0 && nfts.length > 0 && (
+                    <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                        <p className="text-[rgb(186,255,188)]/70">No NFTs match your filters. Try adjusting your search criteria.</p>
+                    </div>
+                )}
+
+                {filteredNFTs.length > 0 && (
+                    <>
+                        {/* Row 1: Cards 1-3 */}
+                        {renderRow(row1)}
+                        
+                        {/* Row 2: Cards 4-6 */}
+                        {renderRow(row2)}
+                        
+                        {/* Row 3: Cards 7-9 */}
+                        {renderRow(row3)}
+                        
+                        {/* Selected NFTs Summary after all rows (only once) */}
+                        {hasSelection && renderSelectedSummary()}
+                    </>
+                )}
+
+                {filteredNFTs.length > 0 && (
+                    <div className="flex justify-center">
+                        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                    </div>
+                )}
+            </>
+        );
+    };
+
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <Filters filters={filters} onFiltersChange={setFilters} />
-            
-            {filteredNFTs.length === 0 && nfts.length > 0 && (
-                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                    <p className="text-[rgb(186,255,188)]/70">No NFTs match your filters. Try adjusting your search criteria.</p>
-                </div>
-            )}
-
-            {filteredNFTs.length > 0 && (
-                <>
-                    {/* Row 1: Cards 1-3 */}
-                    {renderRow(row1)}
-                    
-                    {/* Row 2: Cards 4-6 */}
-                    {renderRow(row2)}
-                    
-                    {/* Row 3: Cards 7-9 */}
-                    {renderRow(row3)}
-                    
-                    {/* Selected NFTs Summary after all rows (only once) */}
-                    {hasSelection && renderSelectedSummary()}
-                </>
-            )}
-
-            {filteredNFTs.length > 0 && (
-                <div className="flex justify-center">
-                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-                </div>
-            )}
+            {renderContent()}
         </div>
     );
 }
