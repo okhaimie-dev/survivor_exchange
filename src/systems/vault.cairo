@@ -12,11 +12,13 @@ pub trait IVault<TContractState> {
 #[dojo::contract]
 pub mod vault_systems {
     use openzeppelin_token::erc20::interface::{IERC20Dispatcher, IERC20DispatcherTrait};
-    use starknet::{get_block_timestamp, get_caller_address};
-    use survivor_exchange::constants::DEFAULT_NS;
+    use starknet::{get_block_timestamp, get_caller_address, get_contract_address};
+    use survivor_exchange::constants::{DEFAULT_NS, Errors};
+    use survivor_exchange::models::auction::AuctionAssert;
     use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
-    use survivor_exchange::utils::{SURVIVOR_ADDRESS_MAINNET, TREASURY_ADDRESS_MAINNET};
+    use survivor_exchange::types::status::AuctionStatus;
+    use survivor_exchange::utils::SURVIVOR_ADDRESS_MAINNET;
     use super::{ContractAddress, IVault};
 
     fn dojo_init(ref self: ContractState) {}
@@ -37,16 +39,15 @@ pub mod vault_systems {
         fn deposit(
             ref self: ContractState, vault_id: u32, amount: u256, depositor: ContractAddress,
         ) {
-            //let caller = get_caller_address();
             let mut store = StoreTrait::new(self.world_default());
-            // TODO: Vault assert
+            let vault = store.vault(vault_id);
+            assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
 
             let survivor_dispatcher = IERC20Dispatcher {
                 contract_address: SURVIVOR_ADDRESS_MAINNET(),
             };
 
-            // TODO: calculate the diff between depositor balance and bid amount to transfer.
-            survivor_dispatcher.transfer_from(depositor, TREASURY_ADDRESS_MAINNET(), amount);
+            survivor_dispatcher.transfer_from(depositor, get_contract_address(), amount);
 
             let mut share = store.vault_share(vault_id, depositor.into());
             let add_amount: u64 = amount.try_into().expect('amount too large'); // TODO: u256 models
@@ -65,18 +66,24 @@ pub mod vault_systems {
             let caller = get_caller_address();
             let mut store = StoreTrait::new(self.world_default());
             let mut share = store.vault_share(vault_id, caller.into());
-            let deduct: u64 = amount.try_into().expect('amount too large');
-            assert(
-                share.share_amount >= deduct,
-                survivor_exchange::constants::Errors::INSUFFICIENT_SHARES,
-            );
+            let deduct: u64 = amount.try_into().expect('Amount > u64::MAX');
+
+            assert(share.share_amount >= deduct, Errors::INSUFFICIENT_SHARES);
+
+            let auction = store.auction(vault_id); // vault_id == auction_id
+            auction.assert_does_exist();
+            let is_highest = caller.into() == auction.highest_bidder;
+            let is_active = auction.status == AuctionStatus::Active.into();
+            let is_outbid_or_ended = !is_highest
+                || !is_active
+                || get_block_timestamp() >= auction.end_time;
+            assert(is_outbid_or_ended, Errors::CANNOT_WITHDRAW_HIGHEST_ACTIVE);
 
             let vault = store.vault(vault_id);
             let token_address: ContractAddress = vault.token_address.try_into().unwrap();
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
-            token_dispatcher.transfer(to, amount);
+            token_dispatcher.transfer(to, amount); // From vault balance
 
-            // Burn shares
             share.share_amount -= deduct;
             share.deposited_amount -= deduct;
             share.updated_at = get_block_timestamp();
@@ -85,7 +92,6 @@ pub mod vault_systems {
             }
             store.set_vault_share(@share);
 
-            // Update aggregate
             let mut vault = store.vault(vault_id);
             vault.locked_amount -= deduct;
             store.set_vault(@vault);

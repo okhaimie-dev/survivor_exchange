@@ -156,28 +156,26 @@ pub mod AuctionableComponent {
             let bidder = get_caller_address();
             let mut store = StoreTrait::new(world);
 
-            // Fetch entities
             let auction = store.auction(auction_id);
             assert(
                 auction.status == AuctionStatus::Active.into()
-                    || auction.end_time > get_block_timestamp(),
-                'unauthorized',
+                    || get_block_timestamp() < auction.end_time,
+                Errors::AUCTION_NOT_ACTIVE,
             );
 
             let mut bid = store.bid(auction_id, bidder.into());
-
             bid.assert_bid_amount_not_zero();
             bid.assert_is_bid_owner(bidder.into());
             bid.assert_not_highest_bidder(@auction);
 
-            // Refund from escrow
-            // TODO: Transfer bid.amount back to bidder
-            // E.g., let escrow_dispatcher = IERC20Dispatcher { contract_address: escrow_address };
-            // escrow_dispatcher.transfer(bidder, bid.amount.into());
+            // FIX: Refund via vault (bid.amount * 10^18 total deposited)
+            let scaled_amount = (bid.amount.into() * TEN_POW_18);
+            let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
+            vault_dispatcher.withdraw(auction_id, bidder, scaled_amount); // to=bidder (default)
 
-            // Clear the bid
-            let mut cleared_bid = bid;
-            cleared_bid.amount = 0;
+            // Clear bid
+            let mut cleared_bid = BidTrait::new(auction_id, bidder.into(), 0);
             store.set_bid(@cleared_bid);
         }
 

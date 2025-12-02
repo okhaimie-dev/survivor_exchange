@@ -30,4 +30,6 @@ pub mod Errors {
     pub const NO_ITEMS: felt252 = 'Auction: no items';
     pub const INVALID_ITEMS_COUNT: felt252 = 'Invalid item count';
     pub const INSUFFICIENT_SHARES: felt252 = 'Vault: insufficient shares';
+    pub const VAULT_NOT_FOUND: felt252 = 'Vault: not found';
+    pub const CANNOT_WITHDRAW_HIGHEST_ACTIVE: felt252 = 'Vault: highest bidder';
 }
