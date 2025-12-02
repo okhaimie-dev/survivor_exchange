@@ -41,12 +41,27 @@ const formatTimeAgo = (timestamp: string): string => {
 };
 
 const getStatusStyle = (status: string): string => {
-    if (status == "1") {
+    const statusNum = parseInt(status);
+    
+    if (statusNum === 0) {
+        return "bg-white/10 text-white/50 border border-white/20";
+    }
+    if (statusNum === 1) {
+        return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    if (statusNum === 2) {
         return "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40";
     }
-    if (status == "2") {
+    if (statusNum === 3) {
         return "bg-white/10 text-white border border-white/20";
     }
+    if (statusNum === 4) {
+        return "bg-blue-400/10 text-blue-300 border border-blue-300/30";
+    }
+    if (statusNum === 5) {
+        return "bg-red-400/10 text-red-300 border border-red-300/30";
+    }
+    
     if (status === "pending" || status === "queued") {
         return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
     }
@@ -54,8 +69,15 @@ const getStatusStyle = (status: string): string => {
 };
 
 const getStatusLabel = (status: string): string => {
-    if (status == "1") return "ongoing";
-    if (status == "2") return "expired";
+    const statusNum = parseInt(status);
+    
+    if (statusNum === 0) return "None";
+    if (statusNum === 1) return "Draft";
+    if (statusNum === 2) return "Active";
+    if (statusNum === 3) return "Ended";
+    if (statusNum === 4) return "Settled";
+    if (statusNum === 5) return "Canceled";
+    
     return status;
 };
 
