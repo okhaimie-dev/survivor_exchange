@@ -5,7 +5,7 @@ pub trait IVault<TContractState> {
     fn deposit(ref self: TContractState, vault_id: u32, amount: u256, depositor: ContractAddress);
     fn withdraw(ref self: TContractState, vault_id: u32, to: ContractAddress, amount: u256);
     fn balance_of(self: @TContractState, vault_id: u32) -> u256;
-    fn get_owner(self: @TContractState) -> ContractAddress;
+    fn share_balance(self: @TContractState, vault_id: u32, user: ContractAddress) -> u256;
 }
 
 #[dojo::contract]
@@ -89,8 +89,9 @@ pub mod vault_systems {
             store.vault(vault_id).locked_amount.into()
         }
 
-        fn get_owner(self: @ContractState) -> ContractAddress {
-            0x0.try_into().unwrap()
+        fn share_balance(self: @ContractState, vault_id: u32, user: ContractAddress) -> u256 {
+            let store = StoreTrait::new(self.world_default());
+            store.vault_share(vault_id, user.into()).share_amount.into()
         }
     }
 
