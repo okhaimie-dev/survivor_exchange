@@ -49,6 +49,91 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             }`}
         >
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
+                <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">
+                    {collection.totalMonsters} nft{collection.totalMonsters === 1 ? '' : 's'} in this collection
+                </span>
+            </header>
+
+            <div className="flex flex-col items-center gap-4 text-center">
+                <div className="h-24 w-24">
+                    {nfts.length === 0 ? (
+                        <div className="flex h-full w-full items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
+                            <Image
+                                src={collection.image}
+                                alt={collection.name}
+                                width={96}
+                                height={96}
+                                draggable={false}
+                                className="h-16 w-16 object-contain"
+                            />
+                        </div>
+                    ) : nfts.length === 1 ? (
+                        <div className="h-full w-full overflow-hidden">
+                            {(() => {
+                                const nft = nfts[0];
+                                const imageSrc = nft.metadata?.image 
+                                    ? nft.metadata.image 
+                                    : nft.imagePath 
+                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
+                                    : collection.image;
+                                const isBase64 = imageSrc.startsWith("data:");
+                                
+                                return isBase64 ? (
+                                    <img
+                                        src={imageSrc}
+                                        alt={nft.metadataName || collection.name}
+                                        draggable={false}
+                                        className="h-full w-full object-contain"
+                                    />
+                                ) : (
+                                    <Image
+                                        src={imageSrc}
+                                        alt={nft.metadataName || collection.name}
+                                        width={96}
+                                        height={96}
+                                        draggable={false}
+                                        className="h-full w-full object-contain"
+                                        unoptimized
+                                    />
+                                );
+                            })()}
+                        </div>
+                    ) : nfts.length === 2 ? (
+                        <div className="flex h-full w-full gap-1">
+                            {nfts.slice(0, 2).map((nft, idx) => {
+                                const imageSrc = nft.metadata?.image 
+                                    ? nft.metadata.image 
+                                    : nft.imagePath 
+                                    ? `${IMAGE_BASE_URL}/${nft.imagePath}`
+                                    : collection.image;
+                                const isBase64 = imageSrc.startsWith("data:");
+                                
+                                return (
+                                    <div key={`${nft.contractAddress}-${nft.tokenId}-${idx}`} className="h-full w-1/2 overflow-hidden">
+                                        {isBase64 ? (
+                                            <img
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                width={48}
+                                                height={96}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                                unoptimized
+                                            />
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="grid h-full w-full grid-cols-2 gap-1">
                             {nfts.slice(0, 2).map((nft, idx) => {
                                 const imageSrc = nft.metadata?.image 
                                     ? nft.metadata.image 
@@ -83,6 +168,38 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                                     </div>
                                 );
                             })}
+                            {nfts.length >= 3 && (
+                                <div className="aspect-square overflow-hidden">
+                                    {(() => {
+                                        const nft = nfts[2];
+                                        const imageSrc = nft.metadata?.image 
+                                            ? nft.metadata.image 
+                                            : nft.imagePath 
+                                            ? `${IMAGE_BASE_URL}/${nft.imagePath}`
+                                            : collection.image;
+                                        const isBase64 = imageSrc.startsWith("data:");
+                                        
+                                        return isBase64 ? (
+                                            <img
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                            />
+                                        ) : (
+                                            <Image
+                                                src={imageSrc}
+                                                alt={nft.metadataName || collection.name}
+                                                width={48}
+                                                height={48}
+                                                draggable={false}
+                                                className="h-full w-full object-contain"
+                                                unoptimized
+                                            />
+                                        );
+                                    })()}
+                                </div>
+                            )}
                             {nfts.length > 3 ? (
                                 <div className="aspect-square flex items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12 text-[10px] font-orbitron uppercase tracking-widest text-[rgb(50,255,52)]">
                                     +{nfts.length - 3} more
