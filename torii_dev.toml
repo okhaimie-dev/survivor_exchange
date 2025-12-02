@@ -19,5 +19,5 @@ polling_interval = 500
 max_concurrent_tasks = 100
 
 [erc]
-async_metadata_updates = true
-metadata_updates_only_at_head = true
+metadata_updates = true
+# async_metadata_updates = true
