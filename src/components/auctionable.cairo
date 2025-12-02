@@ -14,7 +14,6 @@ pub mod AuctionableComponent {
     use survivor_exchange::types::status::AuctionStatus;
     use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
 
-
     #[storage]
     pub struct Storage {}
 
@@ -128,6 +127,8 @@ pub mod AuctionableComponent {
 
             auction.assert_does_exist();
             let bidder = get_caller_address();
+
+            auction.assert_bidder_not_seller(bidder.into());
 
             let mut prev_bid = store.bid(auction_id, bidder.into());
             let prev_scaled = prev_bid.amount.into() * TEN_POW_18;

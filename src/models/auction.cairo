@@ -130,6 +130,11 @@ pub impl AuctionAssert of AssertTrait {
             Errors::BID_TOO_LOW,
         );
     }
+
+    #[inline]
+    fn assert_bidder_not_seller(self: @Auction, bidder: felt252) {
+        assert(*self.seller != bidder, Errors::AUCTION_IS_SELLER);
+    }
 }
 
 #[cfg(test)]
