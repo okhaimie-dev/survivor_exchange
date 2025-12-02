@@ -4,11 +4,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS } from "../lib/constants";
-
-const formatEth = (value: number | null | undefined): string => {
-    if (value === null || value === undefined) return "—";
-    return `${value.toFixed(2)}`;
-};
+import { formatPrice } from "../lib/utils";
 
 const formatTimeAgo = (timestamp: string): string => {
     if (!timestamp) return "Unknown";
@@ -193,12 +189,12 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Starting</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{formatEth(listing.startingPrice)}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatPrice(listing.startingPrice)}</p>
                                 <p className="font-orbitron text-xs tracking-[0.3em]">SURVIVOR</p>
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Top Bid</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{formatEth(listing.currentBid)}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatPrice(listing.currentBid)}</p>
                                 <p className="font-orbitron text-xs tracking-[0.3em]">SURVIVOR</p>
                             </div>
                         </div>

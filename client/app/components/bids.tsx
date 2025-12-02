@@ -9,7 +9,8 @@ import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
 import { truncateWithEllipsis } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants"; 
+import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants";
+import { formatPrice } from "../lib/utils"; 
 
 type Collection = {
     id: string;
@@ -34,11 +35,6 @@ interface BidsProps {
     getAuctionItems: (auctionId: string) => AuctionItem[];
 }
 
-const formatEth = (value: number | string) => {
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    const wholeNumber = Math.floor(numValue);
-    return `${wholeNumber} SURVIVOR`;
-};
 
 export default function Bids({ 
     auctions, 
@@ -367,7 +363,7 @@ export default function Bids({
                                         Starting
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {formatEth(selectedCollection.startingPrice)}
+                                        {formatPrice(selectedCollection.startingPrice)} SURVIVOR
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
@@ -375,7 +371,7 @@ export default function Bids({
                                         Current Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {selectedCollection.highestBid !== undefined ? formatEth(selectedCollection.highestBid) : "No bids"}
+                                        {selectedCollection.highestBid !== undefined ? `${formatPrice(selectedCollection.highestBid)} SURVIVOR` : "No bids"}
                                     </p>
                                 </div>
                             </div>
@@ -411,7 +407,7 @@ export default function Bids({
                                     <p className="text-xs text-[rgb(186,255,188)]/70">
                                         Minimum bid is{" "}
                                         <span className="font-orbitron tracking-widest">
-                                            {formatEth(minimumBid)}
+                                            {formatPrice(minimumBid)} SURVIVOR
                                         </span>
                                         .
                                     </p>
