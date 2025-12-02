@@ -3,10 +3,12 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
+import Filters, { FilterState } from "./filters";
 import { AuctionItem, truncateAddress } from "../lib/graphql";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
 import { truncateWithEllipsis } from "../lib/utils";
+import { applyFiltersToAuctions } from "../lib/filter-utils";
 
 const AUCTION_CONTRACT_ADDRESS = "0x058568FF97b6F409F69183b091af8f476eEcb4Db71e270E25c7b145ADBb2FdE6";
 const SURVIVOR_ADDRESS_MAINNET = "0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B";
@@ -52,9 +54,54 @@ export default function Bids({
     const explorer = useExplorer();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
+    const [filters, setFilters] = useState<FilterState>({
+        search: "",
+        beast: "",
+        type: "",
+        tier: "",
+        levelMin: "",
+        levelMax: "",
+        powerMin: "",
+        powerMax: "",
+        rankMin: "",
+        rankMax: "",
+        shiny: "",
+        animated: "",
+        priceSort: "",
+        tokenIdSort: "",
+    });
     
+    const PAGE_SIZE = 3;
+    const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
+
+    // Apply filters to auctions
+    const filteredAuctions = useMemo(() => {
+        return applyFiltersToAuctions(auctions, filters);
+    }, [auctions, filters]);
+
+    // Calculate pagination for filtered auctions
+    const totalFilteredPages = useMemo(() => {
+        return Math.max(1, Math.ceil(filteredAuctions.length / PAGE_SIZE));
+    }, [filteredAuctions.length]);
+
+    // Get paginated filtered auctions
+    const paginatedFilteredAuctions = useMemo(() => {
+        const startIndex = (localCurrentPage - 1) * PAGE_SIZE;
+        return filteredAuctions.slice(startIndex, startIndex + PAGE_SIZE);
+    }, [filteredAuctions, localCurrentPage]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setLocalCurrentPage(1);
+    }, [filters]);
+
+    // Sync with parent currentPage when it changes externally
+    useEffect(() => {
+        setLocalCurrentPage(currentPage);
+    }, [currentPage]);
+
     const collections: Collection[] = useMemo(() => {
-        return auctions.map((auction) => ({
+        return paginatedFilteredAuctions.map((auction) => ({
             id: auction.auction_id,
             name: truncateWithEllipsis(auction.name),
             totalMonsters: parseInt(auction.item_count) || 0,
@@ -66,7 +113,7 @@ export default function Bids({
             seller: truncateAddress(auction.seller),
             highestBidder: truncateAddress(auction.highest_bidder),
         }));
-    }, [auctions]);
+    }, [paginatedFilteredAuctions]);
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
     const [bidAmount, setBidAmount] = useState<string>("");
@@ -173,19 +220,20 @@ export default function Bids({
 
     const handlePageChange = useCallback(
         (page: number) => {
-            const nextPage = Math.min(Math.max(page, 1), totalPages);
-            if (nextPage === currentPage) {
+            const nextPage = Math.min(Math.max(page, 1), totalFilteredPages);
+            if (nextPage === localCurrentPage) {
                 return;
             }
 
+            setLocalCurrentPage(nextPage);
             setCurrentPage(nextPage);
             // Select first collection on new page
             const firstOnPage = collections[0];
             if (firstOnPage) {
-            updateSelection(firstOnPage);
+                updateSelection(firstOnPage);
             }
         },
-        [currentPage, totalPages, updateSelection, collections],
+        [localCurrentPage, totalFilteredPages, setCurrentPage, updateSelection, collections],
     );
 
     if (loading) {
@@ -204,10 +252,17 @@ export default function Bids({
         );
     }
 
-    if (collections.length === 0) {
+    if (collections.length === 0 && !loading) {
         return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">No auctions available.</p>
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
+                <Filters filters={filters} onFiltersChange={setFilters} />
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                    <p className="text-[rgb(186,255,188)]/70">
+                        {auctions.length === 0 
+                            ? "No auctions available." 
+                            : "No auctions match your filters. Try adjusting your search criteria."}
+                    </p>
+                </div>
             </div>
         );
     }
@@ -215,9 +270,11 @@ export default function Bids({
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
+            <Filters filters={filters} onFiltersChange={setFilters} />
+            
             <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
                 {collections.map((collection) => {
-                    const auction = auctions.find(a => a.auction_id === collection.id);
+                    const auction = paginatedFilteredAuctions.find(a => a.auction_id === collection.id);
                     const nfts = auction?.nfts || [];
                     
                     return (
@@ -238,7 +295,7 @@ export default function Bids({
                     <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                             {(() => {
-                                const auction = auctions.find(a => a.auction_id === selectedCollection.id);
+                                const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
                                 const nfts = auction?.nfts || [];
                                 
                                 if (nfts.length === 0) {
@@ -383,7 +440,7 @@ export default function Bids({
                                 </div>
                                 
                                 {(() => {
-                                    const auction = auctions.find(a => a.auction_id === selectedCollection.id);
+                                    const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
                                     const nfts = auction?.nfts || [];
                                     
                                     // Calculate total power and average power
@@ -438,7 +495,7 @@ export default function Bids({
             )}
 
             <div className="flex justify-center">
-                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                <Pagination currentPage={localCurrentPage} totalPages={totalFilteredPages} onPageChange={handlePageChange} />
             </div>
         </div>
     );

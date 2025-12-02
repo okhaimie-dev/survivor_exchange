@@ -13,6 +13,7 @@ export default function Home() {
   const { nfts, loading, error } = useMyNFTs({ address });
   const { 
     auctions, 
+    allAuctions,
     loading: auctionsLoading, 
     error: auctionsError,
     currentPage,
@@ -35,6 +36,7 @@ export default function Home() {
           loading={loading} 
           error={error}
           auctions={auctions}
+          allAuctions={allAuctions}
           auctionsLoading={auctionsLoading}
           auctionsError={auctionsError || null}
           currentPage={currentPage}

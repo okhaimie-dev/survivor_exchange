@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
 import { shortString } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
+import Filters, { FilterState } from "./filters";
 import { FormattedNFT } from "../lib/graphql";
+import { applyFiltersToNFTs } from "../lib/filter-utils";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -30,6 +32,22 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
+    const [filters, setFilters] = useState<FilterState>({
+        search: "",
+        beast: "",
+        type: "",
+        tier: "",
+        levelMin: "",
+        levelMax: "",
+        powerMin: "",
+        powerMax: "",
+        rankMin: "",
+        rankMax: "",
+        shiny: "",
+        animated: "",
+        priceSort: "",
+        tokenIdSort: "",
+    });
 
     const toggleCardSelection = useCallback((nftId: string) => {
         setSelectedNFTIds((previouslySelected) => {
@@ -41,16 +59,26 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         });
     }, []);
 
-    const totalPages = useMemo(() => Math.max(1, Math.ceil(nfts.length / pageSize)), [nfts.length, pageSize]);
+    // Apply filters to NFTs
+    const filteredNFTs = useMemo(() => {
+        return applyFiltersToNFTs(nfts, filters);
+    }, [nfts, filters]);
+
+    // Reset to page 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filters]);
+
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / pageSize)), [filteredNFTs.length, pageSize]);
 
     const visibleNFTs = useMemo(() => {
         const startIndex = (currentPage - 1) * pageSize;
-        return nfts.slice(startIndex, startIndex + pageSize);
-    }, [currentPage, pageSize, nfts]);
+        return filteredNFTs.slice(startIndex, startIndex + pageSize);
+    }, [currentPage, pageSize, filteredNFTs]);
 
     const selectedNFTs = useMemo(
-        () => nfts.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
-        [selectedNFTIds, nfts],
+        () => filteredNFTs.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
+        [selectedNFTIds, filteredNFTs],
     );
 
     const hasSelection = selectedNFTs.length > 0;
@@ -163,7 +191,16 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-            <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
+            <Filters filters={filters} onFiltersChange={setFilters} />
+            
+            {filteredNFTs.length === 0 && nfts.length > 0 && (
+                <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+                    <p className="text-[rgb(186,255,188)]/70">No NFTs match your filters. Try adjusting your search criteria.</p>
+                </div>
+            )}
+
+            {filteredNFTs.length > 0 && (
+                <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
                 {visibleNFTs.map((nft) => (
                     <div key={nft.tokenId} className="flex h-full w-full">
                         <MonsterCard
@@ -173,9 +210,11 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                         />
                     </div>
                 ))}
-            </div>
+                </div>
+            )}
 
-            <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
+            {filteredNFTs.length > 0 && (
+                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                 <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                     <div className="flex flex-col gap-4">
                         <div>
@@ -344,10 +383,13 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                     </div>
                 </div>
             </section>
+            )}
 
-            <div className="flex justify-center">
-                <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
-            </div>
+            {filteredNFTs.length > 0 && (
+                <div className="flex justify-center">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                </div>
+            )}
         </div>
     );
 }

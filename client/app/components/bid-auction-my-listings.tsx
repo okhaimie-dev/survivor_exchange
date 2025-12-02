@@ -14,6 +14,7 @@ interface BidAuctionMyListingsProps {
     loading: boolean;
     error: Error | null;
     auctions: AuctionWithNFTs[];
+    allAuctions?: AuctionWithNFTs[];
     auctionsLoading: boolean;
     auctionsError: Error | null;
     currentPage: number;
@@ -30,6 +31,7 @@ export default function BidAuctionMyListingsRent({
     loading, 
     error,
     auctions,
+    allAuctions,
     auctionsLoading,
     auctionsError,
     currentPage,
@@ -57,7 +59,7 @@ export default function BidAuctionMyListingsRent({
             <div className="w-full h-full">
                 {activeTab === "bid" && (
                     <Bids 
-                        auctions={auctions}
+                        auctions={allAuctions || auctions}
                         loading={auctionsLoading}
                         error={auctionsError}
                         currentPage={currentPage}
