@@ -10,7 +10,7 @@ import { uint256, num } from "starknet";
 import { truncateWithEllipsis, truncateAddress, formatUSD } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS } from "../lib/constants";
-import { getSwapQuote, generateSwapCalls, type SwapQuote, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
+import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 import { getTokenAmountForUSD } from "../lib/utils/usd-pricing"; 
 
 type Collection = {
@@ -109,8 +109,6 @@ export default function Bids({
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
     const [bidAmountUSD, setBidAmountUSD] = useState<string>("");
     const [paymentToken, setPaymentToken] = useState<string>(SURVIVOR_ADDRESS);
-    const [swapQuote, setSwapQuote] = useState<SwapQuote | null>(null);
-    const [isLoadingQuote, setIsLoadingQuote] = useState(false);
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
@@ -121,51 +119,10 @@ export default function Bids({
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
             const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
-            const defaultBid = minimum + 10;
+            const defaultBid = minimum + 1;
             setBidAmountUSD(defaultBid.toString());
         }
     }, [selectedCollectionId, collections]);
-
-    useEffect(() => {
-        const fetchQuote = async () => {
-            if (!bidAmountUSD || !selectedCollection || parseFloat(bidAmountUSD) <= 0) {
-                setSwapQuote(null);
-                return;
-            }
-
-            try {
-                setIsLoadingQuote(true);
-                const usdAmount = parseFloat(bidAmountUSD);
-                
-                if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
-                    setSwapQuote(null);
-                    setIsLoadingQuote(false);
-                    return;
-                }
-
-                const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                if (!paymentTokenInfo) {
-                    setSwapQuote(null);
-                    setIsLoadingQuote(false);
-                    return;
-                }
-
-                const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
-                const paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
-                
-                const quote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
-                setSwapQuote(quote);
-            } catch (error) {
-                console.error('Error fetching swap quote:', error);
-                setSwapQuote(null);
-            } finally {
-                setIsLoadingQuote(false);
-            }
-        };
-
-        fetchQuote();
-    }, [bidAmountUSD, paymentToken, selectedCollection]);
-
 
     const minimumBid = useMemo(() => {
         if (!selectedCollection) {
@@ -182,13 +139,8 @@ export default function Bids({
         const numericBid = parseFloat(bidAmountUSD);
         const isValid = !Number.isNaN(numericBid) && numericBid > 0;
         const exceedsMinimum = numericBid > minimumBid;
-        
-        if (paymentToken.toLowerCase() !== SURVIVOR_ADDRESS.toLowerCase()) {
-            return isValid && exceedsMinimum && swapQuote !== null && !isLoadingQuote;
-        }
-        
         return isValid && exceedsMinimum;
-    }, [bidAmountUSD, minimumBid, paymentToken, swapQuote, isLoadingQuote]);
+    }, [bidAmountUSD, minimumBid]);
 
     const handlePlaceBid = useCallback(async () => {
         if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid) {
@@ -205,10 +157,6 @@ export default function Bids({
             setIsSubmitting(true);
 
             const auctionId = parseInt(selectedCollectionId, 10);
-            const usdAmount = parseFloat(bidAmountUSD);
-            
-            const survivorAmount = await getTokenAmountForUSD(usdAmount, SURVIVOR_ADDRESS);
-            const bidAmountNum = Math.floor(survivorAmount);
 
             if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
                 const approvalAmount = uint256.bnToUint256(MAX_UINT256);
@@ -226,14 +174,20 @@ export default function Bids({
                     entrypoint: "bid",
                     calldata: [
                         auctionId.toString(),
-                        bidAmountNum.toString()
+                        bidAmountUSD.toString()
                     ]
                 });
             } else {
                 const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                if (!paymentTokenInfo || !swapQuote) {
-                    throw new Error('Invalid payment token or swap quote');
+                if (!paymentTokenInfo) {
+                    throw new Error('Invalid payment token');
                 }
+
+                const usdAmount = parseFloat(bidAmountUSD);
+                const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
+                const paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
+                
+                const swapQuote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
 
                 const routerContract: RouterContract = {
                     address: EKUBO_ROUTER_ADDRESS,
@@ -266,7 +220,7 @@ export default function Bids({
 
                 const tokenQuote: TokenQuote = {
                     tokenAddress: SURVIVOR_ADDRESS,
-                    minimumAmount: bidAmountNum * 0.99,
+                    minimumAmount: Number(bidAmountUSD) * 0.99,
                     quote: swapQuote
                 };
 
@@ -296,7 +250,7 @@ export default function Bids({
                     ]
                 });
 
-                const survivorAmountWei = BigInt(bidAmountNum) * BigInt(10 ** 18);
+                const survivorAmountWei = BigInt(bidAmountUSD) * BigInt(10 ** 18);
                 const survivorApproval = uint256.bnToUint256(survivorAmountWei);
                 calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
@@ -313,7 +267,7 @@ export default function Bids({
                     entrypoint: "bid",
                     calldata: [
                         auctionId.toString(),
-                        bidAmountNum.toString()
+                        bidAmountUSD.toString()
                     ]
                 });
             }
@@ -340,7 +294,7 @@ export default function Bids({
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, selectedCollectionId, bidAmountUSD, isBidValid, paymentToken, swapQuote]);
+    }, [account, selectedCollectionId, bidAmountUSD, isBidValid, paymentToken]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -349,7 +303,7 @@ export default function Bids({
 
         setSelectedCollectionId(collection.id);
         const nextMinimum = Math.max(collection.startingPrice, collection.highestBid ?? collection.startingPrice);
-        const defaultBid = nextMinimum + 10;
+        const defaultBid = nextMinimum + 1;
         setBidAmountUSD(defaultBid.toString());
     }, []);
 
@@ -575,7 +529,7 @@ export default function Bids({
                                                 }
                                             }
                                         }}
-                                        placeholder={(minimumBid + 10).toFixed(2)}
+                                        placeholder={(minimumBid + 1).toFixed(2)}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
                                     <label
@@ -596,16 +550,6 @@ export default function Bids({
                                             </option>
                                         ))}
                                     </select>
-                                    {isLoadingQuote && (
-                                        <p className="text-xs text-[rgb(186,255,188)]/70">
-                                            Loading swap quote...
-                                        </p>
-                                    )}
-                                    {swapQuote && paymentToken.toLowerCase() !== SURVIVOR_ADDRESS.toLowerCase() && (
-                                        <p className="text-xs text-[rgb(186,255,188)]/70">
-                                            Price impact: {(swapQuote.impact * 100).toFixed(2)}%
-                                        </p>
-                                    )}
                                     <p className="text-xs text-[rgb(186,255,188)]/70">
                                         Minimum bid is{" "}
                                         <span className="font-orbitron tracking-widest">
@@ -617,14 +561,14 @@ export default function Bids({
                                         <button
                                             type="button"
                                             onClick={handlePlaceBid}
-                                            disabled={!isBidValid || !account || isSubmitting || isLoadingQuote}
+                                            disabled={!isBidValid || !account || isSubmitting}
                                             className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                                isBidValid && account && !isSubmitting && !isLoadingQuote
+                                                isBidValid && account && !isSubmitting
                                                     ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                                     : "border border-white/12 text-[rgb(186,255,188)]/45"
                                             }`}
                                         >
-                                            {isSubmitting ? "Submitting..." : isLoadingQuote ? "Loading..." : "Place Bid"}
+                                            {isSubmitting ? "Submitting..." : "Place Bid"}
                                         </button>
                                     </div>
                                 </div>
