@@ -4,6 +4,7 @@ mod test_init_market {
     //    use snforge_std::{start_mock_call, stop_mock_call};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
     use survivor_exchange::tests::setup;
+    use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
 
     #[starknet::contract]
     mod contract_test {
@@ -29,7 +30,13 @@ mod test_init_market {
         let contract = declare("contract_test").unwrap().contract_class();
         let (mock_collection, _) = contract.deploy(@array![]).unwrap();
 
-        start_mock_call(mock_collection, selector!("owner_of"), setup::tests::OWNER());
+        let owner = setup::tests::OWNER();
+        let beast_addr = BEAST_ADDRESS_MAINNET();
+
+        start_mock_call(mock_collection, selector!("owner_of"), owner);
+        start_mock_call(beast_addr, selector!("owner_of"), owner);
+        start_mock_call(mock_collection, selector!("owner_of"), owner);
+        start_mock_call(beast_addr, selector!("owner_of"), owner);
 
         set_caller_address(setup::tests::OWNER());
 

@@ -26,6 +26,7 @@ pub mod tests {
                 TestResource::Model("ExchangeSettings"),
                 TestResource::Model("SupportedNFTCollection"), TestResource::Event("AuctionEvent"),
                 TestResource::Event("BidPlaced"), TestResource::Contract("auction_systems"),
+                TestResource::Contract("vault_systems"),
             ]
                 .span(),
         };
