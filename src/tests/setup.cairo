@@ -43,7 +43,9 @@ pub mod tests {
     fn contract_defs() -> Span<ContractDef> {
         [
             ContractDefTrait::new(@DEFAULT_NS(), @"auction_systems")
-                .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span())
+                .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span()),
+            ContractDefTrait::new(@DEFAULT_NS(), @"vault_systems")
+                .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span()),
         ]
             .span()
     }

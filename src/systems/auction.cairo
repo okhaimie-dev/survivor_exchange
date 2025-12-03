@@ -13,7 +13,7 @@ pub trait IAuctionMarketplace<TContractState> {
         items: Span<u32>,
         collection: ContractAddress,
         duration: Option<u64>,
-    );
+    ) -> u32;
 
     /// Adds a single item to a draft auction (convenience; status must be 0; owner only).
     /// - `auction_id`: The draft auction ID.
@@ -96,10 +96,10 @@ pub mod auction_systems {
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
-        ) {
+        ) -> u32 {
             self
                 .auctionable
-                .create(self.world_default(), name, starting_price, items, collection, duration);
+                .create(self.world_default(), name, starting_price, items, collection, duration)
         }
 
         fn add_item(

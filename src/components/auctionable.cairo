@@ -33,12 +33,14 @@ pub mod AuctionableComponent {
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
-        ) {
+        ) -> u32 {
             assert(items.len() >= 1 && items.len() <= 75, Errors::INVALID_ITEMS_COUNT);
 
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
             let auction_id: u32 = store.world.dispatcher.uuid();
+
+            println!("Generated auction_id in create: {}", auction_id)
 
             let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
             auction.auction_id = auction_id;
@@ -65,6 +67,8 @@ pub mod AuctionableComponent {
             if let Option::Some(dur) = duration {
                 self.start_auction(world, auction_id, dur);
             }
+
+            auction_id
         }
 
         fn add_item(
@@ -100,6 +104,8 @@ pub mod AuctionableComponent {
             auction_id: u32,
             duration: u64,
         ) {
+            println!("Passed auction_id to start_auction: {}", auction_id)
+
             let mut store = StoreTrait::new(world);
             let mut auction = store.auction(auction_id);
 
@@ -107,8 +113,10 @@ pub mod AuctionableComponent {
             let current_time = get_block_timestamp();
             auction.activate(duration, current_time);
 
+            println!("Auction id at start_auction: {:?}", auction_id)
+
             let mut vault: Vault = VaultTrait::new(
-                auction.auction_id, 0, SURVIVOR_ADDRESS_MAINNET().into(), get_block_timestamp(),
+                auction_id, 0, SURVIVOR_ADDRESS_MAINNET().into(), get_block_timestamp(),
             );
             store.set_vault(@vault);
 

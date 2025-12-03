@@ -1,6 +1,7 @@
 mod test_auction_system {
     use dojo_snf_test::{set_account_address, set_caller_address};
     use snforge_std::start_mock_call;
+    use survivor_exchange::models::vault::Vault;
     use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
     use survivor_exchange::tests::setup;
@@ -23,11 +24,11 @@ mod test_auction_system {
         let beast_addr = BEAST_ADDRESS_MAINNET();
         start_mock_call(beast_addr, selector!("owner_of"), owner);
         set_caller_address(owner);
-        systems
+        let auction_id = systems
             .auction_systems
             .create_auction(name, starting_price, items_span, beast_addr, duration);
 
-        (world, systems, 0)
+        (world, systems, auction_id)
     }
 
     #[test]
@@ -51,6 +52,14 @@ mod test_auction_system {
     #[available_gas(l2_gas: 300000000000)]
     fn test_bid() {
         let (world, dispatcher, auction_id) = setup_active_auction();
+        let mut store: Store = StoreTrait::new(world);
+
+        let real_auction = store.auction(1); // Try key 1
+        println!("Real auction_id: {}", real_auction.auction_id);
+
+        let vault: Vault = store.vault(auction_id); // Use auction_id
+        let vault_id = vault.vault_id;
+        println!("Vault id: {}", vault_id);
 
         let bidder = setup::tests::BIDDER();
         set_account_address(bidder);
@@ -64,7 +73,6 @@ mod test_auction_system {
         // Act
         dispatcher.auction_systems.bid(auction_id, bid_amount);
 
-        let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(auction_id);
         let bidder_bid = store.bid(auction_id, bidder.into());
 
