@@ -32,8 +32,11 @@ mod test_auction_system {
         let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(0);
 
-        assert(auction.item_count == 2, 'wrong item count');
+        assert(auction.seller == owner.into(), 'wrong seller');
+        assert(auction.name == name, 'wrong name');
         assert(auction.starting_price == starting_price, 'wrong price');
+        assert(auction.item_count == 2, 'wrong item count');
         assert(auction.status == 2, 'not started');
+        assert(auction.end_time > 0, 'no end time');
     }
 }
