@@ -3,9 +3,9 @@
 ## Establish On-Chain Auction and Rental Marketplace for BEAST NFTs with Initial Auction of 75 Unique Shiny BEASTs
 
 ## Submitter
-Okhai Omotuebe - BEAST Marketplace Developer  
+Okhai Omotuebe - Survivor Exchange Developer  
 (x: @sudo_okhai)  
-Date: November 26, 2025
+Date: December 5, 2025
   
 
 ## Executive Summary
