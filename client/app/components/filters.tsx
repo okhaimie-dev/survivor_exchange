@@ -24,7 +24,7 @@ interface FiltersProps {
 }
 
 export default function Filters({ filters, onFiltersChange }: FiltersProps) {
-    const [isExpanded, setIsExpanded] = useState(true);
+    const [isExpanded, setIsExpanded] = useState(false);
 
     const updateFilter = useCallback((key: keyof FilterState, value: string) => {
         onFiltersChange({ ...filters, [key]: value });
