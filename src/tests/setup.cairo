@@ -23,7 +23,7 @@ pub mod tests {
             resources: [
                 TestResource::Model("Bid"), TestResource::Model("Auction"),
                 TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
-                TestResource::Model("ExchangeSettings"),
+                TestResource::Model("ExchangeSettings"), TestResource::Model("Vault"),
                 TestResource::Model("SupportedNFTCollection"), TestResource::Event("AuctionEvent"),
                 TestResource::Event("BidPlaced"), TestResource::Contract("auction_systems"),
                 TestResource::Contract("vault_systems"),
