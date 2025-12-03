@@ -35,5 +35,6 @@ pub mod store;
 pub mod utils;
 
 pub mod tests {
+    mod setup;
     mod test_world;
 }
