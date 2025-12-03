@@ -1,76 +1,113 @@
-![Dojo Starter](./assets/cover.png)
+![Survivor Exchange](./assets/cover.png)
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset=".github/mark-dark.svg">
-  <img alt="Dojo logo" align="right" width="120" src=".github/mark-light.svg">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/icon.png">
+  <img alt="Survivor Exchange" align="right" width="120" src="assets/icon.png">
 </picture>
 
-<a href="https://x.com/ohayo_dojo">
-<img src="https://img.shields.io/twitter/follow/dojostarknet?style=social"/>
-</a>
-<a href="https://github.com/dojoengine/dojo/stargazers">
-<img src="https://img.shields.io/github/stars/dojoengine/dojo?style=social"/>
-</a>
+[![Discord](https://img.shields.io/badge/Discord-Join%20Dojo-brightgreen?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine)
+[![Twitter](https://img.shields.io/twitter/follow/sudo_okhai?style=social)](https://x.com/sudo_okhai)
 
-[![discord](https://img.shields.io/badge/join-dojo-green?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine)
-[![Telegram Chat][tg-badge]][tg-url]
+# Survivor Exchange
 
-[tg-badge]: https://img.shields.io/endpoint?color=neon&logo=telegram&label=chat&style=flat-square&url=https%3A%2F%2Ftg.sumanjay.workers.dev%2Fdojoengine
-[tg-url]: https://t.me/dojoengine
+**Survivor Exchange** is a fully on-chain auction and rental marketplace for BEAST NFTs from [Loot Survivor](https://docs.provable.games/lootsurvivor/beasts), built on Starknet with the [Dojo](https://dojoengine.org) framework. It solves key pain points in BEAST secondary trading:
 
-# Dojo Starter: Official Guide
+- **Bulk Auctions**: Sell curated collections (e.g., 75 Shiny BEASTs, tier bundles like 10 T1s + Rank 1 Dragon).
+- **English-Style Bidding**: Timed auctions with reserves, increments, and auto-settlement.
+- **Rentals**: Short-term leases with fees/collateral (e.g., WBTC), enabling "try-before-buy" for gameplay.
+- **Secure Vaults**: Custody for bids/NFTs.
+- **Admin Controls**: Whitelisting, fees, pauses.
 
-A quickstart guide to help you build and deploy your first Dojo provable game.
+100% provable on-chain, with payments in SURVIVOR/LORDS/STRK. Reduces OTC friction, boosts liquidity, and captures fees for the Survivor DAO.
 
-Read the full tutorial [here](https://dojoengine.org/tutorial/dojo-starter).
+See full specs:
+- [Product Requirements (PRD)](docs/PRD.md)
+- [DAO Proposal](docs/DAO_PROPOSAL.md)
+- [Developer Notes](docs/NOTES.md)
 
-## Running Locally
+## 🛠 Quickstart (Local Dev)
 
-#### Terminal one (Make sure this is running)
+### Prerequisites
+- Rust & [Scarb](https://docs.scarb.rs/)
+- Dojo CLI: `cargo install --git https://github.com/dojoengine/dojo sozo`
+- [Katana](https://github.com/dojoengine/katana): `cargo install --git https://github.com/dojoengine/katana katana --bin katana`
+- Docker (optional)
 
+### 1. Start Katana (Terminal 1)
 ```bash
-# Run Katana
-katana --dev --dev.no-fee
+katana --dev
 ```
+Note the RPC URL (default: `http://127.0.0.1:5050`).
 
-#### Terminal two
-
+### 2. Build, Migrate & Torii (Terminal 2)
 ```bash
-# Build the example
 sozo build
-
-# Inspect the world
-sozo inspect
-
-# Migrate the example
-sozo migrate
-
-# Start Torii
-# Replace <WORLD_ADDRESS> with the address of the deployed world from the previous step
-torii --world <WORLD_ADDRESS> --http.cors_origins "*"
+sozo migrate  # Copy the WORLD_ADDRESS
+sozo torii start --world <WORLD_ADDRESS>
 ```
+- World Explorer: `http://127.0.0.1:4040/graphql`
+- Test contracts via Starknet explorer or scripts.
 
-## Docker
-You can start stack using docker compose. [Here are the installation instruction](https://docs.docker.com/engine/install/)
-
+### Docker Compose (All-in-One)
 ```bash
 docker compose up
 ```
-You'll get all services logs in the same terminal instance. Whenever you want to stop just ctrl+c
 
----
+## 📐 Architecture
 
-## Contribution
+```
+survivor_exchange/
+├── Scarb.toml              # Dojo 1.8.0, OpenZeppelin
+├── src/
+│   ├── lib.cairo           # Exports
+│   ├── store.cairo         # Model readers/writers, events
+│   ├── constants.cairo     # Errors, NS="bm_0_0_6"
+│   ├── models/             # Auction, Bid, Rental, Vault, ExchangeSettings
+│   ├── systems/            # admin, auction, rental, vault
+│   ├── components/         # auctionable.cairo (rentable WIP)
+│   ├── events/             # auction, bid
+│   └── tests/              # test_world.cairo
+├── docs/                   # PRD, Proposal, Notes
+├── assets/                 # cover.png, icon.png
+├── dojo_*.toml             # Dev/Release configs
+└── compose.yaml            # Docker stack
+```
 
-1. **Report a Bug**
+**Key Components**:
+- **Models**: `Auction` (status, seller, items), `Bid`, `Rental`, `VaultShare`.
+- **Systems**: Execute logic (e.g., `auction.create`, `bid.place` with validations).
+- **Store**: Centralized accessors for Dojo world storage.
 
-    - If you think you have encountered a bug, and we should know about it, feel free to report it [here](https://github.com/dojoengine/dojo-starter/issues) and we will take care of it.
+## 🧪 Testing
+```bash
+sozo test
+```
+Coverage includes world setup, auction flows (`src/tests/test_world.cairo`).
 
-2. **Request a Feature**
+## 🚀 Deployment
+1. Update `dojo_release.toml` with mainnet RPC.
+2. `sozo build && sozo migrate --network=mainnet`
+3. Run Torii for indexing.
+4. Frontend: Invite-only site planned (React + Torii GraphQL).
 
-    - You can also request for a feature [here](https://github.com/dojoengine/dojo-starter/issues), and if it's viable, it will be picked for development.
+## 🗺 Roadmap
+From PRD, Notes, & DAO Proposal:
+1. **MVP (Current)**: Core auctions/rentals, bundles.
+2. **Phase 2**: Whitelisting, LORDS/SURVIVOR payments, vaults for custody.
+3. **Phase 3**: Lending integration (e.g., uncap), frontend launch, Shiny BEAST auction (75 units @ 50k SURVIVOR reserve).
+4. **Future**: Achievements, metadata fetching, flash sales (1hr), DAO fees (1-2%).
 
-3. **Create a Pull Request**
-    - It can't get better then this, your pull request will be appreciated by the community.
+## 🤝 Contributing
+1. Fork/clone: `git clone <repo> && cd survivor_exchange`
+2. Install deps: `scarb build`
+3. Test: `sozo test`
+4. Add feature → `sozo build && sozo test`
+5. PR with description/tests.
 
-Happy coding!
+Issues/Bugs: Discord (`tony.stark`) or open an issue.
+
+## 📄 License
+[MIT](LICENSE)
+
+Built by [@sudo_okhai](https://x.com/sudo_okhai). Funded by Survivor DAO. Happy trading! 🦖
+```
