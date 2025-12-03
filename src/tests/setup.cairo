@@ -7,14 +7,20 @@ pub mod tests {
     };
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
+    use survivor_exchange::systems::vault::IVaultDispatcher;
 
     pub fn OWNER() -> starknet::ContractAddress {
         0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
     }
 
+    pub fn BIDDER() -> starknet::ContractAddress {
+        'BIDDER'.try_into().unwrap()
+    }
+
     #[derive(Drop)]
-    struct Systems {
+    pub struct Systems {
         pub auction_systems: IAuctionMarketplaceDispatcher,
+        pub vault_systems: IVaultDispatcher,
     }
 
     fn namespace_def() -> NamespaceDef {
@@ -49,8 +55,10 @@ pub mod tests {
         world.sync_perms_and_inits(contract_defs());
         // [Setup] Systems
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
+        let (vault_address, _) = world.dns(@"vault_systems").unwrap();
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
+            vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
 
         (world, systems)
