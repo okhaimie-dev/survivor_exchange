@@ -1,4 +1,4 @@
-mod test_init_market {
+mod test_auction_system {
     use dojo_snf_test::{set_account_address, set_caller_address};
     use snforge_std::start_mock_call;
     use survivor_exchange::store::{Store, StoreTrait};
