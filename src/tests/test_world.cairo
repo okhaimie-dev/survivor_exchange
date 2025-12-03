@@ -1,7 +1,7 @@
 mod test_init_market {
     use dojo_snf_test::{set_account_address, set_caller_address};
     use snforge_std::start_mock_call;
-    //    use snforge_std::{stop_mock_call};
+    use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
     use survivor_exchange::tests::setup;
     use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
@@ -10,7 +10,7 @@ mod test_init_market {
     #[available_gas(l2_gas: 300000000000)]
     fn test_create_auction() {
         set_account_address(setup::tests::OWNER());
-        let (_world, systems) = setup::tests::spawn_auction();
+        let (world, systems) = setup::tests::spawn_auction();
 
         let name: felt252 = 'test_auction';
         let starting_price: u32 = 100;
@@ -28,5 +28,12 @@ mod test_init_market {
         set_caller_address(setup::tests::OWNER());
 
         systems.auction_systems.create_auction(name, starting_price, items, beast_addr, duration);
+
+        let mut store: Store = StoreTrait::new(world);
+        let auction = store.auction(0);
+
+        assert(auction.item_count == 2, 'wrong item count');
+        assert(auction.starting_price == starting_price, 'wrong price');
+        assert(auction.status == 2, 'not started');
     }
 }
