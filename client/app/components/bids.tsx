@@ -240,6 +240,7 @@ export default function Bids({
                 calls.push(...swapCalls);
 
                 const zeroApproval = uint256.bnToUint256(BigInt(0));
+
                 calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
