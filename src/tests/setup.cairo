@@ -52,8 +52,6 @@ pub mod tests {
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
         };
-        println!("world {:?}", world.dispatcher.contract_address);
-        println!("auction_systems {:?}", systems.auction_systems.contract_address);
 
         (world, systems)
     }
