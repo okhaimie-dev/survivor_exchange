@@ -1,16 +1,12 @@
 #[cfg(test)]
 pub mod tests {
     use dojo::world::{WorldStorage, WorldStorageTrait, world};
-    use dojo_cairo_test::{
+    use dojo_snf_test::{
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
         spawn_test_world,
     };
     use survivor_exchange::constants::DEFAULT_NS;
-    use survivor_exchange::events::index::{e_AuctionEvent, e_BidPlaced};
-    use survivor_exchange::models::index::{
-        m_Auction, m_AuctionItem, m_Bid, m_ExchangeSettings, m_Rental, m_SupportedNFTCollection,
-    };
-    use survivor_exchange::systems::auction::{IAuctionMarketplaceDispatcher, auction_systems};
+    use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
 
     pub fn OWNER() -> starknet::ContractAddress {
         0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
@@ -25,15 +21,11 @@ pub mod tests {
         let ndef = NamespaceDef {
             namespace: DEFAULT_NS(),
             resources: [
-                TestResource::Model(m_Bid::TEST_CLASS_HASH),
-                TestResource::Model(m_Auction::TEST_CLASS_HASH),
-                TestResource::Model(m_AuctionItem::TEST_CLASS_HASH),
-                TestResource::Model(m_Rental::TEST_CLASS_HASH),
-                TestResource::Model(m_ExchangeSettings::TEST_CLASS_HASH),
-                TestResource::Model(m_SupportedNFTCollection::TEST_CLASS_HASH),
-                TestResource::Event(e_AuctionEvent::TEST_CLASS_HASH),
-                TestResource::Event(e_BidPlaced::TEST_CLASS_HASH),
-                TestResource::Contract(auction_systems::TEST_CLASS_HASH),
+                TestResource::Model("Bid"), TestResource::Model("Auction"),
+                TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
+                TestResource::Model("ExchangeSettings"),
+                TestResource::Model("SupportedNFTCollection"), TestResource::Event("AuctionEvent"),
+                TestResource::Event("BidPlaced"), TestResource::Contract("auction_systems"),
             ]
                 .span(),
         };
@@ -52,7 +44,7 @@ pub mod tests {
     pub fn spawn_auction() -> (WorldStorage, Systems) {
         // [Setup] World
         let namespace_def = namespace_def();
-        let world = spawn_test_world(world::TEST_CLASS_HASH, [namespace_def].span());
+        let world = spawn_test_world([namespace_def].span());
         world.sync_perms_and_inits(contract_defs());
         // [Setup] Systems
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
