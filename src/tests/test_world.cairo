@@ -2,13 +2,13 @@ mod test_auction_system {
     use dojo_snf_test::{set_account_address, set_caller_address};
     use snforge_std::start_mock_call;
     use survivor_exchange::store::{Store, StoreTrait};
-    use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
+    use survivor_exchange::systems::auction::{
+        IAuctionMarketplaceDispatcher, IAuctionMarketplaceDispatcherTrait,
+    };
     use survivor_exchange::tests::setup;
     use survivor_exchange::utils::BEAST_ADDRESS_MAINNET;
 
-    #[test]
-    #[available_gas(l2_gas: 300000000000)]
-    fn test_create_auction() {
+    fn setup_active_auction() -> (dojo::world::WorldStorage, IAuctionMarketplaceDispatcher, u32) {
         set_account_address(setup::tests::OWNER());
         let (world, systems) = setup::tests::spawn_auction();
 
@@ -17,24 +17,32 @@ mod test_auction_system {
         let mut items = ArrayTrait::new();
         items.append(1);
         items.append(2);
-        let items = items.span();
+        let items_span = items.span();
         let duration: Option<u64> = Option::Some(3600);
 
         let owner = setup::tests::OWNER();
         let beast_addr = BEAST_ADDRESS_MAINNET();
-
         start_mock_call(beast_addr, selector!("owner_of"), owner);
+        set_caller_address(owner);
+        systems
+            .auction_systems
+            .create_auction(name, starting_price, items_span, beast_addr, duration);
 
-        set_caller_address(setup::tests::OWNER());
+        (world, systems.auction_systems, 0)
+    }
 
-        systems.auction_systems.create_auction(name, starting_price, items, beast_addr, duration);
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_create_auction() {
+        let (world, _dispatcher, auction_id) = setup_active_auction();
 
         let mut store: Store = StoreTrait::new(world);
-        let auction = store.auction(0);
+        let auction = store.auction(auction_id);
 
+        let owner = setup::tests::OWNER();
         assert(auction.seller == owner.into(), 'wrong seller');
-        assert(auction.name == name, 'wrong name');
-        assert(auction.starting_price == starting_price, 'wrong price');
+        assert(auction.name == 'test_auction', 'wrong name');
+        assert(auction.starting_price == 100, 'wrong price');
         assert(auction.item_count == 2, 'wrong item count');
         assert(auction.status == 2, 'not started');
         assert(auction.end_time > 0, 'no end time');
