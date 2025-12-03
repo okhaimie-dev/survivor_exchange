@@ -55,3 +55,39 @@ export function truncateAddress(address: string, startLength: number = 6, endLen
   return `${start}...${end}`;
 }
 
+export function formatUSD(value: number | string | null | undefined, decimals: number = 2): string {
+  if (value === null || value === undefined) return "—";
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return "—";
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(numValue);
+}
+
+export function formatUSDCompact(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue) || numValue === 0) return "$0.00";
+  
+  const absValue = Math.abs(numValue);
+  const sign = numValue < 0 ? "-" : "";
+  
+  if (absValue >= 1000000000000) {
+    return `${sign}$${(absValue / 1000000000000).toFixed(2)}T`;
+  } else if (absValue >= 1000000000) {
+    return `${sign}$${(absValue / 1000000000).toFixed(2)}B`;
+  } else if (absValue >= 1000000) {
+    return `${sign}$${(absValue / 1000000).toFixed(2)}M`;
+  } else if (absValue >= 1000) {
+    return `${sign}$${(absValue / 1000).toFixed(2)}K`;
+  } else {
+    return `${sign}$${absValue.toFixed(2)}`;
+  }
+}
+

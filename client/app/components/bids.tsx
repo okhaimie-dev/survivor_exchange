@@ -6,10 +6,12 @@ import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
-import { uint256 } from "starknet";
-import { truncateWithEllipsis, truncateAddress, formatPrice } from "../lib/utils";
+import { uint256, num } from "starknet";
+import { truncateWithEllipsis, truncateAddress, formatUSD } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants"; 
+import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS } from "../lib/constants";
+import { getSwapQuote, generateSwapCalls, type SwapQuote, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
+import { getTokenAmountForUSD } from "../lib/utils/usd-pricing"; 
 
 type Collection = {
     id: string;
@@ -34,13 +36,11 @@ interface BidsProps {
     getAuctionItems: (auctionId: string) => AuctionItem[];
 }
 
-
 export default function Bids({ 
     auctions, 
     loading, 
     error,
     currentPage,
-    totalPages,
     setCurrentPage}: BidsProps) {
     const { account } = useAccount();
     const explorer = useExplorer();
@@ -87,36 +87,84 @@ export default function Bids({
     }, [currentPage]);
 
     const collections: Collection[] = useMemo(() => {
-        return paginatedFilteredAuctions.map((auction) => ({
-            id: auction.auction_id,
-            name: truncateWithEllipsis(auction.name),
-            totalMonsters: parseInt(auction.item_count) || 0,
-            startingPrice: Math.floor(parseFloat(auction.starting_price) || 0),
-            highestBid: auction.current_bid ? Math.floor(parseFloat(auction.current_bid)) : undefined,
-            image: "/logo.png",
-            status: auction.status,
-            endTime: auction.end_time,
-            seller: truncateAddress(auction.seller),
-            highestBidder: truncateAddress(auction.highest_bidder),
-        }));
+        return paginatedFilteredAuctions.map((auction) => {
+            const startingPrice = parseFloat(auction.starting_price) || 0;
+            const highestBid = auction.current_bid ? parseFloat(auction.current_bid) : undefined;
+            
+            return {
+                id: auction.auction_id,
+                name: truncateWithEllipsis(auction.name),
+                totalMonsters: parseInt(auction.item_count) || 0,
+                startingPrice,
+                highestBid,
+                image: "/logo.png",
+                status: auction.status,
+                endTime: auction.end_time,
+                seller: truncateAddress(auction.seller),
+                highestBidder: truncateAddress(auction.highest_bidder),
+            };
+        });
     }, [paginatedFilteredAuctions]);
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
-    const [bidAmount, setBidAmount] = useState<string>("");
+    const [bidAmountUSD, setBidAmountUSD] = useState<string>("");
+    const [paymentToken, setPaymentToken] = useState<string>(SURVIVOR_ADDRESS);
+    const [swapQuote, setSwapQuote] = useState<SwapQuote | null>(null);
+    const [isLoadingQuote, setIsLoadingQuote] = useState(false);
+
+    const selectedCollection = useMemo(
+        () => collections.find((collection) => collection.id === selectedCollectionId),
+        [selectedCollectionId, collections],
+    );
 
     useEffect(() => {
         const selected = collections.find((c) => c.id === selectedCollectionId);
         if (selected) {
             const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
             const defaultBid = minimum + 10;
-            setBidAmount(defaultBid.toString());
+            setBidAmountUSD(defaultBid.toString());
         }
     }, [selectedCollectionId, collections]);
 
-    const selectedCollection = useMemo(
-        () => collections.find((collection) => collection.id === selectedCollectionId),
-        [selectedCollectionId, collections],
-    );
+    useEffect(() => {
+        const fetchQuote = async () => {
+            if (!bidAmountUSD || !selectedCollection || parseFloat(bidAmountUSD) <= 0) {
+                setSwapQuote(null);
+                return;
+            }
+
+            try {
+                setIsLoadingQuote(true);
+                const usdAmount = parseFloat(bidAmountUSD);
+                
+                if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
+                    setSwapQuote(null);
+                    setIsLoadingQuote(false);
+                    return;
+                }
+
+                const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                if (!paymentTokenInfo) {
+                    setSwapQuote(null);
+                    setIsLoadingQuote(false);
+                    return;
+                }
+
+                const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
+                const paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
+                
+                const quote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
+                setSwapQuote(quote);
+            } catch (error) {
+                console.error('Error fetching swap quote:', error);
+                setSwapQuote(null);
+            } finally {
+                setIsLoadingQuote(false);
+            }
+        };
+
+        fetchQuote();
+    }, [bidAmountUSD, paymentToken, selectedCollection]);
 
 
     const minimumBid = useMemo(() => {
@@ -131,52 +179,168 @@ export default function Bids({
     }, [selectedCollection]);
 
     const isBidValid = useMemo(() => {
-        const numericBid = parseFloat(bidAmount);
-        const isWholeNumber = !Number.isNaN(numericBid) && numericBid % 1 === 0 && numericBid > 0;
-        return isWholeNumber && numericBid > minimumBid;
-    }, [bidAmount, minimumBid]);
+        const numericBid = parseFloat(bidAmountUSD);
+        const isValid = !Number.isNaN(numericBid) && numericBid > 0;
+        const exceedsMinimum = numericBid > minimumBid;
+        
+        if (paymentToken.toLowerCase() !== SURVIVOR_ADDRESS.toLowerCase()) {
+            return isValid && exceedsMinimum && swapQuote !== null && !isLoadingQuote;
+        }
+        
+        return isValid && exceedsMinimum;
+    }, [bidAmountUSD, minimumBid, paymentToken, swapQuote, isLoadingQuote]);
 
     const handlePlaceBid = useCallback(async () => {
         if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid) {
             return;
         }
 
+        const calls: Array<{
+            contractAddress: string;
+            entrypoint: string;
+            calldata: string[];
+        }> = [];
+
         try {
             setIsSubmitting(true);
 
             const auctionId = parseInt(selectedCollectionId, 10);
-            const bidAmountNum = Math.floor(parseFloat(bidAmount));
+            const usdAmount = parseFloat(bidAmountUSD);
             
-            const scaledAmount = MAX_UINT256;
+            const survivorAmount = await getTokenAmountForUSD(usdAmount, SURVIVOR_ADDRESS);
+            const bidAmountNum = Math.floor(survivorAmount);
 
-            const response = await account.execute([
-                {
+            if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
+                const approvalAmount = uint256.bnToUint256(MAX_UINT256);
+                calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
                     calldata: [
                         VAULT_CONTRACT_ADDRESS,
-                        uint256.bnToUint256(scaledAmount)
+                        approvalAmount.low.toString(),
+                        approvalAmount.high.toString()
                     ]
-                },
-                {
+                });
+                calls.push({
                     contractAddress: AUCTION_CONTRACT_ADDRESS,
                     entrypoint: "bid",
                     calldata: [
-                        auctionId,
-                        bidAmountNum
+                        auctionId.toString(),
+                        bidAmountNum.toString()
                     ]
+                });
+            } else {
+                const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                if (!paymentTokenInfo || !swapQuote) {
+                    throw new Error('Invalid payment token or swap quote');
                 }
-            ]);
 
+                const routerContract: RouterContract = {
+                    address: EKUBO_ROUTER_ADDRESS,
+                    populate: (method: string, params: unknown[]) => {
+                        const calldata: string[] = [];
+                        params.forEach(param => {
+                            if (param && typeof param === 'object' && 'contract_address' in param) {
+                                const structParam = param as { contract_address: string; amount?: number | bigint };
+                                calldata.push(structParam.contract_address);
+                                if (structParam.amount !== undefined) {
+                                    const amountHex = typeof structParam.amount === 'bigint' 
+                                        ? num.toHex(structParam.amount)
+                                        : num.toHex(BigInt(Math.floor(Number(structParam.amount))));
+                                    calldata.push(amountHex);
+                                }
+                            } else {
+                                const value = typeof param === 'bigint' 
+                                    ? num.toHex(param)
+                                    : num.toHex(BigInt(Math.floor(Number(param))));
+                                calldata.push(value);
+                            }
+                        });
+                        return {
+                            contractAddress: EKUBO_ROUTER_ADDRESS,
+                            entrypoint: method,
+                            calldata
+                        };
+                    }
+                };
+
+                const tokenQuote: TokenQuote = {
+                    tokenAddress: SURVIVOR_ADDRESS,
+                    minimumAmount: bidAmountNum * 0.99,
+                    quote: swapQuote
+                };
+
+                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote);
+
+                const paymentTokenApproval = uint256.bnToUint256(MAX_UINT256);
+                calls.push({
+                    contractAddress: paymentToken,
+                    entrypoint: "approve",
+                    calldata: [
+                        EKUBO_ROUTER_ADDRESS,
+                        paymentTokenApproval.low.toString(),
+                        paymentTokenApproval.high.toString()
+                    ]
+                });
+
+                calls.push(...swapCalls);
+
+                const zeroApproval = uint256.bnToUint256(BigInt(0));
+                calls.push({
+                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
+                    entrypoint: "approve",
+                    calldata: [
+                        VAULT_CONTRACT_ADDRESS,
+                        zeroApproval.low.toString(),
+                        zeroApproval.high.toString()
+                    ]
+                });
+
+                const survivorAmountWei = BigInt(bidAmountNum) * BigInt(10 ** 18);
+                const survivorApproval = uint256.bnToUint256(survivorAmountWei);
+                calls.push({
+                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
+                    entrypoint: "approve",
+                    calldata: [
+                        VAULT_CONTRACT_ADDRESS,
+                        survivorApproval.low.toString(),
+                        survivorApproval.high.toString()
+                    ]
+                });
+
+                calls.push({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "bid",
+                    calldata: [
+                        auctionId.toString(),
+                        bidAmountNum.toString()
+                    ]
+                });
+            }
+
+            const response = await account.execute(calls);
             setTxnHash(response.transaction_hash);
-            setBidAmount("");
+            setBidAmountUSD("");
 
         } catch (err) {
-            console.error("Error placing bid:", err);
+            console.error("Error placing bid - multicall failed:", err);
+            if (err instanceof Error) {
+                console.error("Error message:", err.message);
+                console.error("Error stack:", err.stack);
+            }
+            if (calls && calls.length > 0) {
+                calls.forEach((call, idx) => {
+                    console.error(`Call ${idx + 1} failed:`, {
+                        contract: call.contractAddress,
+                        entrypoint: call.entrypoint,
+                        calldata: call.calldata
+                    });
+                });
+            }
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, selectedCollectionId, bidAmount, isBidValid]);
+    }, [account, selectedCollectionId, bidAmountUSD, isBidValid, paymentToken, swapQuote]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -186,14 +350,14 @@ export default function Bids({
         setSelectedCollectionId(collection.id);
         const nextMinimum = Math.max(collection.startingPrice, collection.highestBid ?? collection.startingPrice);
         const defaultBid = nextMinimum + 10;
-        setBidAmount(defaultBid.toString());
+        setBidAmountUSD(defaultBid.toString());
     }, []);
 
     const handleSelectCollection = useCallback(
         (collection: Collection) => {
             if (selectedCollectionId === collection.id) {
                 setSelectedCollectionId("");
-                setBidAmount("");
+                setBidAmountUSD("");
             } else {
                 updateSelection(collection);
             }
@@ -362,7 +526,7 @@ export default function Bids({
                                         Starting
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {formatPrice(selectedCollection.startingPrice)} SURVIVOR
+                                        {formatUSD(selectedCollection.startingPrice)}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
@@ -370,7 +534,7 @@ export default function Bids({
                                         Current Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {selectedCollection.highestBid !== undefined ? `${formatPrice(selectedCollection.highestBid)} SURVIVOR` : "No bids"}
+                                        {selectedCollection.highestBid !== undefined ? formatUSD(selectedCollection.highestBid) : "No bids"}
                                     </p>
                                 </div>
                             </div>
@@ -378,35 +542,74 @@ export default function Bids({
                             <div className="flex gap-4 sm:items-start w-full">
                                 <div className="flex flex-[0.4] flex-col gap-3 w-full">
                                     <label
-                                        htmlFor="bid-amount"
+                                        htmlFor="bid-amount-usd"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
                                     >
-                                        Place Your Bid
+                                        Place Your Bid (USD)
                                     </label>
                                     <input
-                                        id="bid-amount"
+                                        id="bid-amount-usd"
                                         type="number"
                                         min={minimumBid + 1}
-                                        step="1"
-                                        value={bidAmount}
+                                        step="0.01"
+                                        value={bidAmountUSD}
                                         onChange={(event) => {
                                             const value = event.target.value;
-                                            if (value === '' || value === '-') {
-                                                setBidAmount(value);
+                                            if (value === '' || value === '-' || value === '.') {
+                                                setBidAmountUSD(value);
                                             } else {
                                                 const num = parseFloat(value);
                                                 if (!isNaN(num) && num >= 0) {
-                                                    setBidAmount(Math.floor(num).toString());
+                                                    setBidAmountUSD(value);
+                                                } else if (value === '') {
+                                                    setBidAmountUSD('');
                                                 }
                                             }
                                         }}
-                                        placeholder={(minimumBid + 10).toString()}
+                                        onBlur={(event) => {
+                                            const value = event.target.value;
+                                            if (value && value !== '') {
+                                                const num = parseFloat(value);
+                                                if (!isNaN(num) && num >= 0) {
+                                                    setBidAmountUSD(num.toFixed(2));
+                                                }
+                                            }
+                                        }}
+                                        placeholder={(minimumBid + 10).toFixed(2)}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
+                                    <label
+                                        htmlFor="payment-token"
+                                        className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
+                                    >
+                                        Pay With
+                                    </label>
+                                    <select
+                                        id="payment-token"
+                                        value={paymentToken}
+                                        onChange={(event) => setPaymentToken(event.target.value)}
+                                        className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
+                                    >
+                                        {SUPPORTED_TOKENS.map((token) => (
+                                            <option key={token.address} value={token.address}>
+                                                {token.symbol}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {isLoadingQuote && (
+                                        <p className="text-xs text-[rgb(186,255,188)]/70">
+                                            Loading swap quote...
+                                        </p>
+                                    )}
+                                    {swapQuote && paymentToken.toLowerCase() !== SURVIVOR_ADDRESS.toLowerCase() && (
+                                        <p className="text-xs text-[rgb(186,255,188)]/70">
+                                            Price impact: {(swapQuote.impact * 100).toFixed(2)}%
+                                        </p>
+                                    )}
                                     <p className="text-xs text-[rgb(186,255,188)]/70">
                                         Minimum bid is{" "}
                                         <span className="font-orbitron tracking-widest">
-                                            {formatPrice(minimumBid)} SURVIVOR
+                                            {formatUSD(minimumBid)}
                                         </span>
                                         .
                                     </p>
@@ -414,14 +617,14 @@ export default function Bids({
                                         <button
                                             type="button"
                                             onClick={handlePlaceBid}
-                                            disabled={!isBidValid || !account || isSubmitting}
+                                            disabled={!isBidValid || !account || isSubmitting || isLoadingQuote}
                                             className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                                isBidValid && account && !isSubmitting
+                                                isBidValid && account && !isSubmitting && !isLoadingQuote
                                                     ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                                     : "border border-white/12 text-[rgb(186,255,188)]/45"
                                             }`}
                                         >
-                                            {isSubmitting ? "Submitting..." : "Place Bid"}
+                                            {isSubmitting ? "Submitting..." : isLoadingQuote ? "Loading..." : "Place Bid"}
                                         </button>
                                     </div>
                                 </div>

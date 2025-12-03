@@ -4,7 +4,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS } from "../lib/constants";
-import { formatPrice } from "../lib/utils";
+import { formatUSDCompact } from "../lib/utils";
 
 const formatTimeAgo = (timestamp: string): string => {
     if (!timestamp) return "Unknown";
@@ -101,6 +101,12 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
         try {
             setIsEndingAuction(auctionId);
 
+            console.log('Executing end_auction call:', {
+                contract: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "end_auction",
+                calldata: [auctionId]
+            });
+
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "end_auction",
@@ -109,7 +115,16 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
             setTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
         } catch (err) {
-            console.error("Error ending auction:", err);
+            console.error("Error ending auction - contract call failed:", err);
+            if (err instanceof Error) {
+                console.error("Error message:", err.message);
+                console.error("Error stack:", err.stack);
+            }
+            console.error("Failed call details:", {
+                contract: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "end_auction",
+                auctionId: auctionId
+            });
         } finally {
             setIsEndingAuction(null);
         }
@@ -204,20 +219,18 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             </div>
                         </div>
 
-                        <div className="grid w-full flex-1 grid-cols-2 gap-4 text-sm text-white md:grid-cols-3">
-                            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                        <div className="grid w-full max-w-[450px] grid-cols-2 gap-4 text-sm text-white md:grid-cols-3">
+                            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Tokens</p>
                                 <p className="font-orbitron text-xl tracking-[0.3em]">{listing.tokenCount}</p>
                             </div>
-                            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Starting</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{formatPrice(listing.startingPrice)}</p>
-                                <p className="font-orbitron text-xs tracking-[0.3em]">SURVIVOR</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatUSDCompact(listing.startingPrice)}</p>
                             </div>
-                            <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-center">
+                            <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Top Bid</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{formatPrice(listing.currentBid)}</p>
-                                <p className="font-orbitron text-xs tracking-[0.3em]">SURVIVOR</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.currentBid !== null ? formatUSDCompact(listing.currentBid) : "—"}</p>
                             </div>
                         </div>
 

@@ -25,3 +25,58 @@ export const MAX_UINT256 = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 export const DEFAULT_AUCTION_DURATION_MINUTES = 30;
 
+export const USDC_ADDRESS = '0x053c91253bc9682c04929ca02ed00b3e423f6710d2ee7e0d5ebb06f3ecf368a8';
+export const ETH_ADDRESS = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
+export const STRK_ADDRESS = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
+export const LORDS_ADDRESS = '0x0124aeb495b947201f5fac96fd1138e326ad86195b98df6dec9009158a533b49';
+export const SURVIVOR_ADDRESS = SURVIVOR_ADDRESS_MAINNET;
+export const EKUBO_ROUTER_ADDRESS = '0x0199741822c2dc722f6f605204f35e56dbc23bceed54818168c4c49e4fb8737e';
+
+export interface TokenInfo {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+}
+
+export const SUPPORTED_TOKENS: TokenInfo[] = [
+  {
+    address: USDC_ADDRESS,
+    symbol: 'USDC',
+    name: 'USD Coin',
+    decimals: 6,
+  },
+  {
+    address: ETH_ADDRESS,
+    symbol: 'ETH',
+    name: 'Ethereum',
+    decimals: 18,
+  },
+  {
+    address: STRK_ADDRESS,
+    symbol: 'STRK',
+    name: 'Starknet',
+    decimals: 18,
+  },
+  {
+    address: LORDS_ADDRESS,
+    symbol: 'LORDS',
+    name: 'Lords',
+    decimals: 18,
+  },
+  {
+    address: SURVIVOR_ADDRESS,
+    symbol: 'SURVIVOR',
+    name: 'Survivor',
+    decimals: 18,
+  },
+];
+
+export const getTokenByAddress = (address: string): TokenInfo | undefined => {
+  return SUPPORTED_TOKENS.find(token => token.address.toLowerCase() === address.toLowerCase());
+};
+
+export const getTokenBySymbol = (symbol: string): TokenInfo | undefined => {
+  return SUPPORTED_TOKENS.find(token => token.symbol.toUpperCase() === symbol.toUpperCase());
+};
+

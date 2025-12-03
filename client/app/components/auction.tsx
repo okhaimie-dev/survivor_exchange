@@ -6,7 +6,8 @@ import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, SURVIVOR_ADDRESS } from "../lib/constants";
+import { getTokenAmountForUSD } from "../lib/utils/usd-pricing";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -20,7 +21,8 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
-    const [startingPrice, setStartingPrice] = useState<string>("");
+    const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
+    const [sellerToken, setSellerToken] = useState<string>(SURVIVOR_ADDRESS);
     const getDefaultDateTime = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
@@ -117,7 +119,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     }, []);
 
     const handleListSelection = useCallback(async () => {
-        if (!account || !hasSelection || !startingPrice || !collectionName.trim() || !endDateTime) return;
+        if (!account || !hasSelection || !startingPriceUSD || !collectionName.trim() || !endDateTime) return;
     
         const selectedDate = new Date(endDateTime);
         const now = new Date();
@@ -125,7 +127,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     
         const minimumDurationSeconds = DEFAULT_AUCTION_DURATION_MINUTES * 60;
         if (durationSeconds < minimumDurationSeconds) {
-            alert(`End date must be at least ${DEFAULT_AUCTION_DURATION_MINUTES} minutes from now`);
+            console.error(`End date must be at least ${DEFAULT_AUCTION_DURATION_MINUTES} minutes from now`);
             return;
         }
     
@@ -134,31 +136,44 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         
             const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
-            const startingPriceWhole = Math.floor(parseFloat(startingPrice) || 0);
+            
+            const usdAmount = parseFloat(startingPriceUSD);
+            const startingPriceWhole = Math.floor(usdAmount);
+            
             const collectionNameFelt = shortString.encodeShortString(collectionName.trim());
         
+            const callData = [
+                collectionNameFelt,
+                startingPriceWhole,
+                token_ids.length,
+                ...token_ids,
+                "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4",
+                0,
+                duration_seconds
+            ];
+
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "create_auction",
-                calldata: [
-                    collectionNameFelt,
-                    startingPriceWhole,
-                    token_ids.length,
-                    ...token_ids,
-                    "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4",
-                    0,
-                    duration_seconds
-                ]
+                calldata: callData
             });
         
             setTxnHash(response.transaction_hash);
         } catch (err) {
-            console.error(err);
+            console.error("Error creating auction - contract call failed:", err);
+            if (err instanceof Error) {
+                console.error("Error message:", err.message);
+                console.error("Error stack:", err.stack);
+            }
+            console.error("Failed call details:", {
+                contract: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "create_auction"
+            });
         } finally {
             setIsSubmitting(false);
         }
 
-    }, [account, hasSelection, startingPrice, collectionName, endDateTime, selectedNFTs]);
+    }, [account, hasSelection, startingPriceUSD, collectionName, endDateTime, selectedNFTs]);
 
     const renderContent = () => {
     if (loading) {
@@ -280,31 +295,55 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                         <div className="flex flex-col gap-2">
                             <label
-                                htmlFor="starting-price"
+                                htmlFor="starting-price-usd"
                                 className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
                             >
-                                Starting Price (SURVIVOR)
+                                Starting Price (USD)
                             </label>
                             <input
-                                id="starting-price"
+                                id="starting-price-usd"
                                 type="number"
-                                min="1"
-                                step="1"
-                                value={startingPrice}
+                                min="0.01"
+                                step="0.01"
+                                value={startingPriceUSD}
                                 onChange={(event) => {
                                     const value = event.target.value;
                                     if (value === '' || value === '-') {
-                                        setStartingPrice(value);
+                                        setStartingPriceUSD(value);
                                     } else {
                                         const num = parseFloat(value);
                                         if (!isNaN(num) && num >= 0) {
-                                            setStartingPrice(Math.floor(num).toString());
+                                            setStartingPriceUSD(num.toFixed(2));
                                         }
                                     }
                                 }}
-                                placeholder="0"
+                                placeholder="0.00"
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label
+                                htmlFor="seller-token"
+                                className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
+                            >
+                                Receive Payment In
+                            </label>
+                            <select
+                                id="seller-token"
+                                value={sellerToken}
+                                onChange={(event) => setSellerToken(event.target.value)}
+                                className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
+                            >
+                                {SUPPORTED_TOKENS.map((token) => (
+                                    <option key={token.address} value={token.address}>
+                                        {token.symbol} - {token.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-[rgb(186,255,188)]/70">
+                                Buyers can pay with any token. Their payment will be swapped to {SUPPORTED_TOKENS.find(t => t.address === sellerToken)?.symbol || 'your selected token'}.
+                            </p>
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -334,9 +373,9 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                             <button
                                 type="button"
                                 onClick={handleListSelection}
-                                disabled={!hasSelection || !startingPrice || !collectionName.trim() || !address || !endDateTime || isSubmitting}
+                                disabled={!hasSelection || !startingPriceUSD || !collectionName.trim() || !address || !endDateTime || isSubmitting}
                                 className={`inline-flex items-center justify-center rounded-full px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                    hasSelection && startingPrice && collectionName.trim() && address && endDateTime && !isSubmitting
+                                    hasSelection && startingPriceUSD && collectionName.trim() && address && endDateTime && !isSubmitting
                                         ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                                 }`}

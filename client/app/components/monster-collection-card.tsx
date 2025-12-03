@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
-import { formatPrice } from "../lib/utils";
+import { formatUSD } from "../lib/utils";
 
 type MonsterCollectionCardProps = {
     collection: {
@@ -19,18 +19,18 @@ type MonsterCollectionCardProps = {
 
 export default function MonsterCollectionCard({ collection, isSelected, onSelect, nfts = [] }: MonsterCollectionCardProps) {
     const highestBidDisplay =
-        collection.highestBid !== undefined ? `${formatPrice(collection.highestBid)} SURVIVOR` : "No bids yet";
+        collection.highestBid !== undefined ? formatUSD(collection.highestBid) : "No bids yet";
 
     const stats = [
         {
             label: "Starting",
-            value: formatPrice(collection.startingPrice),
-            suffix: "SURVIVOR",
+            value: formatUSD(collection.startingPrice),
+            suffix: undefined,
         },
         {
             label: "Current Bid",
-            value: collection.highestBid !== undefined ? formatPrice(collection.highestBid) : "—",
-            suffix: collection.highestBid !== undefined ? "SURVIVOR" : undefined,
+            value: collection.highestBid !== undefined ? formatUSD(collection.highestBid) : "—",
+            suffix: undefined,
         },
     ];
 
