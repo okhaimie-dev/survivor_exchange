@@ -1,6 +1,8 @@
 import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
-import { MY_LISTINGS_QUERY, MyListingsResponse, Auction, felt252ToString } from '../lib/graphql';
+import { MY_LISTINGS_QUERY } from '../lib/queries';
+import type { MyListingsResponse, Auction } from '../lib/types';
+import { felt252ToString } from '../lib/utils';
 import { DEFAULT_POLL_INTERVAL } from '../lib/constants';
 
 export interface FormattedListing {

@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { fetchMyNFTs, formatNFTs, FormattedNFT, ERC721Token } from '../lib/graphql';
+import { fetchMyNFTs } from '../lib/queries';
+import type { FormattedNFT, ERC721Token } from '../lib/types';
+import { formatNFTs } from '../lib/utils';
+import { normalizeContractAddress } from '../lib/utils/normalization';
 import { BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
 interface UseNFTMetadataOptions {
@@ -30,20 +33,6 @@ export function useNFTMetadata({ sellerAddress, tokenIds, contractAddress }: Use
           .filter((metadata): metadata is ERC721Token => metadata !== null && metadata !== undefined) || [];
         
         const allNfts = formatNFTs(rawNFTs);
-        
-        const normalizeContractAddress = (addr: string | null | undefined): string => {
-          if (!addr) return '';
-          const addrStr = String(addr);
-          if (!addrStr) return '';
-          let hexPart: string;
-          if (addrStr.length >= 2 && addrStr[0] === '0' && (addrStr[1] === 'x' || addrStr[1] === 'X')) {
-            hexPart = addrStr.slice(2);
-          } else {
-            hexPart = addrStr;
-          }
-          const padded = hexPart.toLowerCase().padStart(64, '0');
-          return `0x${padded}`;
-        };
         
         const targetContract = contractAddress || BEASTS_NFT_CONTRACT_ADDRESS;
         const targetContractNormalized = normalizeContractAddress(targetContract).toLowerCase();

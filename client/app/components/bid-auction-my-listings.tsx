@@ -5,7 +5,7 @@ import { clsx } from "../lib/utils";
 import Auction from "./auction";
 import Bids from "./bids";
 import MyListings from "./my-listings";
-import { FormattedNFT, AuctionItem } from "../lib/graphql";
+import type { FormattedNFT, AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { FormattedListing } from "../hooks/use-my-listings";
 

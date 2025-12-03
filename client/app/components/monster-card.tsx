@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { FormattedNFT } from "../lib/graphql";
+import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
 
 type MonsterCardProps = {

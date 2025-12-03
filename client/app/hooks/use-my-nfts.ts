@@ -1,7 +1,10 @@
 import { useQuery } from '@apollo/client/react';
 import { useAccount } from '@starknet-react/core';
 import { useMemo } from 'react';
-import { MY_NFTS_QUERY, MyNFTsResponse, ERC721Token, FormattedNFT, formatNFTs } from '../lib/graphql';
+import { MY_NFTS_QUERY } from '../lib/queries';
+import type { MyNFTsResponse, ERC721Token, FormattedNFT } from '../lib/types';
+import { formatNFTs } from '../lib/utils';
+import { normalizeContractAddress } from '../lib/utils/normalization';
 import { DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
 interface UseMyNFTsOptions {
@@ -20,20 +23,6 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: false,
   });
-
-  const normalizeContractAddress = (address: string | null | undefined): string => {
-    if (!address) return '';
-    const addrStr = String(address);
-    if (!addrStr) return '';
-    let hexPart: string;
-    if (addrStr.length >= 2 && addrStr[0] === '0' && (addrStr[1] === 'x' || addrStr[1] === 'X')) {
-      hexPart = addrStr.slice(2);
-    } else {
-      hexPart = addrStr;
-    }
-    const padded = hexPart.toLowerCase().padStart(64, '0');
-    return `0x${padded}`;
-  };
 
   const rawNFTs: ERC721Token[] = useMemo(() => {
     const allNFTs = data?.tokenBalances?.edges

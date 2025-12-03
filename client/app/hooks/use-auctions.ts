@@ -1,46 +1,10 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
-import { AUCTIONS_QUERY, AuctionsResponse, Auction, AuctionItem, MY_NFTS_QUERY, MyNFTsResponse, formatNFTs, FormattedNFT, ERC721Token, felt252ToString } from '../lib/graphql';
+import { AUCTIONS_QUERY, MY_NFTS_QUERY } from '../lib/queries';
+import type { AuctionsResponse, Auction, AuctionItem, MyNFTsResponse, FormattedNFT, ERC721Token } from '../lib/types';
+import { formatNFTs, felt252ToString } from '../lib/utils';
+import { normalizeTokenId, normalizeContractAddress } from '../lib/utils/normalization';
 import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
-
-function normalizeTokenId(tokenId: string | number | null | undefined): string {
-  if (tokenId === null || tokenId === undefined) return '';
-  
-  const tokenIdStr = String(tokenId);
-  if (!tokenIdStr) return '';
-  
-  let hexPart: string;
-  if (tokenIdStr.length >= 2 && tokenIdStr[0] === '0' && (tokenIdStr[1] === 'x' || tokenIdStr[1] === 'X')) {
-    hexPart = tokenIdStr.slice(2);
-  } else {
-    hexPart = tokenIdStr;
-  }
-  
-  if (/^\d+$/.test(hexPart)) {
-    const num = parseInt(hexPart, 10);
-    hexPart = num.toString(16);
-  }
-  
-  const padded = hexPart.toLowerCase().padStart(64, '0');
-  return `0x${padded}`;
-}
-
-function normalizeContractAddress(address: string | null | undefined): string {
-  if (!address) return '';
-  
-  const addrStr = String(address);
-  if (!addrStr) return '';
-  
-  let hexPart: string;
-  if (addrStr.length >= 2 && addrStr[0] === '0' && (addrStr[1] === 'x' || addrStr[1] === 'X')) {
-    hexPart = addrStr.slice(2);
-  } else {
-    hexPart = addrStr;
-  }
-  
-  const padded = hexPart.toLowerCase().padStart(64, '0');
-  return `0x${padded}`;
-}
 
 export interface AuctionWithNFTs extends Auction {
   nfts: FormattedNFT[];
@@ -179,7 +143,7 @@ export function useAuctions() {
               nfts: matchedNFTs,
             });
           }
-        } catch (_err) {
+        } catch {
           for (const { auction } of auctionsWithItems) {
             auctionsWithNFTsData.push({
               ...auction,

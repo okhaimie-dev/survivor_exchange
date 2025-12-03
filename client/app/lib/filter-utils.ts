@@ -1,6 +1,6 @@
-import { FormattedNFT } from "./graphql";
-import { FilterState } from "../components/filters";
-import { AuctionWithNFTs } from "../hooks/use-auctions";
+import type { FormattedNFT } from "./types";
+import type { FilterState } from "../components/filters";
+import type { AuctionWithNFTs } from "../hooks/use-auctions";
 
 function getAttributeValue(nft: FormattedNFT, traitType: string): string | undefined {
     const attr = nft.attributes.find((a) => a.trait_type === traitType);

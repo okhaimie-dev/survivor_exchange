@@ -4,13 +4,12 @@ import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
-import { AuctionItem, truncateAddress } from "../lib/graphql";
+import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
-import { truncateWithEllipsis } from "../lib/utils";
+import { truncateWithEllipsis, truncateAddress, formatPrice } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants";
-import { formatPrice } from "../lib/utils"; 
+import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL } from "../lib/constants"; 
 
 type Collection = {
     id: string;
