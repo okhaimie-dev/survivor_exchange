@@ -251,8 +251,7 @@ export default function Bids({
                     ]
                 });
 
-                const survivorAmountWei = BigInt(bidAmountUSD) * BigInt(10 ** 18);
-                const survivorApproval = uint256.bnToUint256(survivorAmountWei);
+                const survivorApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
