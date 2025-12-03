@@ -58,7 +58,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             <div className="flex flex-col items-center gap-4 text-center">
                 <div className="h-24 w-24">
                     {nfts.length === 0 ? (
-                        <div className="flex h-full w-full items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12">
+                        <div className="flex h-full w-full items-center justify-center border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/12 rounded-2xl">
                             <Image
                                 src={collection.image}
                                 alt={collection.name}
@@ -211,7 +211,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 </div>
                 <div className="flex flex-col gap-2 text-white">
                     <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{collection.name}</h3>
-                    <p className="text-xs text-[rgb(186,255,188)]/70">{highestBidDisplay} top bid</p>
+                    <p className="text-xs text-[rgb(186,255,188)]/70">top bid - {highestBidDisplay}</p>
                 </div>
             </div>
 
