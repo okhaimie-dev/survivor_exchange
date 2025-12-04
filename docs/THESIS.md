@@ -1,6 +1,7 @@
+
 # BEAST Marketplace: Product Thesis & Report
 
-**Status:** MVP Launching Mainnet (Week of [DATE])  
+**Status:** MVP Launching Mainnet (Week of December 10)  
 **Platform:** Starknet L2 + Cairo Smart Contracts  
 **Audience:** Loot Survivor DAO, Starknet Community, Developer Ecosystem
 
@@ -10,7 +11,7 @@
 
 ### 1.1 Problem Statement
 
-Loot Survivor's early success has demonstrated genuine player-collector interest in Beast NFTs. However, three operational constraints currently inhibit secondary market growth and revenue realization:
+Loot Survivor 2 early success has demonstrated genuine player-collector interest in Beast NFTs. However, three operational constraints currently inhibit secondary market growth and revenue realization:
 
 **Bulk Sales Friction.** Collectors who accumulate themed Beast collections (e.g., 75 unique Beasts by species, rarity tier, or battle achievement) currently cannot efficiently sell these sets as curated lots. Each Beast requires individual listing and negotiation, creating operational overhead that discourages both sellers and serious buyers. This friction directly suppresses collection-level trading and liquidity.
 
@@ -38,7 +39,7 @@ The **BEAST Marketplace** is a specialized trading platform built natively on St
 | **Frontend** | Next.js | Modern, performant UX for Web3 interactions |
 | **Indexing & State** | Torii | Real-time event streaming and marketplace state queries |
 | **Deployment** | Starknet Mainnet | Production-ready; aligns with Loot Survivor mainnet deployment |
-| **Payment Tokens** | SURVIVOR, STRK | Native ecosystem alignment; potential multi-token support Phase 2 |
+| **Payment Tokens** | SURVIVOR, STRK, LORDS, WBTC, USDC | Native ecosystem alignment; potential multi-token support Phase 2 |
 
 ### 1.4 Launch Target & Key Metrics
 
