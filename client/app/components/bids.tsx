@@ -108,7 +108,7 @@ export default function Bids({
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
     const [bidAmountUSD, setBidAmountUSD] = useState<string>("");
-    const [paymentToken, setPaymentToken] = useState<string>(SURVIVOR_ADDRESS);
+    const [paymentToken, setPaymentToken] = useState<string>(USDC_ADDRESS);
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
