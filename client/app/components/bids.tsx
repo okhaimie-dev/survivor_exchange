@@ -9,7 +9,7 @@ import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256, num } from "starknet";
 import { truncateWithEllipsis, truncateAddress, formatUSD } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 import { getTokenAmountForUSD } from "../lib/utils/usd-pricing"; 
 
@@ -184,8 +184,15 @@ export default function Bids({
                 }
 
                 const usdAmount = parseFloat(bidAmountUSD);
-                const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
-                const paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
+                
+                // If payment token is USDC, directly convert USD to USDC wei (1 USD = 1 USDC)
+                let paymentTokenAmountWei: number;
+                if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                    paymentTokenAmountWei = Math.floor(usdAmount * Math.pow(10, paymentTokenInfo.decimals));
+                } else {
+                    const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
+                    paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
+                }
                 
                 const swapQuote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
 
@@ -224,7 +231,11 @@ export default function Bids({
                     quote: swapQuote
                 };
 
-                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote);
+                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, paymentTokenAmountWei);
+                
+                console.log("Swap calls generated:", swapCalls);
+                console.log("Quote splits:", swapQuote.splits);
+                console.log("Payment token amount wei:", paymentTokenAmountWei);
 
                 const paymentTokenApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
@@ -238,18 +249,8 @@ export default function Bids({
                 });
 
                 calls.push(...swapCalls);
-
-                const zeroApproval = uint256.bnToUint256(BigInt(0));
-
-                calls.push({
-                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
-                    entrypoint: "approve",
-                    calldata: [
-                        VAULT_CONTRACT_ADDRESS,
-                        zeroApproval.low.toString(),
-                        zeroApproval.high.toString()
-                    ]
-                });
+                
+                console.log("All calls to execute:", calls.map(c => ({ contract: c.contractAddress, entrypoint: c.entrypoint })));
 
                 const survivorApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({

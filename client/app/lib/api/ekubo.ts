@@ -62,15 +62,27 @@ export const getSwapQuote = async (amount: number, token: string, otherToken: st
   };
 };
 
-export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken: string, tokenQuote: TokenQuote): SwapCall[] => {
-  let totalQuoteSum = 0n;
-
+export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken: string, tokenQuote: TokenQuote, inputAmountWei: number | bigint): SwapCall[] => {
+  // Extract input amount from splits (amount_specified is negative for exact input swaps)
+  // If no splits, use the provided inputAmountWei
+  let inputAmount = BigInt(inputAmountWei);
+  
   if (tokenQuote.quote && tokenQuote.quote.splits.length > 0) {
-    const total = BigInt(tokenQuote.quote.total);
-    totalQuoteSum = total < 0n ? -total : total;
+    // Sum up all the input amounts from splits (amount_specified is negative, so we take absolute value)
+    const splitInputAmount = tokenQuote.quote.splits.reduce((sum, split) => {
+      const amount = BigInt(split.amount_specified);
+      // amount_specified is negative for input, so we take the absolute value
+      return sum + (amount < 0n ? -amount : amount);
+    }, 0n);
+    
+    // Use split amount if valid, otherwise fall back to provided amount
+    if (splitInputAmount > 0n) {
+      inputAmount = splitInputAmount;
+    }
   }
 
-  const totalWithBuffer = totalQuoteSum * 100n / 99n;
+  // Add 1% buffer to ensure sufficient funds
+  const totalWithBuffer = inputAmount * 101n / 100n;
 
   const transferCall: SwapCall = {
     contractAddress: purchaseToken,
@@ -87,14 +99,18 @@ export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken
   let { tokenAddress, minimumAmount, quote } = tokenQuote;
 
   if (!quote || quote.splits.length === 0) {
+    console.warn("No quote or splits found, returning transfer and clear only");
     return [transferCall, clearCall];
   }
 
   let { splits } = quote;
+  
+  console.log("Generating swap calls with splits:", splits.length);
 
   const clearProfitsCall = ROUTER_CONTRACT.populate("clear_minimum", [
     { contract_address: tokenAddress },
     minimumAmount * 1e18,
+    0,
   ]);
 
   let swapCalls: SwapCall[];
@@ -128,9 +144,9 @@ export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken
             token: tokenAddress,
             encoded: [],
           }).encoded,
-          tokenAddress,
+          purchaseToken,
           num.toHex(BigInt(split.amount_specified) < 0n ? -BigInt(split.amount_specified) : BigInt(split.amount_specified)),
-          "0x1",
+          "0x0",
         ],
       },
       clearProfitsCall,
@@ -167,9 +183,9 @@ export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken
                   encoded: [],
                 }
               ).encoded,
-              tokenAddress,
+              purchaseToken,
               num.toHex(BigInt(split.amount_specified) < 0n ? -BigInt(split.amount_specified) : BigInt(split.amount_specified)),
-              "0x1",
+              "0x0",
             ]);
           }, []),
         ],
