@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
@@ -7,11 +7,12 @@ import Filters, { FilterState } from "./filters";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256, num } from "starknet";
-import { truncateWithEllipsis, truncateAddress, formatUSD } from "../lib/utils";
+import { truncateWithEllipsis, truncateAddress, formatUSD, formatTokenAmount } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
-import { getTokenAmountForUSD } from "../lib/utils/usd-pricing"; 
+import { convertUSDCToToken } from "../lib/utils/usd-pricing";
+import { getTokenPriceInUSDC, shouldRefetchPrice } from "../lib/utils/token-price-cache"; 
 
 type Collection = {
     id: string;
@@ -107,43 +108,175 @@ export default function Bids({
     }, [paginatedFilteredAuctions]);
 
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
-    const [bidAmountUSD, setBidAmountUSD] = useState<string>("");
+    const [bidAmountToken, setBidAmountToken] = useState<string>("");
     const [paymentToken, setPaymentToken] = useState<string>(USDC_ADDRESS);
+    const [convertedStartingPrice, setConvertedStartingPrice] = useState<number>(0);
+    const [convertedHighestBid, setConvertedHighestBid] = useState<number | undefined>(undefined);
+    const [isConvertingPrices, setIsConvertingPrices] = useState(false);
+    const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+    const priceRetryIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
         [selectedCollectionId, collections],
     );
 
-    useEffect(() => {
-        const selected = collections.find((c) => c.id === selectedCollectionId);
-        if (selected) {
-            const minimum = Math.max(selected.startingPrice, selected.highestBid ?? selected.startingPrice);
-            const defaultBid = minimum + 1;
-            setBidAmountUSD(defaultBid.toString());
-        }
-    }, [selectedCollectionId, collections]);
+    const isValidPrice = useCallback((price: number | null): boolean => {
+        if (price === null) return false;
+        return isFinite(price) && price !== Infinity && price !== -Infinity && !isNaN(price) && price > 0;
+    }, []);
 
-    const minimumBid = useMemo(() => {
-        if (!selectedCollection) {
+    useEffect(() => {
+        const intervalRef = priceRetryIntervalRef;
+        
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+        }
+
+        const fetchTokenPrice = async (isRetry: boolean = false): Promise<boolean> => {
+            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                setTokenPrice(1);
+                setIsConvertingPrices(false);
+                return true;
+            }
+
+            if (!isRetry && !shouldRefetchPrice(paymentToken)) {
+                try {
+                    const cachedPrice = await getTokenPriceInUSDC(paymentToken);
+                    if (isValidPrice(cachedPrice)) {
+                        setTokenPrice(cachedPrice);
+                        setIsConvertingPrices(false);
+                        return true;
+                    } else {
+                        console.warn('Invalid cached price, fetching fresh:', cachedPrice);
+                        setIsConvertingPrices(true);
+                    }
+                } catch (error) {
+                    console.error('Error getting cached price:', error);
+                    setIsConvertingPrices(true);
+                }
+            } else {
+                setIsConvertingPrices(true);
+            }
+
+            try {
+                const price = await getTokenPriceInUSDC(paymentToken);
+                if (isValidPrice(price)) {
+                    setTokenPrice(price);
+                    setIsConvertingPrices(false);
+                    return true;
+                } else {
+                    console.warn('Invalid price received:', price);
+                    setTokenPrice(null);
+                    setIsConvertingPrices(true);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Error fetching token price:', error);
+                setTokenPrice(null);
+                setIsConvertingPrices(true);
+                return false;
+            }
+        };
+
+        fetchTokenPrice().then((success) => {
+            if (!success) {
+                const interval = setInterval(async () => {
+                    const retrySuccess = await fetchTokenPrice(true);
+                    if (retrySuccess) {
+                        if (intervalRef.current) {
+                            clearInterval(intervalRef.current);
+                            intervalRef.current = null;
+                        }
+                    }
+                }, 5000);
+                intervalRef.current = interval;
+            }
+        });
+
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+                intervalRef.current = null;
+            }
+        };
+    }, [paymentToken, isValidPrice]);
+
+    useEffect(() => {
+        const convertPrices = async () => {
+            if (!selectedCollection) {
+                setConvertedStartingPrice(0);
+                setConvertedHighestBid(undefined);
+                return;
+            }
+
+            setIsConvertingPrices(true);
+            try {
+                if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                    setConvertedStartingPrice(selectedCollection.startingPrice);
+                    setConvertedHighestBid(selectedCollection.highestBid);
+                } else if (tokenPrice !== null) {
+                    setConvertedStartingPrice(selectedCollection.startingPrice / tokenPrice);
+                    
+                    if (selectedCollection.highestBid !== undefined) {
+                        setConvertedHighestBid(selectedCollection.highestBid / tokenPrice);
+                    } else {
+                        setConvertedHighestBid(undefined);
+                    }
+                } else {
+                    const convertedStart = await convertUSDCToToken(selectedCollection.startingPrice, paymentToken);
+                    setConvertedStartingPrice(convertedStart);
+                    
+                    if (selectedCollection.highestBid !== undefined) {
+                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid, paymentToken);
+                        setConvertedHighestBid(convertedBid);
+                    } else {
+                        setConvertedHighestBid(undefined);
+                    }
+                }
+            } catch (error) {
+                console.error('Error converting prices:', error);
+                setConvertedStartingPrice(selectedCollection.startingPrice);
+                setConvertedHighestBid(selectedCollection.highestBid);
+            } finally {
+                setIsConvertingPrices(false);
+            }
+        };
+
+        convertPrices();
+    }, [selectedCollection, paymentToken, tokenPrice]);
+
+
+
+    const bidAmountUSD = useMemo(() => {
+        const tokenAmount = parseFloat(bidAmountToken);
+        if (Number.isNaN(tokenAmount) || tokenAmount <= 0 || tokenPrice === null || !isValidPrice(tokenPrice)) {
             return 0;
         }
-
-        return Math.max(
-            selectedCollection.startingPrice,
-            selectedCollection.highestBid ?? selectedCollection.startingPrice,
-        );
-    }, [selectedCollection]);
+        
+        if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+            return tokenAmount;
+        }
+        
+        const usdAmount = tokenAmount * tokenPrice;
+        if (!isFinite(usdAmount) || usdAmount === Infinity || usdAmount === -Infinity) {
+            return 0;
+        }
+        
+        return usdAmount;
+    }, [bidAmountToken, tokenPrice, paymentToken, isValidPrice]);
 
     const isBidValid = useMemo(() => {
-        const numericBid = parseFloat(bidAmountUSD);
-        const isValid = !Number.isNaN(numericBid) && numericBid > 0;
-        const exceedsMinimum = numericBid > minimumBid;
-        return isValid && exceedsMinimum;
-    }, [bidAmountUSD, minimumBid]);
+        const numericBid = parseFloat(bidAmountToken);
+        if (Number.isNaN(numericBid) || numericBid <= 0 || tokenPrice === null || !isValidPrice(tokenPrice)) {
+            return false;
+        }
+        return true;
+    }, [bidAmountToken, tokenPrice, isValidPrice]);
 
     const handlePlaceBid = useCallback(async () => {
-        if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid) {
+        if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid || tokenPrice === null) {
             return;
         }
 
@@ -158,8 +291,28 @@ export default function Bids({
 
             const auctionId = parseInt(selectedCollectionId, 10);
 
+            const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+            if (!paymentTokenInfo) {
+                throw new Error('Invalid payment token');
+            }
+
+            const tokenAmount = parseFloat(bidAmountToken);
+            if (isNaN(tokenAmount) || tokenAmount <= 0) {
+                throw new Error('Invalid bid amount');
+            }
+
+            const usdAmount = bidAmountUSD;
+
+            let finalUSDAmount = usdAmount;
+            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
+                const freshPrice = await getTokenPriceInUSDC(paymentToken);
+                setTokenPrice(freshPrice);
+                finalUSDAmount = tokenAmount * freshPrice;
+            }
+
             if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
-                const approvalAmount = uint256.bnToUint256(MAX_UINT256);
+                const survivorAmountWei = Math.floor(tokenAmount * Math.pow(10, 18));
+                const approvalAmount = uint256.bnToUint256(BigInt(survivorAmountWei));
                 calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
@@ -174,24 +327,11 @@ export default function Bids({
                     entrypoint: "bid",
                     calldata: [
                         auctionId.toString(),
-                        bidAmountUSD.toString()
+                        finalUSDAmount.toString()
                     ]
                 });
             } else {
-                const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                if (!paymentTokenInfo) {
-                    throw new Error('Invalid payment token');
-                }
-
-                const usdAmount = parseFloat(bidAmountUSD);
-                
-                let paymentTokenAmountWei: number;
-                if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                    paymentTokenAmountWei = Math.floor(usdAmount * Math.pow(10, paymentTokenInfo.decimals));
-                } else {
-                    const paymentTokenAmount = await getTokenAmountForUSD(usdAmount, paymentToken);
-                    paymentTokenAmountWei = Math.floor(paymentTokenAmount * Math.pow(10, paymentTokenInfo.decimals));
-                }
+                const paymentTokenAmountWei = Math.floor(tokenAmount * Math.pow(10, paymentTokenInfo.decimals));
                 
                 const swapQuote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
 
@@ -226,7 +366,7 @@ export default function Bids({
 
                 const tokenQuote: TokenQuote = {
                     tokenAddress: SURVIVOR_ADDRESS,
-                    minimumAmount: Number(bidAmountUSD) * 0.99,
+                    minimumAmount: finalUSDAmount * 0.99,
                     quote: swapQuote
                 };
 
@@ -261,21 +401,21 @@ export default function Bids({
                     entrypoint: "bid",
                     calldata: [
                         auctionId.toString(),
-                        bidAmountUSD.toString()
+                        finalUSDAmount.toString()
                     ]
                 });
             }
 
             const response = await account.execute(calls);
             setTxnHash(response.transaction_hash);
-            setBidAmountUSD("");
+            setBidAmountToken("");
 
         } catch (err) {
             console.error("Error placing bid:", err);
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, selectedCollectionId, bidAmountUSD, isBidValid, paymentToken]);
+    }, [account, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -283,16 +423,13 @@ export default function Bids({
         }
 
         setSelectedCollectionId(collection.id);
-        const nextMinimum = Math.max(collection.startingPrice, collection.highestBid ?? collection.startingPrice);
-        const defaultBid = nextMinimum + 1;
-        setBidAmountUSD(defaultBid.toString());
     }, []);
 
     const handleSelectCollection = useCallback(
         (collection: Collection) => {
             if (selectedCollectionId === collection.id) {
                 setSelectedCollectionId("");
-                setBidAmountUSD("");
+                setBidAmountToken("");
             } else {
                 updateSelection(collection);
             }
@@ -461,7 +598,19 @@ export default function Bids({
                                         Starting
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {formatUSD(selectedCollection.startingPrice)}
+                                        {isConvertingPrices ? (
+                                            "Loading..."
+                                        ) : (() => {
+                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                                            const symbol = tokenInfo?.symbol || "";
+                                            const decimals = tokenInfo?.decimals || 18;
+                                            
+                                            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                                                return formatUSD(selectedCollection.startingPrice);
+                                            } else {
+                                                return formatTokenAmount(convertedStartingPrice, decimals, symbol);
+                                            }
+                                        })()}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
@@ -469,7 +618,19 @@ export default function Bids({
                                         Current Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {selectedCollection.highestBid !== undefined ? formatUSD(selectedCollection.highestBid) : "No bids"}
+                                        {isConvertingPrices ? (
+                                            "Loading..."
+                                        ) : selectedCollection.highestBid !== undefined ? (() => {
+                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                                            const symbol = tokenInfo?.symbol || "";
+                                            const decimals = tokenInfo?.decimals || 18;
+                                            
+                                            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                                                return formatUSD(selectedCollection.highestBid);
+                                            } else {
+                                                return formatTokenAmount(convertedHighestBid, decimals, symbol);
+                                            }
+                                        })() : "No bids"}
                                     </p>
                                 </div>
                             </div>
@@ -477,42 +638,38 @@ export default function Bids({
                             <div className="flex gap-4 sm:items-start w-full">
                                 <div className="flex flex-[0.4] flex-col gap-3 w-full">
                                     <label
-                                        htmlFor="bid-amount-usd"
+                                        htmlFor="bid-amount-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
                                     >
-                                        Place Your Bid (USD)
+                                        {(() => {
+                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                                            return `Place Your Bid (${tokenInfo?.symbol || "TOKEN"})`;
+                                        })()}
                                     </label>
                                     <input
-                                        id="bid-amount-usd"
-                                        type="number"
-                                        min={minimumBid + 1}
-                                        step="0.01"
-                                        value={bidAmountUSD}
+                                        id="bid-amount-token"
+                                        type="text"
+                                        value={bidAmountToken}
+                                        placeholder="0.00"
                                         onChange={(event) => {
                                             const value = event.target.value;
-                                            if (value === '' || value === '-' || value === '.') {
-                                                setBidAmountUSD(value);
-                                            } else {
-                                                const num = parseFloat(value);
-                                                if (!isNaN(num) && num >= 0) {
-                                                    setBidAmountUSD(value);
-                                                } else if (value === '') {
-                                                    setBidAmountUSD('');
-                                                }
+                                            setBidAmountToken(value);
+                                            
+                                            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
+                                                getTokenPriceInUSDC(paymentToken).then(price => {
+                                                    setTokenPrice(price);
+                                                }).catch(err => {
+                                                    console.error('Error refetching price:', err);
+                                                });
                                             }
                                         }}
-                                        onBlur={(event) => {
-                                            const value = event.target.value;
-                                            if (value && value !== '') {
-                                                const num = parseFloat(value);
-                                                if (!isNaN(num) && num >= 0) {
-                                                    setBidAmountUSD(num.toFixed(2));
-                                                }
-                                            }
-                                        }}
-                                        placeholder={(minimumBid + 1).toFixed(2)}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
+                                    {bidAmountUSD > 0 && (
+                                        <p className="text-xs text-[rgb(186,255,188)]/50">
+                                            ≈ {formatUSD(bidAmountUSD)}
+                                        </p>
+                                    )}
                                     <label
                                         htmlFor="payment-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
@@ -531,13 +688,6 @@ export default function Bids({
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="text-xs text-[rgb(186,255,188)]/70">
-                                        Minimum bid is{" "}
-                                        <span className="font-orbitron tracking-widest">
-                                            {formatUSD(minimumBid)}
-                                        </span>
-                                        .
-                                    </p>
                                     <div className="flex flex-col gap-2 w-full">
                                         <button
                                             type="button"

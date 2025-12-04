@@ -91,3 +91,47 @@ export function formatUSDCompact(value: number | string | null | undefined): str
   }
 }
 
+/**
+ * Formats a token amount with appropriate decimal places
+ * @param value - The token amount to format
+ * @param decimals - Number of decimal places to show (default: 6)
+ * @param symbol - Optional token symbol to append
+ * @returns Formatted string
+ */
+export function formatTokenAmount(value: number | string | null | undefined, decimals: number = 6, symbol?: string): string {
+  if (value === null || value === undefined) return symbol ? `0.00 ${symbol}` : "0.00";
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return symbol ? `— ${symbol}` : "—";
+  
+  const absValue = Math.abs(numValue);
+  const sign = numValue < 0 ? "-" : "";
+  
+  let formatted: string;
+  
+  if (absValue < 1 && absValue > 0) {
+    const significantFigures = 4;
+    const magnitude = Math.floor(Math.log10(absValue));
+    const decimalsNeeded = significantFigures - 1 - magnitude;
+    const maxDecimals = Math.min(Math.max(0, decimalsNeeded), 7);
+    formatted = absValue.toFixed(maxDecimals);
+  } else if (absValue >= 1000000000000) {
+    // Trillions
+    formatted = `${(absValue / 1000000000000).toFixed(2)}t`;
+  } else if (absValue >= 1000000000) {
+    // Billions
+    formatted = `${(absValue / 1000000000).toFixed(2)}b`;
+  } else if (absValue >= 1000000) {
+    // Millions
+    formatted = `${(absValue / 1000000).toFixed(2)}m`;
+  } else if (absValue >= 1000) {
+    // Thousands
+    formatted = `${(absValue / 1000).toFixed(2)}k`;
+  } else {
+    const maxDecimals = Math.min(decimals, 7);
+    formatted = absValue.toFixed(maxDecimals).replace(/\.?0+$/, '');
+  }
+  
+  return symbol ? `${sign}${formatted} ${symbol}` : `${sign}${formatted}`;
+}
+
