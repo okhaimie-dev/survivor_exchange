@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x7417a06b48c8e4913d8ecd013de589d7c248ca6878fe259e35171dcc66eeb7c",
-    "seed": "bm_0_0_6",
+    "address": "0xc24ebb5018d7fd15b5091d422bc7632bc689b1e3b2de1dc9f7c3a8f7f975a1",
+    "seed": "bm_0_0_7",
     "name": "Survivor Exchange",
     "entrypoints": [
       "uuid",
@@ -33,11 +33,11 @@
   },
   "contracts": [
     {
-      "address": "0x14a55ac6b23a6edb34de6993fd7d996d9df08cf241d7fe7565f5289a1d2eac7",
-      "class_hash": "0x41350fe0438e7a2016614013dc38006f9ea9afcf0948352eaead3a42397cb96",
+      "address": "0x2f2bfaf5c22706ddbc64555094a6ad9bf9f2f4d590b9cf58217ca636da410e5",
+      "class_hash": "0x69a0c96da0395de02c16d4d6c6c0b35912027b3c54d64e0f52720224ad4e357",
       "init_calldata": [],
-      "tag": "bm_0_0_6-admin_systems",
-      "selector": "0x6971337db1c604581710cb0d674ddd55ce7687d240b43a600cba6c280f8a0b2",
+      "tag": "bm_0_0_7-admin_systems",
+      "selector": "0x1468172b9ef823fd77ea21fd02ff125d00c74ffde610af22cab81173733963c",
       "systems": [
         "dojo_init",
         "add_supported_collection",
@@ -46,11 +46,11 @@
       ]
     },
     {
-      "address": "0x58568ff97b6f409f69183b091af8f476eecb4db71e270e25c7b145adbb2fde6",
-      "class_hash": "0x24fdbd842690d011466df482bb5911e4501ac923a1538ef6384c627712db31d",
+      "address": "0x5db351f873691abf47b846c755670ecd3d8380a8b50ecb02b626581bc665f1b",
+      "class_hash": "0x7cc0361e85184c737fc088eb3420b09c94dea11b8600c38a745ff32d4e21d4b",
       "init_calldata": [],
-      "tag": "bm_0_0_6-auction_systems",
-      "selector": "0x2ebbdf3f0f3280f5c789a2805e79fa70ae4906f3d6d23839891d2deb26afdc2",
+      "tag": "bm_0_0_7-auction_systems",
+      "selector": "0x227afe030c707228d612d0befb345f8d02fde4053a35270072e196c82c4cdb8",
       "systems": [
         "create_auction",
         "add_item",
@@ -64,14 +64,13 @@
       ]
     },
     {
-      "address": "0x4615c6e9eab6efe299cb2a07107e0b712a6b3bab73bc8cb4886e15f1e6356d5",
-      "class_hash": "0x1a7805180846c0c0d41b918cb36f4d477b75a93a8ab61acf1bc40013fe9119b",
+      "address": "0x6cfcdaf12471c00372373a59cb46aeec584b636e9b303a79139d0649029cead",
+      "class_hash": "0x1c46343cbdd2abdf289a5c8cd8d2bdbbfe158dc8577ed8112ce9f10bc35f5ce",
       "init_calldata": [],
-      "tag": "bm_0_0_6-vault_systems",
-      "selector": "0x5fe445cebad6a228ec6e79874d3f70bdd6f5508dab90a6aac73b545df673d76",
+      "tag": "bm_0_0_7-vault_systems",
+      "selector": "0x4d10c7e25a78e91405474121ec3eba1ebc285ad8d12ea7150d7066012715685",
       "systems": [
         "dojo_init",
-        "create_vault",
         "deposit",
         "withdraw",
         "upgrade"
@@ -126,11 +125,16 @@
           "name": "seller",
           "type": "core::felt252",
           "key": false
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252",
+          "key": false
         }
       ],
-      "class_hash": "0x5273d31b5dda8130137052deb9764836f0aa767466829cca5754984f2b5acbe",
-      "tag": "bm_0_0_6-Auction",
-      "selector": "0x653e8eb2c4699d61eb1c1fafc4eaeb145e39a577422a4c85b5287809b54dca"
+      "class_hash": "0x597b7bc16937b6577846e19d9e83e6a19e96c683ba6a1222235ecc28dc00f7f",
+      "tag": "bm_0_0_7-Auction",
+      "selector": "0x53fc6ec556a33b2ac05d8b72413c4f226d5dcdd2b7e996d048767ccf7f14876"
     },
     {
       "members": [
@@ -156,8 +160,8 @@
         }
       ],
       "class_hash": "0x15808374daa08ca6fe788d169f85b0212c14d804413171abfa5533241d4db96",
-      "tag": "bm_0_0_6-AuctionItem",
-      "selector": "0x54513f5471f136ab4553085414296f035e2674cbe39d7963299770ae351b5d0"
+      "tag": "bm_0_0_7-AuctionItem",
+      "selector": "0x1d9c944165c5dcbac26d86e1e8b0bdf44534abadbf1b92a381ad6752619ed67"
     },
     {
       "members": [
@@ -178,8 +182,8 @@
         }
       ],
       "class_hash": "0x26d6285e9570194299c1b22164987a94245255dac0c6992e50f07b4c6ca0f17",
-      "tag": "bm_0_0_6-Bid",
-      "selector": "0x153989d409da736a7a2d4c40312036752394af1a8c45ba6640e9f86f06eb739"
+      "tag": "bm_0_0_7-Bid",
+      "selector": "0x348fa10902aee68d05969ba925756a1f9fd9b74f254e00071b3e09c4f49bf30"
     },
     {
       "members": [
@@ -205,8 +209,8 @@
         }
       ],
       "class_hash": "0x31056dcf0242470c77dfab9918875bd690f8207e78464386c7f10102b8d9dd8",
-      "tag": "bm_0_0_6-ExchangeSettings",
-      "selector": "0x3982e5fb3d4cccee179cdad9b63183ff74b513e9db3e02709c5c8c1ed1ff159"
+      "tag": "bm_0_0_7-ExchangeSettings",
+      "selector": "0x65714defb9972e6cd89599ff6c444d308dd864e7e30ad81be04f81709222e90"
     },
     {
       "members": [
@@ -257,8 +261,8 @@
         }
       ],
       "class_hash": "0xc6ffb25d6bf2c1a574e5bd6999af3d717258c2a3311574f602f5022a4f1d7e",
-      "tag": "bm_0_0_6-Rental",
-      "selector": "0x124e532e84304e4a5daecba61dd9f1d08a991136244590e499c7bb760afc99c"
+      "tag": "bm_0_0_7-Rental",
+      "selector": "0x5a55219065b1f8e9d12007743c8ff8ab784c3056cac9ba0c3aa5200491fc3f4"
     },
     {
       "members": [
@@ -274,8 +278,8 @@
         }
       ],
       "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
-      "tag": "bm_0_0_6-SupportedNFTCollection",
-      "selector": "0x4a1d1682ad8b1b53e71f73fb0487ac1c5216a82e298e00781ef5b29c6dbf15f"
+      "tag": "bm_0_0_7-SupportedNFTCollection",
+      "selector": "0x7818b203dfeba76bdff469f7e78dafe4bd36c4f4d3db09ebb145238b992c0f7"
     },
     {
       "members": [
@@ -286,7 +290,7 @@
         },
         {
           "name": "locked_amount",
-          "type": "core::integer::u64",
+          "type": "core::integer::u256",
           "key": false
         },
         {
@@ -300,9 +304,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x344071fdb470743e8de96dc5e3e612c1bf22c7a1d4140505cd68da115b8ee88",
-      "tag": "bm_0_0_6-Vault",
-      "selector": "0x7f088ef5e56e1f4c4b353f82336d5b4cc8bd38325a68c5760981c03bc600dd9"
+      "class_hash": "0x68517c4b29b229f8d32a6efd2747f67b9e2cc3d908d6e292f0b10ce85c1e50f",
+      "tag": "bm_0_0_7-Vault",
+      "selector": "0x76e0ac185b760d58000ba277a56b5b6ccbcbe1daf27a12ed5ff9524dc0bfbc0"
     },
     {
       "members": [
@@ -318,12 +322,12 @@
         },
         {
           "name": "share_amount",
-          "type": "core::integer::u64",
+          "type": "core::integer::u256",
           "key": false
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64",
+          "type": "core::integer::u256",
           "key": false
         },
         {
@@ -337,9 +341,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x78503a10f5b7095dd3266a9653d03d53bb8964908c8ba99e65a4ed354732a34",
-      "tag": "bm_0_0_6-VaultShare",
-      "selector": "0x5dfe6517dbea0481ecbbef122215b4c561ee9fb1488967f69c16e3b366ff055"
+      "class_hash": "0xc8105fa51cea2208cb8c497ea4c603c0a493d9a821d3d215fe18cdb6d87721",
+      "tag": "bm_0_0_7-VaultShare",
+      "selector": "0x26c0e213fd70a3650c33ffc6b69b4877eaf4f8ac55323f8ff133378839d545f"
     }
   ],
   "events": [
@@ -372,8 +376,8 @@
         }
       ],
       "class_hash": "0x50cf7a47be5469dae0c8904231c26bda24428131436ce5dee712a84c5e670d7",
-      "tag": "bm_0_0_6-AuctionEvent",
-      "selector": "0x61b25b1c1f320cd5871e9392c41b4a3cf0b96df1919b23ec6b2d433b17de6f8"
+      "tag": "bm_0_0_7-AuctionEvent",
+      "selector": "0x3068696d8861828bbd65426351160ca6284ea1b15b3e6d51b2bfa9009b14527"
     },
     {
       "members": [
@@ -399,8 +403,8 @@
         }
       ],
       "class_hash": "0x1c7eb5f52a775490ace6f1a0f62b434e0117a02bedf228d669648f08cafb66d",
-      "tag": "bm_0_0_6-BidPlaced",
-      "selector": "0x56c59c87dc2e6e416382aa8e6a533b65a8134ab08a73a6b91be785a657ccf11"
+      "tag": "bm_0_0_7-BidPlaced",
+      "selector": "0x10f04d2e63e3aff314186b7daaadb1aa634ee35a61c25356d58bd0954c9d1a0"
     }
   ],
   "external_contracts": [],
@@ -2434,6 +2438,10 @@
         {
           "name": "seller",
           "type": "core::felt252"
+        },
+        {
+          "name": "fee_token",
+          "type": "core::felt252"
         }
       ]
     },
@@ -2507,6 +2515,10 @@
         },
         {
           "name": "seller",
+          "type": "core::felt252"
+        },
+        {
+          "name": "fee_token",
           "type": "core::felt252"
         }
       ]
@@ -2693,7 +2705,7 @@
         },
         {
           "name": "locked_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "created_at",
@@ -2719,11 +2731,11 @@
         },
         {
           "name": "share_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "claimed",
@@ -2741,11 +2753,11 @@
       "members": [
         {
           "name": "share_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "claimed",
@@ -2763,7 +2775,7 @@
       "members": [
         {
           "name": "locked_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "created_at",
@@ -2901,9 +2913,17 @@
             {
               "name": "duration",
               "type": "core::option::Option::<core::integer::u64>"
+            },
+            {
+              "name": "fee_token",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ],
-          "outputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
           "state_mutability": "external"
         },
         {
@@ -3060,18 +3080,6 @@
       "items": [
         {
           "type": "function",
-          "name": "create_vault",
-          "inputs": [
-            {
-              "name": "vault_id",
-              "type": "core::integer::u32"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "external"
-        },
-        {
-          "type": "function",
           "name": "deposit",
           "inputs": [
             {
@@ -3128,11 +3136,20 @@
         },
         {
           "type": "function",
-          "name": "get_owner",
-          "inputs": [],
+          "name": "share_balance",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
           "outputs": [
             {
-              "type": "core::starknet::contract_address::ContractAddress"
+              "type": "core::integer::u256"
             }
           ],
           "state_mutability": "view"

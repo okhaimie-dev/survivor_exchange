@@ -16,6 +16,7 @@ starknet = "2.13.1"
 
 [[target.starknet-contract]]
 build-external-contracts = ["dojo::world::world_contract::world"]
+allowed-libfuncs-list.name = "experimental"
 
 [tool.scarb]
 allow-prebuilt-plugins = ["dojo_cairo_macros", "snforge_std"]

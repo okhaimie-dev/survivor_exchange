@@ -41,8 +41,6 @@ pub mod AuctionableComponent {
             let seller = get_caller_address();
             let auction_id: u32 = store.world.dispatcher.uuid();
 
-            println!("Generated auction_id in create: {}", auction_id)
-
             let mut auction: Auction = AuctionTrait::new(
                 name, starting_price, seller.into(), fee_token.into(),
             );
@@ -107,16 +105,12 @@ pub mod AuctionableComponent {
             auction_id: u32,
             duration: u64,
         ) {
-            println!("Passed auction_id to start_auction: {}", auction_id)
-
             let mut store = StoreTrait::new(world);
             let mut auction = store.auction(auction_id);
 
             auction.assert_is_seller(get_caller_address().into());
             let current_time = get_block_timestamp();
             auction.activate(duration, current_time);
-
-            println!("Auction id at start_auction: {:?}", auction_id)
 
             let mut vault: Vault = VaultTrait::new(
                 auction_id, 0, USDC_ADDRESS_MAINNET().into(), get_block_timestamp(),

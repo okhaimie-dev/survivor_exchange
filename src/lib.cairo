@@ -34,6 +34,7 @@ pub mod constants;
 pub mod store;
 pub mod utils;
 
+#[cfg(test)]
 pub mod tests {
     mod setup;
     mod test_world;
