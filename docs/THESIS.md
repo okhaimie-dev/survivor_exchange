@@ -1,4 +1,4 @@
-# BEAST Marketplace: Product Thesis & Capstone Report
+# BEAST Marketplace: Product Thesis & Report
 
 **Status:** MVP Launching Mainnet (Week of [DATE])  
 **Platform:** Starknet L2 + Cairo Smart Contracts  
