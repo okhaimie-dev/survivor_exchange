@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
-import { useAccount, useExplorer } from "@starknet-react/core";
+import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
@@ -43,10 +43,12 @@ export default function Bids({
     error,
     currentPage,
     setCurrentPage}: BidsProps) {
-    const { account } = useAccount();
+    const { account, address } = useAccount();
     const explorer = useExplorer();
+    const provider = useProvider();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
+    const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         beast: "",
@@ -276,9 +278,11 @@ export default function Bids({
     }, [bidAmountToken, tokenPrice, isValidPrice]);
 
     const handlePlaceBid = useCallback(async () => {
-        if (!account || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid || tokenPrice === null) {
+        if (!account || !address || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid || tokenPrice === null) {
             return;
         }
+
+        setInsufficientFundsError(null);
 
         const calls: Array<{
             contractAddress: string;
@@ -301,6 +305,29 @@ export default function Bids({
                 throw new Error('Invalid bid amount');
             }
 
+            const tokenAmountWei = BigInt(Math.floor(tokenAmount * Math.pow(10, paymentTokenInfo.decimals)));
+
+            const balanceResult = await provider.provider.callContract({
+                contractAddress: paymentToken,
+                entrypoint: "balanceOf",
+                calldata: [address]
+            });
+            
+            if (!balanceResult || balanceResult.length < 2) {
+                throw new Error('Invalid balance response');
+            }
+            
+            const low = balanceResult[0];
+            const high = balanceResult[1];
+            const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+
+            if (balance < tokenAmountWei) {
+                const balanceFormatted = (Number(balance) / Math.pow(10, paymentTokenInfo.decimals)).toFixed(paymentTokenInfo.decimals);
+                setInsufficientFundsError(`Insufficient funds. You have ${balanceFormatted} ${paymentTokenInfo.symbol}, but need ${tokenAmount} ${paymentTokenInfo.symbol}.`);
+                setIsSubmitting(false);
+                return;
+            }
+
             const usdAmount = bidAmountUSD;
 
             let finalUSDAmount = usdAmount;
@@ -311,8 +338,7 @@ export default function Bids({
             }
 
             if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
-                const survivorAmountWei = Math.floor(tokenAmount * Math.pow(10, 18));
-                const approvalAmount = uint256.bnToUint256(BigInt(survivorAmountWei));
+                const approvalAmount = uint256.bnToUint256(tokenAmountWei);
                 calls.push({
                     contractAddress: SURVIVOR_ADDRESS_MAINNET,
                     entrypoint: "approve",
@@ -331,9 +357,7 @@ export default function Bids({
                     ]
                 });
             } else {
-                const paymentTokenAmountWei = Math.floor(tokenAmount * Math.pow(10, paymentTokenInfo.decimals));
-                
-                const swapQuote = await getSwapQuote(paymentTokenAmountWei, paymentToken, SURVIVOR_ADDRESS);
+                const swapQuote = await getSwapQuote(Number(tokenAmountWei), paymentToken, SURVIVOR_ADDRESS);
 
                 const routerContract: RouterContract = {
                     address: EKUBO_ROUTER_ADDRESS,
@@ -370,7 +394,7 @@ export default function Bids({
                     quote: swapQuote
                 };
 
-                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, paymentTokenAmountWei);
+                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, tokenAmountWei);
 
                 const paymentTokenApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
@@ -412,10 +436,13 @@ export default function Bids({
 
         } catch (err) {
             console.error("Error placing bid:", err);
+            if (err instanceof Error && err.message.includes("balance")) {
+                setInsufficientFundsError("Insufficient funds");
+            }
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice]);
+    }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -668,6 +695,11 @@ export default function Bids({
                                     {bidAmountUSD > 0 && (
                                         <p className="text-xs text-[rgb(186,255,188)]/50">
                                             ≈ {formatUSD(bidAmountUSD)}
+                                        </p>
+                                    )}
+                                    {insufficientFundsError && (
+                                        <p className="text-xs text-red-400">
+                                            {insufficientFundsError}
                                         </p>
                                     )}
                                     <label
