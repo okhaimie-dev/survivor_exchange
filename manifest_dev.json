@@ -65,7 +65,7 @@
     },
     {
       "address": "0x6cfcdaf12471c00372373a59cb46aeec584b636e9b303a79139d0649029cead",
-      "class_hash": "0x1c46343cbdd2abdf289a5c8cd8d2bdbbfe158dc8577ed8112ce9f10bc35f5ce",
+      "class_hash": "0xac913e12783065d4382e473e16dec41b6971fba53d21fc180d79a2d458400f",
       "init_calldata": [],
       "tag": "bm_0_0_7-vault_systems",
       "selector": "0x4d10c7e25a78e91405474121ec3eba1ebc285ad8d12ea7150d7066012715685",
