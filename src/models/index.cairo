@@ -11,6 +11,7 @@ pub struct Auction {
     pub name: felt252,
     pub highest_bidder: felt252,
     pub seller: felt252,
+    pub fee_token: felt252,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]

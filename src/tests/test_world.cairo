@@ -22,11 +22,12 @@ mod test_auction_system {
 
         let owner = setup::tests::OWNER();
         let beast_addr = BEAST_ADDRESS_MAINNET();
+        let survivor_addr = SURVIVOR_ADDRESS_MAINNET();
         start_mock_call(beast_addr, selector!("owner_of"), owner);
         set_caller_address(owner);
         let auction_id = systems
             .auction_systems
-            .create_auction(name, starting_price, items_span, beast_addr, duration);
+            .create_auction(name, starting_price, items_span, beast_addr, duration, survivor_addr);
 
         println!("Auction id after test setup: {:?}", auction_id);
 

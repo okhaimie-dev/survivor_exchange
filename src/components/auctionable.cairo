@@ -12,7 +12,7 @@ pub mod AuctionableComponent {
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
     use survivor_exchange::types::status::AuctionStatus;
-    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
+    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, USDC_ADDRESS_MAINNET};
 
     #[storage]
     pub struct Storage {}
@@ -33,6 +33,7 @@ pub mod AuctionableComponent {
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
+            fee_token: ContractAddress,
         ) -> u32 {
             assert(items.len() >= 1 && items.len() <= 75, Errors::INVALID_ITEMS_COUNT);
 
@@ -42,7 +43,9 @@ pub mod AuctionableComponent {
 
             println!("Generated auction_id in create: {}", auction_id)
 
-            let mut auction: Auction = AuctionTrait::new(name, starting_price, seller.into());
+            let mut auction: Auction = AuctionTrait::new(
+                name, starting_price, seller.into(), fee_token.into(),
+            );
             auction.auction_id = auction_id;
             store.set_auction(@auction);
 
@@ -116,7 +119,7 @@ pub mod AuctionableComponent {
             println!("Auction id at start_auction: {:?}", auction_id)
 
             let mut vault: Vault = VaultTrait::new(
-                auction_id, 0, SURVIVOR_ADDRESS_MAINNET().into(), get_block_timestamp(),
+                auction_id, 0, USDC_ADDRESS_MAINNET().into(), get_block_timestamp(),
             );
             store.set_vault(@vault);
 

@@ -7,7 +7,7 @@ pub mod errors {}
 #[generate_trait]
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
-    fn new(name: felt252, starting_price: u32, seller: felt252) -> Auction {
+    fn new(name: felt252, starting_price: u32, seller: felt252, fee_token: felt252) -> Auction {
         AuctionAssert::assert_valid_starting_price(starting_price);
         AuctionAssert::assert_valid_seller(seller);
         AuctionAssert::assert_valid_name(name);
@@ -21,6 +21,7 @@ pub impl AuctionImpl of AuctionTrait {
             name,
             highest_bidder: 0x0,
             seller,
+            fee_token,
         }
     }
 
@@ -149,7 +150,7 @@ mod tests {
     const CURRENT_TIMESTAMP: u64 = 0x0;
 
     fn setup_draft_auction() -> Auction {
-        AuctionTrait::new(NAME, STARTING_PRICE, CONTRACT_ADDR)
+        AuctionTrait::new(NAME, STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR)
     }
 
     fn setup_active_auction(duration: u64, current_time: u64) -> Auction {
@@ -161,7 +162,9 @@ mod tests {
 
     #[test]
     fn test_auction_new() {
-        let auction: Auction = AuctionTrait::new(NAME, STARTING_PRICE, CONTRACT_ADDR);
+        let auction: Auction = AuctionTrait::new(
+            NAME, STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR,
+        );
         assert_eq!(auction.auction_id, 0);
         assert_eq!(auction.name, NAME);
         assert_eq!(auction.starting_price, STARTING_PRICE);
@@ -188,7 +191,7 @@ mod tests {
     #[test]
     #[should_panic(expected: 'Invalid name')]
     fn test_auction_new_invalid_name() {
-        let _auction = AuctionTrait::new(0, STARTING_PRICE, CONTRACT_ADDR);
+        let _auction = AuctionTrait::new(0, STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR);
     }
 
     #[test]
@@ -258,13 +261,13 @@ mod tests {
     #[test]
     #[should_panic(expected: 'Auction: invalid starting price')]
     fn test_auction_new_invalid_price() {
-        let _auction = AuctionTrait::new(NAME, 0, CONTRACT_ADDR);
+        let _auction = AuctionTrait::new(NAME, 0, CONTRACT_ADDR, CONTRACT_ADDR);
     }
 
     #[test]
     #[should_panic(expected: 'Auction: invalid seller')]
     fn test_auction_new_invalid_seller() {
-        let _auction = AuctionTrait::new(NAME, STARTING_PRICE, 0);
+        let _auction = AuctionTrait::new(NAME, STARTING_PRICE, 0, CONTRACT_ADDR);
     }
 
     #[test]
