@@ -7,7 +7,6 @@ import Filters, { FilterState } from "./filters";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, SURVIVOR_ADDRESS } from "../lib/constants";
-import { getTokenAmountForUSD } from "../lib/utils/usd-pricing";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -302,20 +301,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                             </label>
                             <input
                                 id="starting-price-usd"
-                                type="number"
-                                min="0.01"
-                                step="0.01"
+                                type="text"
                                 value={startingPriceUSD}
                                 onChange={(event) => {
-                                    const value = event.target.value;
-                                    if (value === '' || value === '-') {
-                                        setStartingPriceUSD(value);
-                                    } else {
-                                        const num = parseFloat(value);
-                                        if (!isNaN(num) && num >= 0) {
-                                            setStartingPriceUSD(num.toFixed(2));
-                                        }
-                                    }
+                                    setStartingPriceUSD(event.target.value);
                                 }}
                                 placeholder="0.00"
                                 className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
