@@ -185,7 +185,6 @@ export default function Bids({
 
                 const usdAmount = parseFloat(bidAmountUSD);
                 
-                // If payment token is USDC, directly convert USD to USDC wei (1 USD = 1 USDC)
                 let paymentTokenAmountWei: number;
                 if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
                     paymentTokenAmountWei = Math.floor(usdAmount * Math.pow(10, paymentTokenInfo.decimals));
@@ -232,10 +231,6 @@ export default function Bids({
                 };
 
                 const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, paymentTokenAmountWei);
-                
-                console.log("Swap calls generated:", swapCalls);
-                console.log("Quote splits:", swapQuote.splits);
-                console.log("Payment token amount wei:", paymentTokenAmountWei);
 
                 const paymentTokenApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
@@ -249,8 +244,6 @@ export default function Bids({
                 });
 
                 calls.push(...swapCalls);
-                
-                console.log("All calls to execute:", calls.map(c => ({ contract: c.contractAddress, entrypoint: c.entrypoint })));
 
                 const survivorApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
@@ -278,20 +271,7 @@ export default function Bids({
             setBidAmountUSD("");
 
         } catch (err) {
-            console.error("Error placing bid - multicall failed:", err);
-            if (err instanceof Error) {
-                console.error("Error message:", err.message);
-                console.error("Error stack:", err.stack);
-            }
-            if (calls && calls.length > 0) {
-                calls.forEach((call, idx) => {
-                    console.error(`Call ${idx + 1} failed:`, {
-                        contract: call.contractAddress,
-                        entrypoint: call.entrypoint,
-                        calldata: call.calldata
-                    });
-                });
-            }
+            console.error("Error placing bid:", err);
         } finally {
             setIsSubmitting(false);
         }
