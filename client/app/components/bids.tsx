@@ -498,7 +498,7 @@ export default function Bids({
         );
     }
 
-        if (collections.length === 0 && !loading) {
+        if (collections.length === 0) {
             return (
                 <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
                     <p className="text-[rgb(186,255,188)]/70">

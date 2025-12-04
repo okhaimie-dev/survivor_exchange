@@ -13,6 +13,7 @@ export interface AuctionWithNFTs extends Auction {
 export function useAuctions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [auctionsWithNFTs, setAuctionsWithNFTs] = useState<AuctionWithNFTs[]>([]);
+  const [isProcessingNFTs, setIsProcessingNFTs] = useState(false);
   const apolloClient = useApolloClient();
 
   const { data, loading, error } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
@@ -71,8 +72,11 @@ export function useAuctions() {
     const fetchAllAuctionNFTs = async () => {
       if (!allAuctions.length) {
         setAuctionsWithNFTs([]);
+        setIsProcessingNFTs(false);
         return;
       }
+
+      setIsProcessingNFTs(true);
 
       const auctionsBySeller = new Map<string, Auction[]>();
       for (const auction of allAuctions) {
@@ -134,16 +138,19 @@ export function useAuctions() {
       }
 
       setAuctionsWithNFTs(auctionsWithNFTsData);
+      setIsProcessingNFTs(false);
     };
 
     fetchAllAuctionNFTs();
   }, [allAuctions, itemsByAuction, apolloClient]);
 
+  const isLoading = loading || isProcessingNFTs;
+
   return {
     auctions: paginatedAuctions,
     allAuctions: auctionsWithNFTs,
     allAuctionItems,
-    loading,
+    loading: isLoading,
     error,
     currentPage,
     totalPages,
