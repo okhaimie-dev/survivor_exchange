@@ -27,7 +27,11 @@ export function useAuctions() {
       ...edge.node,
       name: felt252ToString(edge.node.name) || edge.node.name,
     })) || [];
-    return [...auctions].sort((a, b) => {
+    const filtered = auctions.filter((auction) => {
+      const statusNum = parseInt(auction.status);
+      return statusNum === 2;
+    });
+    return [...filtered].sort((a, b) => {
       const aId = parseInt(a.auction_id) || 0;
       const bId = parseInt(b.auction_id) || 0;
       return bId - aId;
