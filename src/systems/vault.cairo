@@ -27,7 +27,7 @@ pub mod vault_systems {
             ref self: ContractState, vault_id: u32, amount: u256, depositor: ContractAddress,
         ) {
             let mut store = StoreTrait::new(self.world_default());
-            let vault = store.vault(vault_id);
+            //let vault = store.vault(vault_id);
             //assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
 
             let survivor_dispatcher = IERC20Dispatcher {

@@ -1,7 +1,7 @@
 mod test_auction_system {
     use dojo_snf_test::{set_account_address, set_caller_address};
     use snforge_std::start_mock_call;
-    use survivor_exchange::models::vault::Vault;
+    //use survivor_exchange::models::vault::Vault;
     use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
     use survivor_exchange::tests::setup;
