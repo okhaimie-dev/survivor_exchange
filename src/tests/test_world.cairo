@@ -28,6 +28,8 @@ mod test_auction_system {
             .auction_systems
             .create_auction(name, starting_price, items_span, beast_addr, duration);
 
+        println!("Auction id after test setup: {:?}", auction_id);
+
         (world, systems, auction_id)
     }
 
@@ -35,6 +37,7 @@ mod test_auction_system {
     #[available_gas(l2_gas: 300000000000)]
     fn test_create_auction() {
         let (world, _dispatcher, auction_id) = setup_active_auction();
+        println!("Auction id after test setup 1: {:?}", auction_id);
 
         let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(auction_id);

@@ -73,7 +73,7 @@ pub struct ExchangeSettings {
 pub struct Vault {
     #[key]
     pub vault_id: u32,
-    pub locked_amount: u64,
+    pub locked_amount: u256,
     pub created_at: u64,
     pub token_address: felt252,
 }
@@ -87,9 +87,9 @@ pub struct VaultShare {
     #[key]
     pub user: felt252,
     // Proportional shares (e.g., total_shares / total_locked * deposit)
-    pub share_amount: u64,
+    pub share_amount: u256,
     // Original lock amount (for claim calculation)
-    pub deposited_amount: u64,
+    pub deposited_amount: u256,
     pub claimed: bool,
     pub updated_at: u64,
 }

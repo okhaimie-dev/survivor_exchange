@@ -14,7 +14,7 @@ pub mod tests {
     }
 
     pub fn BIDDER() -> starknet::ContractAddress {
-        'BIDDER'.try_into().unwrap()
+        0x127fd0f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
     }
 
     #[derive(Drop)]
@@ -30,9 +30,9 @@ pub mod tests {
                 TestResource::Model("Bid"), TestResource::Model("Auction"),
                 TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
                 TestResource::Model("ExchangeSettings"), TestResource::Model("Vault"),
-                TestResource::Model("SupportedNFTCollection"), TestResource::Event("AuctionEvent"),
-                TestResource::Event("BidPlaced"), TestResource::Contract("auction_systems"),
-                TestResource::Contract("vault_systems"),
+                TestResource::Model("VaultShare"), TestResource::Model("SupportedNFTCollection"),
+                TestResource::Event("AuctionEvent"), TestResource::Event("BidPlaced"),
+                TestResource::Contract("auction_systems"), TestResource::Contract("vault_systems"),
             ]
                 .span(),
         };

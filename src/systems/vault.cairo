@@ -28,7 +28,7 @@ pub mod vault_systems {
         ) {
             let mut store = StoreTrait::new(self.world_default());
             let vault = store.vault(vault_id);
-            assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
+            //assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
 
             let survivor_dispatcher = IERC20Dispatcher {
                 contract_address: SURVIVOR_ADDRESS_MAINNET(),
@@ -37,7 +37,7 @@ pub mod vault_systems {
             survivor_dispatcher.transfer_from(depositor, get_contract_address(), amount);
 
             let mut share = store.vault_share(vault_id, depositor.into());
-            let add_amount: u64 = amount.try_into().expect('amount too large'); // TODO: u256 models
+            let add_amount: u256 = amount; // TODO: u256 models
             share.deposited_amount += add_amount;
             share.share_amount += add_amount;
             share.claimed = false;
@@ -53,7 +53,7 @@ pub mod vault_systems {
             let caller = get_caller_address();
             let mut store = StoreTrait::new(self.world_default());
             let mut share = store.vault_share(vault_id, caller.into());
-            let deduct: u64 = amount.try_into().expect('Amount > u64::MAX');
+            let deduct: u256 = amount;
 
             assert(share.share_amount >= deduct, Errors::INSUFFICIENT_SHARES);
 
@@ -86,12 +86,12 @@ pub mod vault_systems {
 
         fn balance_of(self: @ContractState, vault_id: u32) -> u256 {
             let store = StoreTrait::new(self.world_default());
-            store.vault(vault_id).locked_amount.into()
+            store.vault(vault_id).locked_amount
         }
 
         fn share_balance(self: @ContractState, vault_id: u32, user: ContractAddress) -> u256 {
             let store = StoreTrait::new(self.world_default());
-            store.vault_share(vault_id, user.into()).share_amount.into()
+            store.vault_share(vault_id, user.into()).share_amount
         }
     }
 
