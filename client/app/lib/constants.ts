@@ -6,8 +6,8 @@ export const IMAGE_BASE_URL = 'https://api.cartridge.gg/x/tt/torii';
 export const MAINNET_RPC_URL = 'https://api.cartridge.gg/x/starknet/mainnet';
 export const SEPOLIA_RPC_URL = 'https://api.cartridge.gg/x/starknet/sepolia';
 
-export const AUCTION_CONTRACT_ADDRESS = '0x05db351f873691abf47b846c755670ecd3d8380a8b50ecb02b626581bc665f1b';
-export const VAULT_CONTRACT_ADDRESS = '0x06cfcdaf12471c00372373a59cb46aeec584b636e9b303a79139d0649029cead';
+export const AUCTION_CONTRACT_ADDRESS = '0x00abfaa3865708426bbf13bdec5b51f40d23e9e9e0dc12d12529c1f1e8c36372';
+export const VAULT_CONTRACT_ADDRESS = '0x03a47d39ee9106f2da13f094c30ed19a5e26dfae220ba1106c43a99bc10619fa';
 export const BEASTS_NFT_CONTRACT_ADDRESS = '0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4';
 
 export const DEFAULT_PAGE_SIZE = 9;

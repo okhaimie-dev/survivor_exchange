@@ -3,7 +3,7 @@ import type { AuctionsResponse, MyListingsResponse } from '../types';
 
 export const AUCTIONS_QUERY = gql`
   query MyQuery {
-    bm007AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm008AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -13,7 +13,7 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
-    bm007AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm008AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -38,7 +38,7 @@ export async function fetchAuctions(): Promise<AuctionsResponse> {
 
 export const MY_LISTINGS_QUERY = gql`
   query MyListings($seller: String!) {
-    bm007AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
+    bm008AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -82,7 +82,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctionItems: bm007AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctionItems: bm008AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -92,7 +92,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctions: bm007AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctions: bm008AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -108,7 +108,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    myListings: bm007AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) @skip(if: $skipListings) {
+    myListings: bm008AuctionModels(where: {seller: $seller}, order: {direction: DESC, field: AUCTION_ID}) @skip(if: $skipListings) {
       edges {
         node {
           auction_id

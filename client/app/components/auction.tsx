@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
-import { CallData, shortString } from "starknet";
+import { shortString, byteArray } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
@@ -30,6 +30,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
+    const [durationError, setDurationError] = useState<string | null>(null);
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         beast: "",
@@ -126,10 +127,11 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     
         const minimumDurationSeconds = DEFAULT_AUCTION_DURATION_MINUTES * 60;
         if (durationSeconds < minimumDurationSeconds) {
-            console.error(`End date must be at least ${DEFAULT_AUCTION_DURATION_MINUTES} minutes from now`);
+            setDurationError(`End date must be at least ${DEFAULT_AUCTION_DURATION_MINUTES} minutes from now`);
             return;
         }
     
+        setDurationError(null);
         try {
             setIsSubmitting(true);
         
@@ -138,11 +140,9 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             
             const usdAmount = parseFloat(startingPriceUSD);
             const startingPriceWhole = Math.floor(usdAmount);
-            
-            const collectionNameFelt = shortString.encodeShortString(collectionName.trim());
         
             const callData = [
-                collectionNameFelt,
+                byteArray.byteArrayFromString(collectionName.trim()),
                 startingPriceWhole,
                 token_ids.length,
                 ...token_ids,
@@ -347,17 +347,30 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 id="end-datetime"
                                 type="datetime-local"
                                 value={endDateTime}
-                                onChange={(event) => setEndDateTime(event.target.value)}
+                                onChange={(event) => {
+                                    setEndDateTime(event.target.value);
+                                    setDurationError(null);
+                                }}
                                 min={(() => {
                                     const now = new Date();
                                     now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
                                     return now.toISOString().slice(0, 16);
                                 })()}
-                                className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100"
+                                className={`w-full rounded-xl border px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:ring-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
+                                    durationError 
+                                        ? "border-red-500 bg-black/60 focus:border-red-500 focus:ring-red-500/35" 
+                                        : "border-white/12 bg-black/60 focus:border-[rgb(50,255,52)] focus:ring-[rgb(50,255,52)]/35"
+                                }`}
                             />
-                            <p className="text-xs text-[rgb(186,255,188)]/70">
-                                Minimum duration is {DEFAULT_AUCTION_DURATION_MINUTES} minutes from now.
-                            </p>
+                            {durationError ? (
+                                <p className="text-xs text-red-400">
+                                    {durationError}
+                                </p>
+                            ) : (
+                                <p className="text-xs text-[rgb(186,255,188)]/70">
+                                    Minimum duration is {DEFAULT_AUCTION_DURATION_MINUTES} minutes from now.
+                                </p>
+                            )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                             <button
