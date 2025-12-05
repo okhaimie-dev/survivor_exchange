@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
 import { AUCTIONS_QUERY, MY_NFTS_QUERY } from '../lib/queries';
 import type { AuctionsResponse, Auction, AuctionItem, MyNFTsResponse, FormattedNFT, ERC721Token } from '../lib/types';
@@ -14,6 +14,7 @@ export function useAuctions() {
   const [currentPage, setCurrentPage] = useState(1);
   const [auctionsWithNFTs, setAuctionsWithNFTs] = useState<AuctionWithNFTs[]>([]);
   const [isProcessingNFTs, setIsProcessingNFTs] = useState(false);
+  const hasInitialData = useRef(false);
   const apolloClient = useApolloClient();
 
   const { data, loading, error } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
@@ -73,10 +74,14 @@ export function useAuctions() {
       if (!allAuctions.length) {
         setAuctionsWithNFTs([]);
         setIsProcessingNFTs(false);
+        hasInitialData.current = false;
         return;
       }
 
-      setIsProcessingNFTs(true);
+      // Only show loading state on initial load, not on updates
+      if (!hasInitialData.current) {
+        setIsProcessingNFTs(true);
+      }
 
       const auctionsBySeller = new Map<string, Auction[]>();
       for (const auction of allAuctions) {
@@ -139,12 +144,14 @@ export function useAuctions() {
 
       setAuctionsWithNFTs(auctionsWithNFTsData);
       setIsProcessingNFTs(false);
+      hasInitialData.current = true;
     };
 
     fetchAllAuctionNFTs();
   }, [allAuctions, itemsByAuction, apolloClient]);
 
-  const isLoading = loading || isProcessingNFTs;
+  // Only show loading on initial load, not when updating existing data
+  const isLoading = (!hasInitialData.current && (loading || isProcessingNFTs));
 
   return {
     auctions: paginatedAuctions,
