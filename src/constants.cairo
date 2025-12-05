@@ -34,4 +34,5 @@ pub mod Errors {
     pub const CANNOT_WITHDRAW_HIGHEST_ACTIVE: felt252 = 'Vault: highest bidder';
     pub const AUCTION_NOT_DISBURSED: felt252 = 'Auction: funds not disbursed';
     pub const INSUFFICIENT_VAULT_FUNDS: felt252 = 'Vault: insufficient funds';
+    pub const AUCTION_ALREADY_SETTLED: felt252 = 'Auction: already settled';
 }

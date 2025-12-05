@@ -212,12 +212,32 @@ pub mod AuctionableComponent {
 
         fn settle(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
             let mut auction = store.auction(auction_id);
             let status = auction.status;
 
-            // Assert auction exists and is ended (not active or settled)
+            // Assert auction exists and is not already settled
             auction.assert_does_exist();
-            assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
+            assert(status != AuctionStatus::Settled.into(), Errors::AUCTION_ALREADY_SETTLED);
+
+            // Auto-end if active and expired (mimics end() logic for post-expiry)
+            if status == AuctionStatus::Active.into() {
+                assert(
+                    current_time >= auction.end_time, Errors::AUCTION_NOT_ENDED,
+                ); // Revert if not expired
+                // TODO: Check no active rentals on items before ending/settling
+
+                auction.status = AuctionStatus::Ended.into();
+                store.set_auction(@auction); // Persist the Ended status
+                // TODO: Emit AuctionEnded event (auction_id, end_time)
+            // world.emit_event(AuctionEnded { auction_id, end_time: auction.end_time });
+            } else {
+                // If not Active, must already be Ended
+                assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
+            }
+
+            // Reload auction after potential update (in case of external changes, but unlikely)
+            auction = store.auction(auction_id);
 
             let winner: ContractAddress = auction.highest_bidder.try_into().unwrap();
             let seller: ContractAddress = auction.seller.try_into().unwrap();
@@ -227,10 +247,13 @@ pub mod AuctionableComponent {
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
 
             if has_winner {
-                // Withdraw funds to seller
+                // Withdraw funds to seller via disbursement
                 let amount = auction.current_bid.into();
 
-                // Check no active rentals on items before transferring
+                // Check no active rentals on items before transferring (if not already checked
+                // above)
+                // Note: If rentals checked in auto-end, skip here to avoid double-check; otherwise,
+                // add it
 
                 // Transfer items to winner
                 let mut i: u32 = 0;
@@ -251,7 +274,6 @@ pub mod AuctionableComponent {
             // Update to Settled
             auction.status = AuctionStatus::Settled.into();
             store.set_auction(@auction);
-            // TODO: Emit AuctionSettled event (auction_id, winner, final_price)
         }
     }
 }
