@@ -388,10 +388,17 @@ export default function Bids({
                     }
                 };
 
+                // Calculate minimum amount from swap quote output (in wei)
+                // The quote.total is the expected output amount in wei
+                // We'll use 99% of expected output as minimum (1% slippage tolerance)
+                const usdcTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase());
+                const usdcDecimals = usdcTokenInfo?.decimals || 6;
+                
                 const tokenQuote: TokenQuote = {
                     tokenAddress: USDC_ADDRESS,
-                    minimumAmount: finalUSDAmount * 0.99,
-                    quote: swapQuote
+                    minimumAmount: 0, // Will be calculated from quote.total in generateSwapCalls
+                    quote: swapQuote,
+                    outputTokenDecimals: usdcDecimals
                 };
 
                 const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, tokenAmountWei);

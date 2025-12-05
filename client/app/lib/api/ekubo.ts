@@ -25,13 +25,14 @@ interface RouteNode {
 
 interface TokenQuote {
   tokenAddress: string;
-  minimumAmount: number;
+  minimumAmount: number | bigint; // Can be in wei (bigint) or decimal (number)
   quote?: SwapQuote;
+  outputTokenDecimals?: number; // Decimals for the output token
 }
 
 interface RouterContract {
   address: string;
-  populate: (method: string, params: any[]) => any;
+  populate: (method: string, params: unknown[]) => SwapCall;
 }
 
 interface SwapCall {
@@ -90,17 +91,29 @@ export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken
     calldata: [purchaseToken],
   };
 
-  let { tokenAddress, minimumAmount, quote } = tokenQuote;
+  const { tokenAddress, minimumAmount, quote, outputTokenDecimals = 18 } = tokenQuote;
 
   if (!quote || quote.splits.length === 0) {
     return [transferCall, clearCall];
   }
 
-  let { splits } = quote;
+  const { splits } = quote;
+
+  let minimumAmountWei: bigint;
+  if (typeof minimumAmount === 'bigint') {
+    minimumAmountWei = minimumAmount;
+  } else if (quote.total && quote.total > 0) {
+
+    const expectedOutput = BigInt(Math.floor(quote.total));
+    minimumAmountWei = expectedOutput * 99n / 100n;
+  } else {
+    const decimals = outputTokenDecimals;
+    minimumAmountWei = BigInt(Math.floor(minimumAmount * Math.pow(10, decimals)));
+  }
 
   const clearProfitsCall = ROUTER_CONTRACT.populate("clear_minimum", [
     { contract_address: tokenAddress },
-    minimumAmount * 1e18,
+    minimumAmountWei,
     0,
   ]);
 
