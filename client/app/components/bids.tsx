@@ -49,6 +49,8 @@ export default function Bids({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [txnHash, setTxnHash] = useState<string | undefined>();
     const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
+    const [isSettling, setIsSettling] = useState(false);
+    const [settleTxnHash, setSettleTxnHash] = useState<string | undefined>();
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         beast: "",
@@ -451,6 +453,54 @@ export default function Bids({
         }
     }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider]);
 
+    const isAuctionExpired = useCallback((endTime: string, status: string): boolean => {
+        if (!endTime || endTime === "0") return false;
+        
+        try {
+            let endTimeNum: number;
+            if (endTime.startsWith('0x') || endTime.startsWith('0X')) {
+                endTimeNum = parseInt(endTime, 16);
+            } else {
+                endTimeNum = parseInt(endTime, 10);
+            }
+
+            if (isNaN(endTimeNum) || endTimeNum === 0) return false;
+
+            const now = Math.floor(Date.now() / 1000);
+            const statusNum = parseInt(status);
+            
+            // Expired if end time passed or status is Ended (3)
+            return endTimeNum <= now || statusNum === 3;
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const handleSettleAuction = useCallback(async () => {
+        if (!account || !selectedCollectionId) {
+            return;
+        }
+
+        try {
+            setIsSettling(true);
+            setSettleTxnHash(undefined);
+
+            const auctionId = parseInt(selectedCollectionId, 10);
+
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "settle_auction",
+                calldata: [auctionId.toString()]
+            });
+
+            setSettleTxnHash(response.transaction_hash);
+        } catch (err) {
+            console.error("Error settling auction:", err);
+        } finally {
+            setIsSettling(false);
+        }
+    }, [account, selectedCollectionId]);
+
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
             return;
@@ -670,7 +720,7 @@ export default function Bids({
                             </div>
 
                             <div className="flex gap-4 sm:items-start w-full">
-                                <div className="flex flex-[0.4] flex-col gap-3 w-full">
+                                <div className="flex flex-1 flex-col gap-3 w-full">
                                     <label
                                         htmlFor="bid-amount-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
@@ -727,7 +777,7 @@ export default function Bids({
                                             </option>
                                         ))}
                                     </select>
-                                    <div className="flex flex-col gap-2 w-full">
+                                    <div className="flex flex-row gap-2 w-full">
                                         <button
                                             type="button"
                                             onClick={handlePlaceBid}
@@ -739,6 +789,18 @@ export default function Bids({
                                             }`}
                                         >
                                             {isSubmitting ? "Submitting..." : "Place Bid"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSettleAuction}
+                                            disabled={!account || isSettling || !isAuctionExpired(selectedCollection.endTime, selectedCollection.status)}
+                                            className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
+                                                account && !isSettling && isAuctionExpired(selectedCollection.endTime, selectedCollection.status)
+                                                    ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black"
+                                                    : "border border-white/12 text-[rgb(186,255,188)]/45"
+                                            }`}
+                                        >
+                                            {isSettling ? "Settling..." : "Settle"}
                                         </button>
                                     </div>
                                 </div>
@@ -780,7 +842,7 @@ export default function Bids({
                             {txnHash && (
                                 <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-3 w-full">
                                     <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
-                                        Transaction Submitted
+                                        Bid Transaction Submitted
                                     </p>
                                     <a
                                         href={explorer.transaction(txnHash)}
@@ -789,6 +851,21 @@ export default function Bids({
                                         className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all w-full"
                                     >
                                         {txnHash}
+                                    </a>
+                                </div>
+                            )}
+                            {settleTxnHash && (
+                                <div className="rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-3 w-full">
+                                    <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                                        Settle Transaction Submitted
+                                    </p>
+                                    <a
+                                        href={explorer.transaction(settleTxnHash)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-sm font-orbitron text-orange-500 hover:underline break-all w-full"
+                                    >
+                                        {settleTxnHash}
                                     </a>
                                 </div>
                             )}

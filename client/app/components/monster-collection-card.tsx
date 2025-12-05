@@ -2,6 +2,7 @@ import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
 import { formatUSD } from "../lib/utils";
+import CountdownTimer from "./countdown-timer";
 
 type MonsterCollectionCardProps = {
     collection: {
@@ -11,6 +12,8 @@ type MonsterCollectionCardProps = {
         startingPrice: number;
         highestBid?: number;
         image: string;
+        endTime?: string;
+        status?: string;
     };
     isSelected: boolean;
     onSelect: () => void;
@@ -212,6 +215,15 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 <div className="flex flex-col gap-2 text-white">
                     <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{collection.name}</h3>
                     <p className="text-xs text-[rgb(186,255,188)]/70">top bid - {highestBidDisplay}</p>
+                    {collection.endTime && (
+                        <p className="text-xs text-[rgb(186,255,188)]/70">
+                            {collection.status && parseInt(collection.status) === 3 ? (
+                                <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" />
+                            ) : (
+                                <>Ends in: <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" /></>
+                            )}
+                        </p>
+                    )}
                 </div>
             </div>
 

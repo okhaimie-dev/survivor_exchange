@@ -31,7 +31,7 @@ export function useAuctions() {
     })) || [];
     const filtered = auctions.filter((auction) => {
       const statusNum = parseInt(auction.status);
-      return statusNum === 2;
+      return statusNum === 2 || statusNum === 3; // Active (2) and Ended (3)
     });
     return [...filtered].sort((a, b) => {
       const aId = parseInt(a.auction_id) || 0;
