@@ -243,7 +243,7 @@ pub mod AuctionableComponent {
                     i += 1;
                 }
 
-                vault_dispatcher.withdraw(auction.auction_id, seller, amount);
+                vault_dispatcher.disburse_to_seller(auction.auction_id, seller, amount);
             }
             // If no winner, items stay with seller; no fund transfer (vault should be empty or
             // withdrawable separately)
