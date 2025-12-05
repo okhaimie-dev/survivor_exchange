@@ -1,5 +1,5 @@
 pub fn DEFAULT_NS() -> ByteArray {
-    "bm_0_0_2"
+    "bm_0_0_8"
 }
 
 pub const TEN_POW_18: u256 = 1000000000000000000;
@@ -11,6 +11,7 @@ pub mod Errors {
     pub const AUCTION_ALREADY_EXISTS: felt252 = 'Auction: already exist';
     pub const AUCTION_NOT_SELLER: felt252 = 'Auction: not seller';
     pub const AUCTION_EMPTY: felt252 = 'Auction: empty auction';
+    pub const AUCTION_IS_SELLER: felt252 = 'Auction: seller cannot bid';
     pub const BID_TOO_LOW: felt252 = 'Auction: bid too low';
     pub const AUCTION_EXPIRED: felt252 = 'Auction: has expired';
     pub const UNAUTHORIZED_TO_END: felt252 = 'Auction: cannot end';
@@ -29,4 +30,6 @@ pub mod Errors {
     pub const NO_ITEMS: felt252 = 'Auction: no items';
     pub const INVALID_ITEMS_COUNT: felt252 = 'Invalid item count';
     pub const INSUFFICIENT_SHARES: felt252 = 'Vault: insufficient shares';
+    pub const VAULT_NOT_FOUND: felt252 = 'Vault: not found';
+    pub const CANNOT_WITHDRAW_HIGHEST_ACTIVE: felt252 = 'Vault: highest bidder';
 }

@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x6465e6079436dc4810ec03a70bd2936fa6ce7f4611767d7df1e612788c373b8",
-    "seed": "bm_0_0_2",
+    "address": "0x6f65de79296c7b625ec04ce997edc64413dc14ca41008d51835802c27ebdbf1",
+    "seed": "bm_0_0_8",
     "name": "Survivor Exchange",
     "entrypoints": [
       "uuid",
@@ -33,11 +33,11 @@
   },
   "contracts": [
     {
-      "address": "0x51f7f8db893bf5d94a7cd000ef3ff4d0ba811bf1cdd5ace1d46cd4030b8a3cb",
-      "class_hash": "0x3b68414ac2e9f166a6bbbb4d78ac5961d121ec8e9351e646df9f3598360a210",
+      "address": "0x6c95d035e7f6ddbd3ffc3ec87f904bdaadf7aafee1b0419cf367e164b18aa90",
+      "class_hash": "0x699c46ee0887194d7f363a0cd3c5e8c2b11d5fa8e2ed208dc63f00ee9c1b8e6",
       "init_calldata": [],
-      "tag": "bm_0_0_2-admin_systems",
-      "selector": "0x61ac3fef3fc58dcf3acf89f49af832f4a3a5c851c7fefc3a945ed1a65a9bd07",
+      "tag": "bm_0_0_8-admin_systems",
+      "selector": "0x4e085ea6048cc09ee89d334afd875a37fd17c530a8327e060921b20d3808029",
       "systems": [
         "dojo_init",
         "add_supported_collection",
@@ -46,11 +46,11 @@
       ]
     },
     {
-      "address": "0x23886a55d413d1d85881ecb9a6fe14ac9e6c53690628f10de06f64a1ccedc5",
-      "class_hash": "0x4d506bc4827b4aa5cf5f945bcc8fb2edaf3724a7136c85bcbb1d6b3ea0b59f6",
+      "address": "0xabfaa3865708426bbf13bdec5b51f40d23e9e9e0dc12d12529c1f1e8c36372",
+      "class_hash": "0x457de31f62df6a004d74c8e5dc7a06a6c3de47180dd9321c4c2cd2459b99c32",
       "init_calldata": [],
-      "tag": "bm_0_0_2-auction_systems",
-      "selector": "0x4a8c01bfa9d6ec54ff5df2121cb487c6a7e2392bc67d009fa979317d04e4b9a",
+      "tag": "bm_0_0_8-auction_systems",
+      "selector": "0x5e749b16723b908e531627253137ecda344543f477197349a24ad2fa7b8ec55",
       "systems": [
         "create_auction",
         "add_item",
@@ -64,14 +64,13 @@
       ]
     },
     {
-      "address": "0x79d67ca9bb8736dbb44e08489480e44939103fe9d9a1e8de4c94edadfb62373",
-      "class_hash": "0x3653d4816ee78a2df8f8c5729bc3910d988510fae155dcaa2fb3a7b23bfbac1",
+      "address": "0x3a47d39ee9106f2da13f094c30ed19a5e26dfae220ba1106c43a99bc10619fa",
+      "class_hash": "0x67797d89edd0001a28c3acc413fe3282c7ab50e4149803dcb1d445c0f08547",
       "init_calldata": [],
-      "tag": "bm_0_0_2-vault_systems",
-      "selector": "0x1cf3f7c199ab965c047bcdfda1cbd98d0b41bfaa0e6028263189b29fc0445c",
+      "tag": "bm_0_0_8-vault_systems",
+      "selector": "0x1a76590d85d4a077c0d90c7830efc1c9e10cb78fd817171e9d2ce8970aff19f",
       "systems": [
         "dojo_init",
-        "create_vault",
         "deposit",
         "withdraw",
         "upgrade"
@@ -88,33 +87,18 @@
           "key": true
         },
         {
-          "name": "name",
-          "type": "core::felt252",
-          "key": false
-        },
-        {
-          "name": "starting_price",
-          "type": "core::integer::u8",
-          "key": false
-        },
-        {
-          "name": "current_bid",
-          "type": "core::integer::u8",
-          "key": false
-        },
-        {
-          "name": "highest_bidder",
-          "type": "core::felt252",
-          "key": false
-        },
-        {
           "name": "status",
           "type": "core::integer::u8",
           "key": false
         },
         {
-          "name": "end_time",
-          "type": "core::integer::u64",
+          "name": "starting_price",
+          "type": "core::integer::u32",
+          "key": false
+        },
+        {
+          "name": "current_bid",
+          "type": "core::integer::u32",
           "key": false
         },
         {
@@ -123,14 +107,34 @@
           "key": false
         },
         {
+          "name": "end_time",
+          "type": "core::integer::u64",
+          "key": false
+        },
+        {
+          "name": "name",
+          "type": "core::byte_array::ByteArray",
+          "key": false
+        },
+        {
+          "name": "highest_bidder",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
           "name": "seller",
+          "type": "core::felt252",
+          "key": false
+        },
+        {
+          "name": "fee_token",
           "type": "core::felt252",
           "key": false
         }
       ],
-      "class_hash": "0x1bd933bbc6ce8d910d92ca515300e4923ee24a3d977dbc78c16af9201ba1643",
-      "tag": "bm_0_0_2-Auction",
-      "selector": "0x317a42ae2e7578b3e7aea317e947744b76320340554afe1ae598ebca943cca2"
+      "class_hash": "0x363a03350472bf1ade7c4241ec208096814a1247bac518208cd30b7a5dbb1f0",
+      "tag": "bm_0_0_8-Auction",
+      "selector": "0x750512d0d4cd492906293b18e05ea0c090765724dd212102306d1d0df7143d1"
     },
     {
       "members": [
@@ -156,8 +160,8 @@
         }
       ],
       "class_hash": "0x15808374daa08ca6fe788d169f85b0212c14d804413171abfa5533241d4db96",
-      "tag": "bm_0_0_2-AuctionItem",
-      "selector": "0x17180f3a7f706b8259b27b7bd23cc2eb59fb26f58c1b0d2ae77b3f910bf97a1"
+      "tag": "bm_0_0_8-AuctionItem",
+      "selector": "0x23fc10452ecc9b61e4906186f86655c5b9553c9b3d9fbfb5bb8bcbde6b68bff"
     },
     {
       "members": [
@@ -173,13 +177,13 @@
         },
         {
           "name": "amount",
-          "type": "core::integer::u8",
+          "type": "core::integer::u32",
           "key": false
         }
       ],
-      "class_hash": "0x6a826a1cce93801d579b343f8ced88489aa1d022a481993aba5d140b462ddcd",
-      "tag": "bm_0_0_2-Bid",
-      "selector": "0x4e5f41af849dbefcddab70040e8f4f6814d84ce2a4823be408f27dabbe584bc"
+      "class_hash": "0x26d6285e9570194299c1b22164987a94245255dac0c6992e50f07b4c6ca0f17",
+      "tag": "bm_0_0_8-Bid",
+      "selector": "0x2dbde8acedfc0401d6e4721e821fcf02c3033813c72e4163a4530e66bebb40f"
     },
     {
       "members": [
@@ -205,8 +209,8 @@
         }
       ],
       "class_hash": "0x31056dcf0242470c77dfab9918875bd690f8207e78464386c7f10102b8d9dd8",
-      "tag": "bm_0_0_2-ExchangeSettings",
-      "selector": "0x349c52b46c97d2beab02c37db98d52eb55a0fe43ed20df8b757a3acedba1269"
+      "tag": "bm_0_0_8-ExchangeSettings",
+      "selector": "0x36040a034f857e2f7730b2a3add9594478ade0c352ede37acd7706c693333bf"
     },
     {
       "members": [
@@ -214,6 +218,11 @@
           "name": "token_id",
           "type": "core::integer::u32",
           "key": true
+        },
+        {
+          "name": "rental_status",
+          "type": "core::integer::u8",
+          "key": false
         },
         {
           "name": "rental_price",
@@ -231,11 +240,6 @@
           "key": false
         },
         {
-          "name": "renter",
-          "type": "core::felt252",
-          "key": false
-        },
-        {
           "name": "start_time",
           "type": "core::integer::u64",
           "key": false
@@ -246,8 +250,8 @@
           "key": false
         },
         {
-          "name": "rental_status",
-          "type": "core::integer::u8",
+          "name": "renter",
+          "type": "core::felt252",
           "key": false
         },
         {
@@ -256,9 +260,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x402bedbb7fc249f582ce4a4d35dd5356d5cf9120a46dbead84fc0bedfad10c2",
-      "tag": "bm_0_0_2-Rental",
-      "selector": "0xa09a2c662686c4fc3aa9271720af73c4b4ae7e5e0ef555eb587eaa983d07ce"
+      "class_hash": "0xc6ffb25d6bf2c1a574e5bd6999af3d717258c2a3311574f602f5022a4f1d7e",
+      "tag": "bm_0_0_8-Rental",
+      "selector": "0x5261a8dabc0d70853eb60f2e2cc922947bacd396f36754d49ec59b45690695a"
     },
     {
       "members": [
@@ -274,8 +278,8 @@
         }
       ],
       "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
-      "tag": "bm_0_0_2-SupportedNFTCollection",
-      "selector": "0x54e8d21be0c631db91fea1d932e6383de474bda3ac8e7c4399235b22c98eb2a"
+      "tag": "bm_0_0_8-SupportedNFTCollection",
+      "selector": "0x36ac37c3face216ea8bce761eec75bc3c86c1d1acaa94a663fda462f60db0c3"
     },
     {
       "members": [
@@ -286,6 +290,11 @@
         },
         {
           "name": "locked_amount",
+          "type": "core::integer::u256",
+          "key": false
+        },
+        {
+          "name": "created_at",
           "type": "core::integer::u64",
           "key": false
         },
@@ -293,16 +302,11 @@
           "name": "token_address",
           "type": "core::felt252",
           "key": false
-        },
-        {
-          "name": "created_at",
-          "type": "core::integer::u64",
-          "key": false
         }
       ],
-      "class_hash": "0x2e720496fde1ce54d91d25f317e923c86fd2dc26c9f1079f676f783af789784",
-      "tag": "bm_0_0_2-Vault",
-      "selector": "0x3434117478a27168fdde300c11dedb7ed6ff0217a943c04ac9ee80b152d7bdc"
+      "class_hash": "0x68517c4b29b229f8d32a6efd2747f67b9e2cc3d908d6e292f0b10ce85c1e50f",
+      "tag": "bm_0_0_8-Vault",
+      "selector": "0x15b8d1d70f78ad6c77d88e24e6e1a334cfd6099193c7dad4bc21747f40123df"
     },
     {
       "members": [
@@ -318,12 +322,12 @@
         },
         {
           "name": "share_amount",
-          "type": "core::integer::u64",
+          "type": "core::integer::u256",
           "key": false
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64",
+          "type": "core::integer::u256",
           "key": false
         },
         {
@@ -337,9 +341,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x78503a10f5b7095dd3266a9653d03d53bb8964908c8ba99e65a4ed354732a34",
-      "tag": "bm_0_0_2-VaultShare",
-      "selector": "0x292f459c16ab52d22636100a0ab290bcfd9c98855bf95365b49e7cf28a3a440"
+      "class_hash": "0xc8105fa51cea2208cb8c497ea4c603c0a493d9a821d3d215fe18cdb6d87721",
+      "tag": "bm_0_0_8-VaultShare",
+      "selector": "0x6ccd261d680f28851b1fc7accb43d2edb2c0562524f1278c31f9e77217c593d"
     }
   ],
   "events": [
@@ -372,8 +376,8 @@
         }
       ],
       "class_hash": "0x50cf7a47be5469dae0c8904231c26bda24428131436ce5dee712a84c5e670d7",
-      "tag": "bm_0_0_2-AuctionEvent",
-      "selector": "0x50499027cf0ea9b33c253db4c9ea6577619dbb05ac46b8b22bee7b8cfb58445"
+      "tag": "bm_0_0_8-AuctionEvent",
+      "selector": "0x628c8333a54f891b16b146fa184f069bfcfdb4e4c9ad92b7a035160fc343415"
     },
     {
       "members": [
@@ -389,7 +393,7 @@
         },
         {
           "name": "amount",
-          "type": "core::integer::u8",
+          "type": "core::integer::u32",
           "key": false
         },
         {
@@ -398,9 +402,9 @@
           "key": false
         }
       ],
-      "class_hash": "0x2ddd3d853954e8371cf65c501d616bd34bff3265f4a5a490934f7b4ed48d028",
-      "tag": "bm_0_0_2-BidPlaced",
-      "selector": "0x127a6924e0fdc03860a1f4a5c29601f92baa5e6fad50508318048e0cb2789ce"
+      "class_hash": "0x1c7eb5f52a775490ace6f1a0f62b434e0117a02bedf228d669648f08cafb66d",
+      "tag": "bm_0_0_8-BidPlaced",
+      "selector": "0x1ffab6dbc16d9f1579339b3e53f1079de4d5f5bdad1998165b1a200b3869a67"
     }
   ],
   "external_contracts": [],
@@ -2357,7 +2361,7 @@
         },
         {
           "name": "amount",
-          "type": "core::integer::u8"
+          "type": "core::integer::u32"
         },
         {
           "name": "timestamp",
@@ -2375,7 +2379,7 @@
         },
         {
           "name": "amount",
-          "type": "core::integer::u8"
+          "type": "core::integer::u32"
         },
         {
           "name": "timestamp",
@@ -2404,35 +2408,39 @@
           "type": "core::integer::u32"
         },
         {
-          "name": "name",
-          "type": "core::felt252"
-        },
-        {
-          "name": "starting_price",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "current_bid",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "highest_bidder",
-          "type": "core::felt252"
-        },
-        {
           "name": "status",
           "type": "core::integer::u8"
         },
         {
-          "name": "end_time",
-          "type": "core::integer::u64"
+          "name": "starting_price",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "current_bid",
+          "type": "core::integer::u32"
         },
         {
           "name": "item_count",
           "type": "core::integer::u32"
         },
         {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "name",
+          "type": "core::byte_array::ByteArray"
+        },
+        {
+          "name": "highest_bidder",
+          "type": "core::felt252"
+        },
+        {
           "name": "seller",
+          "type": "core::felt252"
+        },
+        {
+          "name": "fee_token",
           "type": "core::felt252"
         }
       ]
@@ -2478,35 +2486,39 @@
       "name": "survivor_exchange::models::index::AuctionValue",
       "members": [
         {
-          "name": "name",
-          "type": "core::felt252"
-        },
-        {
-          "name": "starting_price",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "current_bid",
-          "type": "core::integer::u8"
-        },
-        {
-          "name": "highest_bidder",
-          "type": "core::felt252"
-        },
-        {
           "name": "status",
           "type": "core::integer::u8"
         },
         {
-          "name": "end_time",
-          "type": "core::integer::u64"
+          "name": "starting_price",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "current_bid",
+          "type": "core::integer::u32"
         },
         {
           "name": "item_count",
           "type": "core::integer::u32"
         },
         {
+          "name": "end_time",
+          "type": "core::integer::u64"
+        },
+        {
+          "name": "name",
+          "type": "core::byte_array::ByteArray"
+        },
+        {
+          "name": "highest_bidder",
+          "type": "core::felt252"
+        },
+        {
           "name": "seller",
+          "type": "core::felt252"
+        },
+        {
+          "name": "fee_token",
           "type": "core::felt252"
         }
       ]
@@ -2525,7 +2537,7 @@
         },
         {
           "name": "amount",
-          "type": "core::integer::u8"
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -2535,7 +2547,7 @@
       "members": [
         {
           "name": "amount",
-          "type": "core::integer::u8"
+          "type": "core::integer::u32"
         }
       ]
     },
@@ -2588,6 +2600,10 @@
           "type": "core::integer::u32"
         },
         {
+          "name": "rental_status",
+          "type": "core::integer::u8"
+        },
+        {
           "name": "rental_price",
           "type": "core::integer::u8"
         },
@@ -2600,10 +2616,6 @@
           "type": "core::integer::u64"
         },
         {
-          "name": "renter",
-          "type": "core::felt252"
-        },
-        {
           "name": "start_time",
           "type": "core::integer::u64"
         },
@@ -2612,8 +2624,8 @@
           "type": "core::integer::u64"
         },
         {
-          "name": "rental_status",
-          "type": "core::integer::u8"
+          "name": "renter",
+          "type": "core::felt252"
         },
         {
           "name": "owner",
@@ -2626,6 +2638,10 @@
       "name": "survivor_exchange::models::index::RentalValue",
       "members": [
         {
+          "name": "rental_status",
+          "type": "core::integer::u8"
+        },
+        {
           "name": "rental_price",
           "type": "core::integer::u8"
         },
@@ -2638,10 +2654,6 @@
           "type": "core::integer::u64"
         },
         {
-          "name": "renter",
-          "type": "core::felt252"
-        },
-        {
           "name": "start_time",
           "type": "core::integer::u64"
         },
@@ -2650,8 +2662,8 @@
           "type": "core::integer::u64"
         },
         {
-          "name": "rental_status",
-          "type": "core::integer::u8"
+          "name": "renter",
+          "type": "core::felt252"
         },
         {
           "name": "owner",
@@ -2693,15 +2705,15 @@
         },
         {
           "name": "locked_amount",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "created_at",
           "type": "core::integer::u64"
         },
         {
           "name": "token_address",
           "type": "core::felt252"
-        },
-        {
-          "name": "created_at",
-          "type": "core::integer::u64"
         }
       ]
     },
@@ -2719,11 +2731,11 @@
         },
         {
           "name": "share_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "claimed",
@@ -2741,11 +2753,11 @@
       "members": [
         {
           "name": "share_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "deposited_amount",
-          "type": "core::integer::u64"
+          "type": "core::integer::u256"
         },
         {
           "name": "claimed",
@@ -2763,15 +2775,15 @@
       "members": [
         {
           "name": "locked_amount",
+          "type": "core::integer::u256"
+        },
+        {
+          "name": "created_at",
           "type": "core::integer::u64"
         },
         {
           "name": "token_address",
           "type": "core::felt252"
-        },
-        {
-          "name": "created_at",
-          "type": "core::integer::u64"
         }
       ]
     },
@@ -2884,11 +2896,11 @@
           "inputs": [
             {
               "name": "name",
-              "type": "core::felt252"
+              "type": "core::byte_array::ByteArray"
             },
             {
               "name": "starting_price",
-              "type": "core::integer::u8"
+              "type": "core::integer::u32"
             },
             {
               "name": "items",
@@ -2901,9 +2913,17 @@
             {
               "name": "duration",
               "type": "core::option::Option::<core::integer::u64>"
+            },
+            {
+              "name": "fee_token",
+              "type": "core::starknet::contract_address::ContractAddress"
             }
           ],
-          "outputs": [],
+          "outputs": [
+            {
+              "type": "core::integer::u32"
+            }
+          ],
           "state_mutability": "external"
         },
         {
@@ -2972,7 +2992,7 @@
             },
             {
               "name": "bid_amount",
-              "type": "core::integer::u8"
+              "type": "core::integer::u32"
             }
           ],
           "outputs": [],
@@ -3060,18 +3080,6 @@
       "items": [
         {
           "type": "function",
-          "name": "create_vault",
-          "inputs": [
-            {
-              "name": "vault_id",
-              "type": "core::integer::u32"
-            }
-          ],
-          "outputs": [],
-          "state_mutability": "external"
-        },
-        {
-          "type": "function",
           "name": "deposit",
           "inputs": [
             {
@@ -3128,11 +3136,20 @@
         },
         {
           "type": "function",
-          "name": "get_owner",
-          "inputs": [],
+          "name": "share_balance",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "user",
+              "type": "core::starknet::contract_address::ContractAddress"
+            }
+          ],
           "outputs": [
             {
-              "type": "core::starknet::contract_address::ContractAddress"
+              "type": "core::integer::u256"
             }
           ],
           "state_mutability": "view"

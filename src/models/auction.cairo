@@ -7,20 +7,21 @@ pub mod errors {}
 #[generate_trait]
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
-    fn new(name: felt252, starting_price: u8, seller: felt252) -> Auction {
+    fn new(name: ByteArray, starting_price: u32, seller: felt252, fee_token: felt252) -> Auction {
         AuctionAssert::assert_valid_starting_price(starting_price);
         AuctionAssert::assert_valid_seller(seller);
-        AuctionAssert::assert_valid_name(name);
+        AuctionAssert::assert_valid_name(@name);
         Auction {
             auction_id: 0,
-            name,
+            status: AuctionStatus::Draft.into(),
             starting_price,
             current_bid: 0,
-            highest_bidder: 0x0,
-            status: AuctionStatus::Draft.into(),
             end_time: 0,
             item_count: 0,
+            name,
+            highest_bidder: 0x0,
             seller,
+            fee_token,
         }
     }
 
@@ -46,7 +47,7 @@ pub impl AuctionImpl of AuctionTrait {
     }
 
     #[inline]
-    fn update_bid(ref self: Auction, bidder: felt252, amount: u8, current_time: u64) {
+    fn update_bid(ref self: Auction, bidder: felt252, amount: u32, current_time: u64) {
         assert(self.is_active(), Errors::AUCTION_NOT_ACTIVE);
         self.assert_not_expired(current_time);
         self.assert_bid_not_low(amount);
@@ -104,8 +105,8 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_valid_name(name: felt252) {
-        assert(name != 0, Errors::INVALID_NAME);
+    fn assert_valid_name(name: @ByteArray) {
+        assert(name.len() != 0, Errors::INVALID_NAME);
     }
 
     #[inline]
@@ -114,7 +115,7 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_valid_starting_price(starting_price: u8) {
+    fn assert_valid_starting_price(starting_price: u32) {
         assert(starting_price != 0, Errors::INVALID_STARTING_PRICE);
     }
 
@@ -124,11 +125,16 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_bid_not_low(self: @Auction, bid_amount: u8) {
+    fn assert_bid_not_low(self: @Auction, bid_amount: u32) {
         assert(
             bid_amount > *self.current_bid && bid_amount >= *self.starting_price,
             Errors::BID_TOO_LOW,
         );
+    }
+
+    #[inline]
+    fn assert_bidder_not_seller(self: @Auction, bidder: felt252) {
+        assert(*self.seller != bidder, Errors::AUCTION_IS_SELLER);
     }
 }
 
@@ -137,14 +143,16 @@ mod tests {
     // Local imports
     use super::{Auction, AuctionAssert, AuctionItemImpl, AuctionStatus, AuctionTrait};
 
-    // Constants
-    const NAME: felt252 = 7265849240828751573555476048407354681602097;
-    const STARTING_PRICE: u8 = 100;
+    fn NAME() -> ByteArray {
+        "Test Auction"
+    }
+
+    const STARTING_PRICE: u32 = 100;
     const CONTRACT_ADDR: felt252 = 0x1234_felt252;
     const CURRENT_TIMESTAMP: u64 = 0x0;
 
     fn setup_draft_auction() -> Auction {
-        AuctionTrait::new(NAME, STARTING_PRICE, CONTRACT_ADDR)
+        AuctionTrait::new(NAME(), STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR)
     }
 
     fn setup_active_auction(duration: u64, current_time: u64) -> Auction {
@@ -156,9 +164,11 @@ mod tests {
 
     #[test]
     fn test_auction_new() {
-        let auction: Auction = AuctionTrait::new(NAME, STARTING_PRICE, CONTRACT_ADDR);
+        let auction: Auction = AuctionTrait::new(
+            NAME(), STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR,
+        );
         assert_eq!(auction.auction_id, 0);
-        assert_eq!(auction.name, NAME);
+        assert_eq!(auction.name, NAME());
         assert_eq!(auction.starting_price, STARTING_PRICE);
         assert_eq!(auction.current_bid, 0);
         assert_eq!(auction.highest_bidder, 0);
@@ -183,7 +193,7 @@ mod tests {
     #[test]
     #[should_panic(expected: 'Invalid name')]
     fn test_auction_new_invalid_name() {
-        let _auction = AuctionTrait::new(0, STARTING_PRICE, CONTRACT_ADDR);
+        let _auction = AuctionTrait::new("", STARTING_PRICE, CONTRACT_ADDR, CONTRACT_ADDR);
     }
 
     #[test]
@@ -220,7 +230,7 @@ mod tests {
     #[test]
     fn test_update_bid_valid() {
         let mut auction = setup_active_auction(3600, 100);
-        let amount = 150_u8;
+        let amount = 150;
         auction.update_bid(CONTRACT_ADDR, amount, 200);
         assert_eq!(auction.current_bid, amount);
         assert_eq!(auction.highest_bidder, CONTRACT_ADDR);
@@ -253,13 +263,13 @@ mod tests {
     #[test]
     #[should_panic(expected: 'Auction: invalid starting price')]
     fn test_auction_new_invalid_price() {
-        let _auction = AuctionTrait::new(NAME, 0, CONTRACT_ADDR);
+        let _auction = AuctionTrait::new(NAME(), 0, CONTRACT_ADDR, CONTRACT_ADDR);
     }
 
     #[test]
     #[should_panic(expected: 'Auction: invalid seller')]
     fn test_auction_new_invalid_seller() {
-        let _auction = AuctionTrait::new(NAME, STARTING_PRICE, 0);
+        let _auction = AuctionTrait::new(NAME(), STARTING_PRICE, 0, CONTRACT_ADDR);
     }
 
     #[test]

@@ -1,60 +1,84 @@
-#[cfg(test)]
-mod tests {
-    use dojo::world::{WorldStorage, WorldStorageTrait, world};
-    use dojo_cairo_test::{
-        ContractDef, ContractDefTrait, NamespaceDef, TestResource, spawn_test_world,
-    };
-    use survivor_exchange::constants::DEFAULT_NS;
-    use survivor_exchange::events::index::{e_AuctionEvent, e_BidPlaced};
-    use survivor_exchange::models::index::{
-        m_Auction, m_AuctionItem, m_Bid, m_ExchangeSettings, m_Rental, m_SupportedNFTCollection,
-    };
-    use survivor_exchange::systems::auction::{IAuctionMarketplaceDispatcher, auction_systems};
+mod test_auction_system {
+    use dojo_snf_test::{set_account_address, set_caller_address};
+    use snforge_std::start_mock_call;
+    //use survivor_exchange::models::vault::Vault;
+    use survivor_exchange::store::{Store, StoreTrait};
+    use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
+    use survivor_exchange::tests::setup;
+    use survivor_exchange::tests::setup::tests::Systems;
+    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
 
-    #[derive(Drop)]
-    struct Systems {
-        auction_systems: IAuctionMarketplaceDispatcher,
+    fn setup_active_auction() -> (dojo::world::WorldStorage, Systems, u32) {
+        set_account_address(setup::tests::OWNER());
+        let (world, systems) = setup::tests::spawn_auction();
+
+        let name: ByteArray = "test_auction";
+        let starting_price: u32 = 100;
+        let mut items = ArrayTrait::new();
+        items.append(1);
+        items.append(2);
+        let items_span = items.span();
+        let duration: Option<u64> = Option::Some(3600);
+
+        let owner = setup::tests::OWNER();
+        let beast_addr = BEAST_ADDRESS_MAINNET();
+        let survivor_addr = SURVIVOR_ADDRESS_MAINNET();
+        start_mock_call(beast_addr, selector!("owner_of"), owner);
+        set_caller_address(owner);
+        let auction_id = systems
+            .auction_systems
+            .create_auction(name, starting_price, items_span, beast_addr, duration, survivor_addr);
+
+        (world, systems, auction_id)
     }
 
-    fn namespace_def() -> NamespaceDef {
-        let ndef = NamespaceDef {
-            namespace: DEFAULT_NS(),
-            resources: [
-                TestResource::Model(m_Bid::TEST_CLASS_HASH),
-                TestResource::Model(m_Auction::TEST_CLASS_HASH),
-                TestResource::Model(m_AuctionItem::TEST_CLASS_HASH),
-                TestResource::Model(m_Rental::TEST_CLASS_HASH),
-                TestResource::Model(m_ExchangeSettings::TEST_CLASS_HASH),
-                TestResource::Model(m_SupportedNFTCollection::TEST_CLASS_HASH),
-                TestResource::Event(e_AuctionEvent::TEST_CLASS_HASH),
-                TestResource::Event(e_BidPlaced::TEST_CLASS_HASH),
-                TestResource::Contract(auction_systems::TEST_CLASS_HASH),
-            ]
-                .span(),
-        };
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_create_auction() {
+        let (world, _dispatcher, auction_id) = setup_active_auction();
 
-        ndef
+        let mut store: Store = StoreTrait::new(world);
+        let auction = store.auction(auction_id);
+
+        let owner = setup::tests::OWNER();
+        assert(auction.seller == owner.into(), 'wrong seller');
+        assert(auction.name == "test_auction", 'wrong name');
+        assert(auction.starting_price == 100, 'wrong price');
+        assert(auction.item_count == 2, 'wrong item count');
+        assert(auction.status == 2, 'not started');
+        assert(auction.end_time > 0, 'no end time');
     }
 
-    fn contract_defs() -> Span<ContractDef> {
-        [
-            ContractDefTrait::new(@DEFAULT_NS(), @"auction_systems")
-                .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span())
-        ]
-            .span()
-    }
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_bid() { //let (world, dispatcher, auction_id) = setup_active_auction();
+    //let mut store: Store = StoreTrait::new(world);
 
-    fn spawn_game() -> (WorldStorage, Systems) {
-        // [Setup] World
-        let namespace_def = namespace_def();
-        let world = spawn_test_world(world::TEST_CLASS_HASH, [namespace_def].span());
-        //world.sync_perms_and_inits(setup_contracts());
-        // [Setup] Systems
-        let (auction_address, _) = world.dns(@"auction_systems").unwrap();
-        let systems = Systems {
-            auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
-        };
+    //let real_auction = store.auction(1); // Try key 1
+    //println!("Real auction_id: {}", real_auction.auction_id);
 
-        (world, systems)
+    //let vault: Vault = store.vault(auction_id); // Use auction_id
+    //let vault_id = vault.vault_id;
+    //println!("Vault id: {}", vault_id);
+
+    //let bidder = setup::tests::BIDDER();
+    //set_account_address(bidder);
+
+    //let bid_amount: u32 = 200;
+    //set_caller_address(bidder);
+
+    //let survivor_addr = SURVIVOR_ADDRESS_MAINNET();
+    //start_mock_call(survivor_addr, selector!("transfer_from"), '');
+
+    //// Act
+    //dispatcher.auction_systems.bid(auction_id, bid_amount);
+
+    //let auction = store.auction(auction_id);
+    //let bidder_bid = store.bid(auction_id, bidder.into());
+
+    //assert(auction.current_bid == bid_amount, 'wrong current_bid');
+    //assert(auction.highest_bidder == bidder.into(), 'wrong highest_bidder');
+    //assert(bidder_bid.amount == bid_amount, 'wrong bid amount');
+    //assert(auction.status == 2, 'status changed');
     }
 }

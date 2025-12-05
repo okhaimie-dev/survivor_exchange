@@ -20,8 +20,7 @@ pub mod types {
 
 pub mod components {
     pub mod auctionable;
-    //pub mod vaultable;
-//pub mod rentable;
+    //pub mod rentable;
 }
 
 pub mod events {
@@ -35,6 +34,8 @@ pub mod constants;
 pub mod store;
 pub mod utils;
 
+#[cfg(test)]
 pub mod tests {
+    mod setup;
     mod test_world;
 }
