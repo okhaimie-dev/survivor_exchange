@@ -699,7 +699,7 @@ export default function Bids({
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
                                     <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
-                                        Current Bid
+                                        Highest Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
                                         {isConvertingPrices ? (

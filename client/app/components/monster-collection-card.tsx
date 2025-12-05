@@ -31,7 +31,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             suffix: undefined,
         },
         {
-            label: "Current Bid",
+            label: "Highest Bid",
             value: collection.highestBid !== undefined ? formatUSD(collection.highestBid/1e6) : "—",
             suffix: undefined,
         },
@@ -214,7 +214,6 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 </div>
                 <div className="flex flex-col gap-2 text-white">
                     <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{collection.name}</h3>
-                    <p className="text-xs text-[rgb(186,255,188)]/70">top bid - {highestBidDisplay}</p>
                     {collection.endTime && (
                         <p className="text-xs text-[rgb(186,255,188)]/70">
                             {collection.status && parseInt(collection.status) === 3 ? (
