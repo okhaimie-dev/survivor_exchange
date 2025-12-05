@@ -51,14 +51,9 @@ export default function RootLayout({
       >
         {isSmallScreen ? (
           <div className="flex min-h-screen w-full flex-col items-center justify-center bg-black p-8">
-            <Image 
-              src="/logo.png" 
-              alt="logo" 
-              width={500} 
-              height={400} 
-              draggable={false} 
-              className="w-[500px] h-[500px]" 
-            />
+            <div className="w-fit h-full flex items-center justify-center border-2 border-[rgb(50,255,52)]/20 rounded-2xl p-2">
+                <Image src="/logo.png" alt="logo" width={500} height={500} draggable={false} className="w-[250px] h-[250px]" />
+            </div>
             <p className="mt-8 text-center text-lg text-white">
               This app is not yet optimized for this screen size
             </p>
