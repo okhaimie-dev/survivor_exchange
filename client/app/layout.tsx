@@ -1,5 +1,5 @@
 "use client";
-import { Orbitron } from "next/font/google";
+import { Orbitron, Inter } from "next/font/google";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import "./globals.css";
@@ -9,6 +9,11 @@ import { ApolloGraphQLProvider } from "./providers/apollo-provider";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
+  subsets: ["latin"],
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
@@ -42,7 +47,7 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" />
       </head>
       <body
-        className={`${orbitron.variable} antialiased`}
+        className={`${orbitron.variable} ${inter.variable} antialiased`}
       >
         {isSmallScreen ? (
           <div className="flex min-h-screen w-full flex-col items-center justify-center bg-black p-8">

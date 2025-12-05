@@ -13,6 +13,7 @@
   --font-mono: var(--font-geist-mono);
 
   --font-orbitron: var(--font-orbitron);
+  --font-inter: var(--font-inter);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -27,4 +28,8 @@ body {
   color: var(--foreground);
 
   font-family: var(--font-orbitron), sans-serif;
+}
+
+.font-inter {
+  font-family: var(--font-inter), sans-serif;
 }

@@ -224,7 +224,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                         <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
                             {stat.label}
                         </p>
-                        <p className="text-2xl font-orbitron tracking-tight text-white">{stat.value}</p>
+                        <p className="text-2xl font-inter tracking-tight text-white">{stat.value}</p>
                         {stat.suffix ? (
                             <span className="text-xs font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/80">
                                 {stat.suffix}
