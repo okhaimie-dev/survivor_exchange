@@ -13,6 +13,7 @@ export interface Auction {
   auction_id: string;
   current_bid: string;
   end_time: string;
+  fee_token: string;
   highest_bidder: string;
   item_count: string;
   name: string;
@@ -26,16 +27,16 @@ export interface AuctionNode {
 }
 
 export interface AuctionsResponse {
-  bm006AuctionModels: {
+  bm007AuctionModels: {
     edges: AuctionNode[];
   };
-  bm006AuctionItemModels: {
+  bm007AuctionItemModels: {
     edges: AuctionItemNode[];
   };
 }
 
 export interface MyListingsResponse {
-  bm006AuctionModels: {
+  bm007AuctionModels: {
     edges: AuctionNode[];
   };
 }

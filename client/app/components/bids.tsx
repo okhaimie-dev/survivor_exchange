@@ -9,7 +9,7 @@ import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256, num } from "starknet";
 import { truncateWithEllipsis, truncateAddress, formatUSD, formatTokenAmount } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, SURVIVOR_ADDRESS_MAINNET, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, SURVIVOR_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 import { convertUSDCToToken } from "../lib/utils/usd-pricing";
 import { getTokenPriceInUSDC, shouldRefetchPrice } from "../lib/utils/token-price-cache"; 
@@ -337,10 +337,10 @@ export default function Bids({
                 finalUSDAmount = tokenAmount * freshPrice;
             }
 
-            if (paymentToken.toLowerCase() === SURVIVOR_ADDRESS.toLowerCase()) {
+            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
                 const approvalAmount = uint256.bnToUint256(tokenAmountWei);
                 calls.push({
-                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
+                    contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",
                     calldata: [
                         VAULT_CONTRACT_ADDRESS,
@@ -357,7 +357,7 @@ export default function Bids({
                     ]
                 });
             } else {
-                const swapQuote = await getSwapQuote(Number(tokenAmountWei), paymentToken, SURVIVOR_ADDRESS);
+                const swapQuote = await getSwapQuote(Number(tokenAmountWei), paymentToken, USDC_ADDRESS);
 
                 const routerContract: RouterContract = {
                     address: EKUBO_ROUTER_ADDRESS,
@@ -389,7 +389,7 @@ export default function Bids({
                 };
 
                 const tokenQuote: TokenQuote = {
-                    tokenAddress: SURVIVOR_ADDRESS,
+                    tokenAddress: USDC_ADDRESS,
                     minimumAmount: finalUSDAmount * 0.99,
                     quote: swapQuote
                 };
@@ -409,14 +409,14 @@ export default function Bids({
 
                 calls.push(...swapCalls);
 
-                const survivorApproval = uint256.bnToUint256(MAX_UINT256);
+                const usdcApproval = uint256.bnToUint256(MAX_UINT256);
                 calls.push({
-                    contractAddress: SURVIVOR_ADDRESS_MAINNET,
+                    contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",
                     calldata: [
                         VAULT_CONTRACT_ADDRESS,
-                        survivorApproval.low.toString(),
-                        survivorApproval.high.toString()
+                        usdcApproval.low.toString(),
+                        usdcApproval.high.toString()
                     ]
                 });
 

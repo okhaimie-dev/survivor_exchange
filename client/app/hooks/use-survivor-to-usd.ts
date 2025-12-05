@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTokenPriceUSD } from '../lib/utils/usd-pricing';
-import { SURVIVOR_ADDRESS } from '../lib/constants';
+import { SURVIVOR_ADDRESS_MAINNET } from '../lib/constants';
 
 export function useSurvivorToUSD() {
   const [survivorPriceUSD, setSurvivorPriceUSD] = useState<number | null>(null);
@@ -9,7 +9,7 @@ export function useSurvivorToUSD() {
   useEffect(() => {
     const fetchPrice = async () => {
       try {
-        const price = await getTokenPriceUSD(SURVIVOR_ADDRESS);
+        const price = await getTokenPriceUSD(SURVIVOR_ADDRESS_MAINNET);
         setSurvivorPriceUSD(price);
       } catch (error) {
         console.error('Error fetching SURVIVOR price:', error);

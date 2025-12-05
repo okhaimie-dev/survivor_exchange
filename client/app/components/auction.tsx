@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
-import { shortString } from "starknet";
+import { CallData, shortString } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, SURVIVOR_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -21,7 +21,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [selectedNFTIds, setSelectedNFTIds] = useState<string[]>([]);
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
-    const [sellerToken, setSellerToken] = useState<string>(SURVIVOR_ADDRESS);
+    const [sellerToken, setSellerToken] = useState<string>(USDC_ADDRESS);
     const getDefaultDateTime = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
@@ -146,9 +146,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                 startingPriceWhole,
                 token_ids.length,
                 ...token_ids,
-                "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4",
+                BEASTS_NFT_CONTRACT_ADDRESS,
                 0,
-                duration_seconds
+                duration_seconds,
+                sellerToken
             ];
 
             const response = await account.execute({
@@ -172,7 +173,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             setIsSubmitting(false);
         }
 
-    }, [account, hasSelection, startingPriceUSD, collectionName, endDateTime, selectedNFTs]);
+    }, [account, hasSelection, startingPriceUSD, collectionName, endDateTime, selectedNFTs, sellerToken]);
 
     const renderContent = () => {
     if (loading) {
