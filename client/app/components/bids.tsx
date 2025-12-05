@@ -330,7 +330,7 @@ export default function Bids({
 
             const usdAmount = bidAmountUSD;
 
-            let finalUSDAmount = usdAmount;
+            let finalUSDAmount = Math.floor(usdAmount * 1e6);
             if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
                 const freshPrice = await getTokenPriceInUSDC(paymentToken);
                 setTokenPrice(freshPrice);
