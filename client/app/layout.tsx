@@ -12,11 +12,6 @@ const orbitron = Orbitron({
   subsets: ["latin"],
 });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -47,7 +42,7 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" />
       </head>
       <body
-        className={`${orbitron.variable} ${inter.variable} antialiased`}
+        className={`${orbitron.variable} antialiased`}
       >
         {isSmallScreen ? (
           <div className="flex min-h-screen w-full flex-col items-center justify-center bg-black p-8">

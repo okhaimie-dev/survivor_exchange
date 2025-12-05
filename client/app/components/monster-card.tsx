@@ -88,7 +88,7 @@ export default function MonsterCard({ nft, selected, onToggle }: MonsterCardProp
                         <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
                             {stat.label}
                         </p>
-                        <p className="text-lg font-inter tracking-tight text-white">{stat.value}</p>
+                        <p className="text-lg font-orbitrontracking-tight text-white">{stat.value}</p>
                     </div>
                 ))}
             </div>
