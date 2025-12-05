@@ -1,4 +1,4 @@
-#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[derive(Drop, Serde)]
 #[dojo::model]
 pub struct Auction {
     #[key]
@@ -8,7 +8,7 @@ pub struct Auction {
     pub current_bid: u32,
     pub item_count: u32,
     pub end_time: u64,
-    pub name: felt252,
+    pub name: ByteArray,
     pub highest_bidder: felt252,
     pub seller: felt252,
     pub fee_token: felt252,

@@ -28,7 +28,7 @@ pub mod AuctionableComponent {
         fn create(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
-            name: felt252,
+            name: ByteArray,
             starting_price: u32,
             items: Span<u32>,
             collection: ContractAddress,

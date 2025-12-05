@@ -61,7 +61,7 @@ survivor_exchange/
 ├── src/
 │   ├── lib.cairo           # Exports
 │   ├── store.cairo         # Model readers/writers, events
-│   ├── constants.cairo     # Errors, NS="bm_0_0_7"
+│   ├── constants.cairo     # Errors, NS="bm_0_0_8"
 │   ├── models/             # Auction, Bid, Rental, Vault, ExchangeSettings
 │   ├── systems/            # admin, auction, rental, vault
 │   ├── components/         # auctionable.cairo (rentable WIP)

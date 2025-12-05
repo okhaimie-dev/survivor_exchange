@@ -12,7 +12,7 @@ mod test_auction_system {
         set_account_address(setup::tests::OWNER());
         let (world, systems) = setup::tests::spawn_auction();
 
-        let name: felt252 = 'test_auction';
+        let name: ByteArray = "test_auction";
         let starting_price: u32 = 100;
         let mut items = ArrayTrait::new();
         items.append(1);
@@ -42,7 +42,7 @@ mod test_auction_system {
 
         let owner = setup::tests::OWNER();
         assert(auction.seller == owner.into(), 'wrong seller');
-        assert(auction.name == 'test_auction', 'wrong name');
+        assert(auction.name == "test_auction", 'wrong name');
         assert(auction.starting_price == 100, 'wrong price');
         assert(auction.item_count == 2, 'wrong item count');
         assert(auction.status == 2, 'not started');
