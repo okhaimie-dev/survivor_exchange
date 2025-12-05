@@ -2,7 +2,7 @@ import { useQuery } from '@apollo/client/react';
 import { useMemo } from 'react';
 import { MY_LISTINGS_QUERY } from '../lib/queries';
 import type { MyListingsResponse, Auction } from '../lib/types';
-import { felt252ToString } from '../lib/utils';
+import { byteArrayToString } from '../lib/utils';
 import { DEFAULT_POLL_INTERVAL } from '../lib/constants';
 
 export interface FormattedListing {
@@ -38,7 +38,7 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     const auctions: Auction[] = data.bm008AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
 
     return auctions.map((auction) => {
-      const decodedName = felt252ToString(auction.name);
+      const decodedName = byteArrayToString(auction.name);
       
       const startingPrice = parseFloat(auction.starting_price) || 0;
       const currentBid = auction.current_bid ? parseFloat(auction.current_bid) : null;

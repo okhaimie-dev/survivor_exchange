@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
 import { AUCTIONS_QUERY, MY_NFTS_QUERY } from '../lib/queries';
 import type { AuctionsResponse, Auction, AuctionItem, MyNFTsResponse, FormattedNFT, ERC721Token } from '../lib/types';
-import { formatNFTs, felt252ToString } from '../lib/utils';
+import { formatNFTs, byteArrayToString } from '../lib/utils';
 import { normalizeTokenId, normalizeContractAddress } from '../lib/utils/normalization';
 import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
@@ -26,7 +26,7 @@ export function useAuctions() {
   const allAuctions: Auction[] = useMemo(() => {
     const auctions = data?.bm008AuctionModels?.edges?.map((edge) => ({
       ...edge.node,
-      name: felt252ToString(edge.node.name) || edge.node.name,
+      name: byteArrayToString(edge.node.name) || edge.node.name,
     })) || [];
     const filtered = auctions.filter((auction) => {
       const statusNum = parseInt(auction.status);

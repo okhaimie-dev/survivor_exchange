@@ -1,4 +1,5 @@
 import * as starknet from 'starknet';
+import { byteArray } from 'starknet';
 
 export function truncateWithEllipsis(str: string, maxLength: number = 20): string {
     if (!str) return '';
@@ -41,6 +42,45 @@ export function felt252ToString(felt252: string): string {
   } catch {
     return felt252;
   }
+}
+
+/**
+ * Converts a ByteArray (from GraphQL/Cairo) to a JavaScript string
+ * Handles both ByteArray structure and plain string formats
+ */
+export function byteArrayToString(value: any): string {
+  if (!value) return '';
+  
+  // If it's already a string, return it
+  if (typeof value === 'string') {
+    // Check if it looks like a ByteArray structure (object with data/pending_word)
+    if (value.includes('{') || value.includes('[')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && (parsed.data !== undefined || parsed.pending_word !== undefined)) {
+          return byteArray.stringFromByteArray(parsed);
+        }
+      } catch {
+        // Not JSON, continue
+      }
+    }
+    return value;
+  }
+  
+  // If it's an object with ByteArray structure
+  if (typeof value === 'object' && value !== null) {
+    try {
+      // Check if it has ByteArray structure
+      if (value.data !== undefined || value.pending_word !== undefined) {
+        return byteArray.stringFromByteArray(value);
+      }
+    } catch {
+      // If decoding fails, try to stringify
+      return JSON.stringify(value);
+    }
+  }
+  
+  return String(value);
 }
 
 export function truncateAddress(address: string, startLength: number = 6, endLength: number = 4): string {
