@@ -3,7 +3,7 @@ pub mod AuctionableComponent {
     use dojo::world::{IWorldDispatcherTrait, WorldStorage, WorldStorageTrait};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
-    use survivor_exchange::constants::{Errors, TEN_POW_18};
+    use survivor_exchange::constants::Errors;
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
@@ -136,17 +136,15 @@ pub mod AuctionableComponent {
             auction.assert_bidder_not_seller(bidder.into());
 
             let mut prev_bid = store.bid(auction_id, bidder.into());
-            let prev_scaled = prev_bid.amount.into() * TEN_POW_18;
-            let new_scaled = bid_amount.into() * TEN_POW_18;
-            if new_scaled > prev_scaled {
-                let diff = new_scaled - prev_scaled;
+            let prev_amount = prev_bid.amount;
+            let new_amount = bid_amount;
+            if new_amount > prev_amount {
+                let diff = (new_amount - prev_amount).into();
                 let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
                 let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
                 vault_dispatcher.deposit(auction.auction_id, diff, bidder);
             }
 
-            let mut bid = prev_bid;
-            bid.amount = bid_amount;
             let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
             store.set_bid(@bid);
 
@@ -173,11 +171,11 @@ pub mod AuctionableComponent {
             bid.assert_is_bid_owner(bidder.into());
             bid.assert_not_highest_bidder(@auction);
 
-            // FIX: Refund via vault (bid.amount * 10^18 total deposited)
-            let scaled_amount = (bid.amount.into() * TEN_POW_18);
+            // Refund via vault (raw bid amount)
+            let amount = bid.amount.into();
             let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-            vault_dispatcher.withdraw(auction_id, bidder, scaled_amount); // to=bidder (default)
+            vault_dispatcher.withdraw(auction_id, bidder, amount); // to=bidder (default)
 
             // Clear bid
             let mut cleared_bid = BidTrait::new(auction_id, bidder.into(), 0);

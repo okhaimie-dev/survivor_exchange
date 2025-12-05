@@ -19,7 +19,7 @@ default = "bm_0_0_8"
 rpc_url = "https://api.cartridge.gg/x/starknet/mainnet"
 # Default account for katana with seed = 0
 account_address = "0x07C28a0Cb8ef410c5B6fe30397A09636763F67909103b8225c6C04060B4258C5"
-private_key = "0x064ddb1260b4a1281c7c03cc2ee4ef5d836ed1f4424ed988dbba9bd7da531d6f"
+private_key = ""
 # world_address = "0x026d5777eccca1861a23303ee0ba48c0e8349e849d0377a21c3801ef1d0f8cef"
 
 [writers]
