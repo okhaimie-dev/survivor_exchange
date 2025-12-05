@@ -660,7 +660,7 @@ export default function Bids({
                                             const decimals = tokenInfo?.decimals || 18;
                                             
                                             if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                                                return formatUSD(selectedCollection.highestBid);
+                                                return formatUSD(selectedCollection.highestBid/1e6);
                                             } else {
                                                 return formatTokenAmount(convertedHighestBid, decimals, symbol);
                                             }
