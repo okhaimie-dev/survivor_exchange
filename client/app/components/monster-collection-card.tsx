@@ -24,7 +24,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
     const stats = [
         {
             label: "Starting",
-            value: formatUSD(collection.startingPrice),
+            value: formatUSD(collection.startingPrice/1e6),
             suffix: undefined,
         },
         {

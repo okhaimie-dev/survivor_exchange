@@ -216,22 +216,22 @@ export default function Bids({
             setIsConvertingPrices(true);
             try {
                 if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                    setConvertedStartingPrice(selectedCollection.startingPrice);
-                    setConvertedHighestBid(selectedCollection.highestBid);
+                    setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
+                    setConvertedHighestBid(selectedCollection.highestBid ? selectedCollection.highestBid / 1e6 : undefined);
                 } else if (tokenPrice !== null) {
-                    setConvertedStartingPrice(selectedCollection.startingPrice / tokenPrice);
+                    setConvertedStartingPrice((selectedCollection.startingPrice / 1e6) / tokenPrice);
                     
                     if (selectedCollection.highestBid !== undefined) {
-                        setConvertedHighestBid(selectedCollection.highestBid / tokenPrice);
+                        setConvertedHighestBid((selectedCollection.highestBid / 1e6) / tokenPrice);
                     } else {
                         setConvertedHighestBid(undefined);
                     }
                 } else {
-                    const convertedStart = await convertUSDCToToken(selectedCollection.startingPrice, paymentToken);
+                    const convertedStart = await convertUSDCToToken(selectedCollection.startingPrice / 1e6, paymentToken);
                     setConvertedStartingPrice(convertedStart);
                     
                     if (selectedCollection.highestBid !== undefined) {
-                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid, paymentToken);
+                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid / 1e6, paymentToken);
                         setConvertedHighestBid(convertedBid);
                     } else {
                         setConvertedHighestBid(undefined);
@@ -239,8 +239,8 @@ export default function Bids({
                 }
             } catch (error) {
                 console.error('Error converting prices:', error);
-                setConvertedStartingPrice(selectedCollection.startingPrice);
-                setConvertedHighestBid(selectedCollection.highestBid);
+                setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
+                setConvertedHighestBid(selectedCollection.highestBid ? selectedCollection.highestBid / 1e6 : undefined);
             } finally {
                 setIsConvertingPrices(false);
             }
@@ -640,7 +640,7 @@ export default function Bids({
                                             const decimals = tokenInfo?.decimals || 18;
                                             
                                             if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                                                return formatUSD(selectedCollection.startingPrice);
+                                                return formatUSD(selectedCollection.startingPrice/1e6);
                                             } else {
                                                 return formatTokenAmount(convertedStartingPrice, decimals, symbol);
                                             }

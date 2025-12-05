@@ -226,11 +226,11 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Starting</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{formatUSDCompact(listing.startingPrice)}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{formatUSDCompact(listing.startingPrice / 1e6)}</p>
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Top Bid</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.currentBid !== null ? formatUSDCompact(listing.currentBid) : "—"}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.currentBid !== null ? formatUSDCompact(listing.currentBid / 1e6) : "—"}</p>
                             </div>
                         </div>
 

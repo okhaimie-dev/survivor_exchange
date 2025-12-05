@@ -139,7 +139,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             
             const usdAmount = parseFloat(startingPriceUSD);
-            const startingPriceWhole = Math.floor(usdAmount);
+            const startingPriceWhole = Math.floor(usdAmount * 1e6);
         
             const callData = [
                 byteArray.byteArrayFromString(collectionName.trim()),
