@@ -92,6 +92,8 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
     const explorer = useExplorer();
     const [isEndingAuction, setIsEndingAuction] = useState<string | null>(null);
     const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
+    const [isSettling, setIsSettling] = useState<string | null>(null);
+    const [settleTxnHashes, setSettleTxnHashes] = useState<Record<string, string>>({});
 
     const handleEndAuction = useCallback(async (auctionId: string) => {
         if (!account) {
@@ -129,6 +131,67 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
             setIsEndingAuction(null);
         }
     }, [account]);
+
+    const isAuctionExpired = (endTime: string, status: string): boolean => {
+        if (!endTime || endTime === "0") return false;
+        
+        try {
+            let endTimeNum: number;
+            if (endTime.startsWith('0x') || endTime.startsWith('0X')) {
+                endTimeNum = parseInt(endTime, 16);
+            } else {
+                endTimeNum = parseInt(endTime, 10);
+            }
+
+            if (isNaN(endTimeNum) || endTimeNum === 0) return false;
+
+            const now = Math.floor(Date.now() / 1000);
+            const statusNum = parseInt(status);
+            
+            // Expired if end time passed or status is Ended (3)
+            return endTimeNum <= now || statusNum === 3;
+        } catch {
+            return false;
+        }
+    };
+
+    const handleSettleAuction = useCallback(async (auctionId: string) => {
+        if (!account) {
+            return;
+        }
+
+        try {
+            setIsSettling(auctionId);
+
+            console.log('Executing settle_auction call:', {
+                contract: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "settle_auction",
+                calldata: [auctionId]
+            });
+
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "settle_auction",
+                calldata: [auctionId]
+            });
+
+            setSettleTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
+        } catch (err) {
+            console.error("Error settling auction - contract call failed:", err);
+            if (err instanceof Error) {
+                console.error("Error message:", err.message);
+                console.error("Error stack:", err.stack);
+            }
+            console.error("Failed call details:", {
+                contract: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "settle_auction",
+                auctionId: auctionId
+            });
+        } finally {
+            setIsSettling(null);
+        }
+    }, [account]);
+
     if (loading) {
         return (
             <section className="flex w-full flex-col gap-6">
@@ -240,14 +303,24 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             >
                                 {getStatusLabel(listing.status)}
                             </span>
-                            <button
-                                type="button"
-                                onClick={() => handleEndAuction(listing.auctionId)}
-                                disabled={!account || isEndingAuction === listing.auctionId}
-                                className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isEndingAuction === listing.id ? "Ending..." : "Remove Collection"}
-                            </button>
+                            <div className="flex flex-row gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleEndAuction(listing.auctionId)}
+                                    disabled={!account || isEndingAuction === listing.auctionId}
+                                    className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isEndingAuction === listing.auctionId ? "Ending..." : "End Auction"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleSettleAuction(listing.auctionId)}
+                                    disabled={!account || isSettling === listing.auctionId || !isAuctionExpired(listing.endTime, listing.status)}
+                                    className="inline-flex items-center justify-center rounded-full border border-orange-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-orange-400 transition hover:cursor-pointer hover:bg-orange-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isSettling === listing.auctionId ? "Settling..." : "Settle Bid"}
+                                </button>
+                            </div>
                             {txnHashes[listing.auctionId] && (
                                 <a
                                     href={explorer.transaction(txnHashes[listing.auctionId])}
@@ -256,6 +329,16 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                     className="text-xs font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
                                 >
                                     View Transaction
+                                </a>
+                            )}
+                            {settleTxnHashes[listing.auctionId] && (
+                                <a
+                                    href={explorer.transaction(settleTxnHashes[listing.auctionId])}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-xs font-orbitron text-orange-400 hover:underline break-all"
+                                >
+                                    View Settle Transaction
                                 </a>
                             )}
                         </div>
