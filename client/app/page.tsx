@@ -7,6 +7,7 @@ import { useAccount } from "@starknet-react/core";
 import { useMyNFTs } from "./hooks/use-my-nfts";
 import { useAuctions } from "./hooks/use-auctions";
 import { useMyListings } from "./hooks/use-my-listings";
+import { useSearchParams } from "next/navigation";
 
 export default function Home() {
   const { address } = useAccount();
@@ -26,6 +27,8 @@ export default function Home() {
     loading: listingsLoading, 
     error: listingsError 
   } = useMyListings({ seller: address || undefined });
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center font-sans dark:bg-black"> 
@@ -46,6 +49,7 @@ export default function Home() {
           listings={listings}
           listingsLoading={listingsLoading}
           listingsError={listingsError}
+          token={token}
         />
         <Footer />
       </div>

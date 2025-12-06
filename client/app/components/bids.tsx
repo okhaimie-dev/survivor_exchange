@@ -35,6 +35,7 @@ interface BidsProps {
     totalPages: number;
     setCurrentPage: (page: number) => void;
     getAuctionItems: (auctionId: string) => AuctionItem[];
+    token: string | null;
 }
 
 export default function Bids({ 
@@ -42,7 +43,9 @@ export default function Bids({
     loading, 
     error,
     currentPage,
-    setCurrentPage}: BidsProps) {
+    setCurrentPage,
+    token
+}: BidsProps) {
     const { account, address } = useAccount();
     const explorer = useExplorer();
     const provider = useProvider();
@@ -54,6 +57,7 @@ export default function Bids({
     const [isWithdrawing, setIsWithdrawing] = useState(false);
     const [withdrawTxnHash, setWithdrawTxnHash] = useState<string | undefined>();
     const [filters, setFilters] = useState<FilterState>({
+        id: "",
         search: "",
         beast: "",
         type: "",
@@ -120,6 +124,9 @@ export default function Bids({
     const [convertedHighestBid, setConvertedHighestBid] = useState<number | undefined>(undefined);
     const [isConvertingPrices, setIsConvertingPrices] = useState(false);
     const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
+
     const priceRetryIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const selectedCollection = useMemo(
@@ -706,6 +713,14 @@ export default function Bids({
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
                                 {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} in this collection
                             </p>
+                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]" onClick={() => {
+                                const collectionLink = `${window.location.origin}/?token=${selectedCollection.id}`;
+                                navigator.clipboard.writeText(collectionLink);
+                                setCopied(true);
+                                setCopiedTimeout(setTimeout(() => {
+                                    setCopied(false);
+                                }, 2000));
+                            }}>{copied ? "Copied!" : "🔗 Copy Collection Link"}</p>
                         </div>
 
                         <div className="flex flex-col gap-6">
@@ -963,7 +978,7 @@ export default function Bids({
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-            <Filters filters={filters} onFiltersChange={setFilters} />
+            <Filters token={token} filters={filters} onFiltersChange={setFilters} />
             {renderContent()}
         </div>
     );

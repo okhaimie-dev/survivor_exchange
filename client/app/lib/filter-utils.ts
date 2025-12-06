@@ -95,7 +95,7 @@ export function filterNFT(nft: FormattedNFT, filters: FilterState): boolean {
 }
 
 export function sortNFTs(nfts: FormattedNFT[], filters: FilterState): FormattedNFT[] {
-    let sorted = [...nfts];
+    const sorted = [...nfts];
 
     if (filters.tokenIdSort) {
         sorted.sort((a, b) => {
@@ -116,7 +116,7 @@ export function applyFiltersToNFTs(nfts: FormattedNFT[], filters: FilterState): 
 export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState): AuctionWithNFTs[] {
     const hasFilters = filters.search || filters.beast || filters.type || filters.tier || 
         filters.levelMin || filters.levelMax || filters.powerMin || filters.powerMax ||
-        filters.rankMin || filters.rankMax || filters.shiny || filters.animated;
+        filters.rankMin || filters.rankMax || filters.shiny || filters.animated || filters.id;
     
     if (!hasFilters) {
         return auctions;
@@ -124,6 +124,11 @@ export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState
 
     return auctions.filter(auction => {
         let matchesCollectionSearch = true;
+
+        if (filters.id) {
+            matchesCollectionSearch = Number(auction.auction_id) === Number(filters.id);
+        }
+
         if (filters.search) {
             matchesCollectionSearch = matchesSearch(auction.name, filters.search);
         }
@@ -131,7 +136,7 @@ export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState
         if (auction.nfts.length === 0) {
             if (filters.search && !filters.beast && !filters.type && !filters.tier && 
                 !filters.levelMin && !filters.levelMax && !filters.powerMin && !filters.powerMax &&
-                !filters.rankMin && !filters.rankMax && !filters.shiny && !filters.animated) {
+                !filters.rankMin && !filters.rankMax && !filters.shiny && !filters.animated && !filters.id) {
                 return matchesCollectionSearch;
             }
             return false;
@@ -148,7 +153,7 @@ export function filterAuctions(auctions: AuctionWithNFTs[], filters: FilterState
 }
 
 export function sortAuctions(auctions: AuctionWithNFTs[], filters: FilterState): AuctionWithNFTs[] {
-    let sorted = [...auctions];
+    const sorted = [...auctions];
 
     if (filters.priceSort) {
         sorted.sort((a, b) => {

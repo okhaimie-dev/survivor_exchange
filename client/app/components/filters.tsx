@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { BEAST_OPTIONS, TYPE_OPTIONS } from "../lib/constants/filters";
 
 export interface FilterState {
+    id: string;
     search: string;
     beast: string;
     type: string;
@@ -19,11 +20,12 @@ export interface FilterState {
 }
 
 interface FiltersProps {
+    token: string | null;
     filters: FilterState;
     onFiltersChange: (filters: FilterState) => void;
 }
 
-export default function Filters({ filters, onFiltersChange }: FiltersProps) {
+export default function Filters({ token, filters, onFiltersChange }: FiltersProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const updateFilter = useCallback((key: keyof FilterState, value: string) => {
@@ -32,6 +34,7 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
 
     const clearFilters = useCallback(() => {
         onFiltersChange({
+            id: "",
             search: "",
             beast: "",
             type: "",
@@ -50,6 +53,12 @@ export default function Filters({ filters, onFiltersChange }: FiltersProps) {
     }, [onFiltersChange]);
 
     const hasActiveFilters = Object.values(filters).some(value => value !== "");
+
+    useEffect(() => {
+        if (token) {
+            onFiltersChange({...filters, id: token });
+        }
+    }, [token]);
 
     return (
         <div className="w-full">

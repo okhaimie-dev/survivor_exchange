@@ -105,12 +105,6 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
         try {
             setIsEndingAuction(auctionId);
 
-            console.log('Executing end_auction call:', {
-                contract: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "end_auction",
-                calldata: [auctionId]
-            });
-
             const response = await account.execute({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "end_auction",
@@ -139,7 +133,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
         
         try {
             let endTimeNum: number;
-            if (endTime.startsWith('0x') || endTime.startsWith('0X')) {
+            if (endTime.startsWith('0x') || endTime.startsWith('0x')) {
                 endTimeNum = parseInt(endTime, 16);
             } else {
                 endTimeNum = parseInt(endTime, 10);
@@ -150,7 +144,6 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
             const now = Math.floor(Date.now() / 1000);
             const statusNum = parseInt(status);
             
-            // Expired if end time passed or status is Ended (3)
             return endTimeNum <= now || statusNum === 3;
         } catch {
             return false;
@@ -407,7 +400,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                 <button
                                     type="button"
                                     onClick={() => handleEndAuction(listing.auctionId)}
-                                    disabled={!account || isEndingAuction === listing.auctionId}
+                                    disabled={!account || isEndingAuction === listing.auctionId || Number(listing.status) !== 2}
                                     className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isEndingAuction === listing.auctionId ? "Ending..." : "End Auction"}
@@ -415,7 +408,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                 <button
                                     type="button"
                                     onClick={() => handleSettleAuction(listing.auctionId)}
-                                    disabled={!account || isSettling === listing.auctionId || !isAuctionExpired(listing.endTime, listing.status)}
+                                    disabled={!account || isSettling === listing.auctionId || !isAuctionExpired(listing.endTime, listing.status) || Number(listing.status) === 4}
                                     className="inline-flex items-center justify-center rounded-full border border-orange-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-orange-400 transition hover:cursor-pointer hover:bg-orange-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {isSettling === listing.auctionId ? "Settling..." : "Settle Bid"}

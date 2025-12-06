@@ -24,6 +24,7 @@ interface BidAuctionMyListingsProps {
     listings: FormattedListing[];
     listingsLoading: boolean;
     listingsError: Error | null;
+    token: string | null;
 }
 
 export default function BidAuctionMyListingsRent({ 
@@ -40,7 +41,8 @@ export default function BidAuctionMyListingsRent({
     getAuctionItems,
     listings,
     listingsLoading,
-    listingsError
+    listingsError,
+    token
 }: BidAuctionMyListingsProps) {
     const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
     return ( 
@@ -66,6 +68,7 @@ export default function BidAuctionMyListingsRent({
                         totalPages={totalPages}
                         setCurrentPage={setCurrentPage}
                         getAuctionItems={getAuctionItems}
+                        token={token}
                     />
                 )}
                 {activeTab === "auction" && <Auction nfts={nfts} loading={loading} error={error} />}
