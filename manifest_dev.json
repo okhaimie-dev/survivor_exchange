@@ -3,7 +3,7 @@
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
     "address": "0x6f65de79296c7b625ec04ce997edc64413dc14ca41008d51835802c27ebdbf1",
     "seed": "bm_0_0_8",
-    "name": "Survivor Exchange",
+    "name": "Dojo starter",
     "entrypoints": [
       "uuid",
       "set_metadata",
@@ -47,7 +47,7 @@
     },
     {
       "address": "0xabfaa3865708426bbf13bdec5b51f40d23e9e9e0dc12d12529c1f1e8c36372",
-      "class_hash": "0x4a831f813cb3b34a98dfb619914b91ec1b0529d73d180bcf23d4d770fdae73e",
+      "class_hash": "0x777052aadea3667532e75dbbbf348c0676a10869e790c9ab11eb5b2194f9eb7",
       "init_calldata": [],
       "tag": "bm_0_0_8-auction_systems",
       "selector": "0x5e749b16723b908e531627253137ecda344543f477197349a24ad2fa7b8ec55",
@@ -65,7 +65,7 @@
     },
     {
       "address": "0x3a47d39ee9106f2da13f094c30ed19a5e26dfae220ba1106c43a99bc10619fa",
-      "class_hash": "0x67797d89edd0001a28c3acc413fe3282c7ab50e4149803dcb1d445c0f08547",
+      "class_hash": "0x3e6e6934ecaac914c65a5723ab826381436cdba80f7571432260e6849345c3b",
       "init_calldata": [],
       "tag": "bm_0_0_8-vault_systems",
       "selector": "0x1a76590d85d4a077c0d90c7830efc1c9e10cb78fd817171e9d2ce8970aff19f",
@@ -73,6 +73,7 @@
         "dojo_init",
         "deposit",
         "withdraw",
+        "disburse_to_seller",
         "upgrade"
       ]
     }
@@ -3153,6 +3154,26 @@
             }
           ],
           "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "disburse_to_seller",
+          "inputs": [
+            {
+              "name": "vault_id",
+              "type": "core::integer::u32"
+            },
+            {
+              "name": "seller",
+              "type": "core::starknet::contract_address::ContractAddress"
+            },
+            {
+              "name": "amount",
+              "type": "core::integer::u256"
+            }
+          ],
+          "outputs": [],
+          "state_mutability": "external"
         }
       ]
     },
