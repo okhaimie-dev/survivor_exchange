@@ -531,6 +531,11 @@ export default function Bids({
         }
 
         setSelectedCollectionId(collection.id);
+        setBidAmountToken("");
+        setTxnHash(undefined);
+        setSettleTxnHash(undefined);
+        setWithdrawTxnHash(undefined);
+        setInsufficientFundsError(null);
     }, []);
 
     const handleSelectCollection = useCallback(
@@ -538,6 +543,10 @@ export default function Bids({
             if (selectedCollectionId === collection.id) {
                 setSelectedCollectionId("");
                 setBidAmountToken("");
+                setTxnHash(undefined);
+                setSettleTxnHash(undefined);
+                setWithdrawTxnHash(undefined);
+                setInsufficientFundsError(null);
             } else {
                 updateSelection(collection);
             }
