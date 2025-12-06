@@ -13,7 +13,7 @@ mod test_auction_system {
         let (world, systems) = setup::tests::spawn_auction();
 
         let name: ByteArray = "test_auction";
-        let starting_price: u32 = 100;
+        let starting_price: u64 = 100;
         let mut items = ArrayTrait::new();
         items.append(1);
         items.append(2);

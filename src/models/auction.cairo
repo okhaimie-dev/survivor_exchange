@@ -7,7 +7,7 @@ pub mod errors {}
 #[generate_trait]
 pub impl AuctionImpl of AuctionTrait {
     #[inline]
-    fn new(name: ByteArray, starting_price: u32, seller: felt252, fee_token: felt252) -> Auction {
+    fn new(name: ByteArray, starting_price: u64, seller: felt252, fee_token: felt252) -> Auction {
         AuctionAssert::assert_valid_starting_price(starting_price);
         AuctionAssert::assert_valid_seller(seller);
         AuctionAssert::assert_valid_name(@name);
@@ -47,7 +47,7 @@ pub impl AuctionImpl of AuctionTrait {
     }
 
     #[inline]
-    fn update_bid(ref self: Auction, bidder: felt252, amount: u32, current_time: u64) {
+    fn update_bid(ref self: Auction, bidder: felt252, amount: u64, current_time: u64) {
         assert(self.is_active(), Errors::AUCTION_NOT_ACTIVE);
         self.assert_not_expired(current_time);
         self.assert_bid_not_low(amount);
@@ -115,7 +115,7 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_valid_starting_price(starting_price: u32) {
+    fn assert_valid_starting_price(starting_price: u64) {
         assert(starting_price != 0, Errors::INVALID_STARTING_PRICE);
     }
 
@@ -125,7 +125,7 @@ pub impl AuctionAssert of AssertTrait {
     }
 
     #[inline]
-    fn assert_bid_not_low(self: @Auction, bid_amount: u32) {
+    fn assert_bid_not_low(self: @Auction, bid_amount: u64) {
         assert(
             bid_amount > *self.current_bid && bid_amount >= *self.starting_price,
             Errors::BID_TOO_LOW,
@@ -147,7 +147,7 @@ mod tests {
         "Test Auction"
     }
 
-    const STARTING_PRICE: u32 = 100;
+    const STARTING_PRICE: u64 = 100;
     const CONTRACT_ADDR: felt252 = 0x1234_felt252;
     const CURRENT_TIMESTAMP: u64 = 0x0;
 

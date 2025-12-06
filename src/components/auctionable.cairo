@@ -29,7 +29,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             name: ByteArray,
-            starting_price: u32,
+            starting_price: u64,
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
@@ -124,7 +124,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
-            bid_amount: u32,
+            bid_amount: u64,
         ) {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();
@@ -136,7 +136,7 @@ pub mod AuctionableComponent {
             auction.assert_bidder_not_seller(bidder.into());
 
             let mut prev_bid = store.bid(auction_id, bidder.into());
-            let prev_amount = prev_bid.amount;
+            let prev_amount: u64 = prev_bid.amount;
             let new_amount = bid_amount;
             if new_amount > prev_amount {
                 let diff = (new_amount - prev_amount).into();
