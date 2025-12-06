@@ -538,12 +538,17 @@ export default function Bids({
                 calldata: [auctionId.toString()]
             });
 
-            // 2. Swap USDC to feeToken if they're different
-            // Skip swap if feeToken is already USDC (no need to swap USDC to USDC)
+            // 2. Swap USDC to feeToken only if caller is the seller
+            // Check if caller is the seller
+            const callerAddress = normalizeContractAddress(address).toLowerCase();
+            const sellerAddress = normalizeContractAddress(auction.seller).toLowerCase();
+            const isSeller = callerAddress === sellerAddress;
+
+            // Only do swap if caller is seller and feeToken is different from USDC
             const feeTokenAddress = normalizeContractAddress(auction.fee_token).toLowerCase();
             const usdcAddress = normalizeContractAddress(USDC_ADDRESS).toLowerCase();
 
-            if (feeTokenAddress !== usdcAddress) {
+            if (isSeller && feeTokenAddress !== usdcAddress) {
                 // Calculate USDC amount in wei (USDC has 6 decimals)
                 // current_bid is already in USDC wei (6 decimals) from the contract
                 const usdcAmountWei = BigInt(Math.floor(currentBid));
