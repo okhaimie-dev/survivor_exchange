@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, MAX_UINT256 } from "../lib/constants";
 import { formatUSDCompact } from "../lib/utils";
+import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 
@@ -200,8 +201,8 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
             // 2. Swap USDC to feeToken if they're different
             // Skip swap if feeToken is already USDC (no need to swap USDC to USDC)
-            const feeTokenAddress = listing.feeToken.toLowerCase();
-            const usdcAddress = USDC_ADDRESS.toLowerCase();
+            const feeTokenAddress = normalizeContractAddress(listing.feeToken).toLowerCase();
+            const usdcAddress = normalizeContractAddress(USDC_ADDRESS).toLowerCase();
 
             if (feeTokenAddress !== usdcAddress) {
                 // Calculate USDC amount in wei (USDC has 6 decimals)
