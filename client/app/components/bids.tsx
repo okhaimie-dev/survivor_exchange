@@ -545,10 +545,15 @@ export default function Bids({
 
             if (feeTokenAddress !== usdcAddress) {
                 // Calculate USDC amount in wei (USDC has 6 decimals)
+                // current_bid is already in USDC wei (6 decimals) from the contract
                 const usdcAmountWei = BigInt(Math.floor(currentBid));
+                
+                // generateSwapCalls adds a 1% buffer (101/100), so we need to pass 100/101 of the amount
+                // to ensure the transfer doesn't exceed the balance after settle_auction
+                const swapInputAmount = (usdcAmountWei * 100n) / 101n;
 
-                // Get swap quote
-                const swapQuote = await getSwapQuote(Number(usdcAmountWei), USDC_ADDRESS, auction.fee_token);
+                // Get swap quote using the adjusted amount
+                const swapQuote = await getSwapQuote(Number(swapInputAmount), USDC_ADDRESS, auction.fee_token);
 
                 const routerContract: RouterContract = {
                     address: EKUBO_ROUTER_ADDRESS,
@@ -589,7 +594,7 @@ export default function Bids({
                     outputTokenDecimals: feeTokenDecimals
                 };
 
-                const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, usdcAmountWei);
+                const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, swapInputAmount);
 
                 // Approve USDC for swap
                 const usdcApproval = uint256.bnToUint256(MAX_UINT256);
