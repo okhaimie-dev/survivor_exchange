@@ -51,6 +51,8 @@ export default function Bids({
     const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
     const [isSettling, setIsSettling] = useState(false);
     const [settleTxnHash, setSettleTxnHash] = useState<string | undefined>();
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+    const [withdrawTxnHash, setWithdrawTxnHash] = useState<string | undefined>();
     const [filters, setFilters] = useState<FilterState>({
         search: "",
         beast: "",
@@ -336,7 +338,7 @@ export default function Bids({
             if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
                 const freshPrice = await getTokenPriceInUSDC(paymentToken);
                 setTokenPrice(freshPrice);
-                finalUSDAmount = tokenAmount * freshPrice;
+                finalUSDAmount = Math.floor(tokenAmount * freshPrice * 1e6);
             }
 
             if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
@@ -390,9 +392,6 @@ export default function Bids({
                     }
                 };
 
-                // Calculate minimum amount from swap quote output (in wei)
-                // The quote.total is the expected output amount in wei
-                // We'll use 99% of expected output as minimum (1% slippage tolerance)
                 const usdcTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === USDC_ADDRESS.toLowerCase());
                 const usdcDecimals = usdcTokenInfo?.decimals || 6;
                 
@@ -501,6 +500,31 @@ export default function Bids({
         }
     }, [account, selectedCollectionId]);
 
+    const handleWithdrawBid = useCallback(async () => {
+        if (!account || !selectedCollectionId) {
+            return;
+        }
+
+        try {
+            setIsWithdrawing(true);
+            setWithdrawTxnHash(undefined);
+
+            const auctionId = parseInt(selectedCollectionId, 10);
+
+            const response = await account.execute({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "withdraw_bid",
+                calldata: [auctionId.toString()]
+            });
+
+            setWithdrawTxnHash(response.transaction_hash);
+        } catch (err) {
+            console.error("Error withdrawing bid:", err);
+        } finally {
+            setIsWithdrawing(false);
+        }
+    }, [account, selectedCollectionId]);
+
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
             return;
@@ -600,7 +624,7 @@ export default function Bids({
 
         return (
                 <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/80 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
-                    <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
+                    <div className="grid gap-8 p-6 grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                             {(() => {
                                 const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
@@ -720,14 +744,14 @@ export default function Bids({
                             </div>
 
                             <div className="flex gap-4 sm:items-start w-full">
-                                <div className="flex flex-1 flex-col gap-3 w-full">
+                                <div className="flex w-[200px] flex-col gap-3">
                                     <label
                                         htmlFor="bid-amount-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
                                     >
                                         {(() => {
                                             const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                                            return `Place Your Bid (${tokenInfo?.symbol || "TOKEN"})`;
+                                            return `Place Your Bid (${tokenInfo?.symbol || "USDC"})`;
                                         })()}
                                     </label>
                                     <input
@@ -777,32 +801,6 @@ export default function Bids({
                                             </option>
                                         ))}
                                     </select>
-                                    <div className="flex flex-row gap-2 w-full">
-                                        <button
-                                            type="button"
-                                            onClick={handlePlaceBid}
-                                            disabled={!isBidValid || !account || isSubmitting}
-                                            className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                                isBidValid && account && !isSubmitting
-                                                    ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
-                                                    : "border border-white/12 text-[rgb(186,255,188)]/45"
-                                            }`}
-                                        >
-                                            {isSubmitting ? "Submitting..." : "Place Bid"}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={handleSettleAuction}
-                                            disabled={!account || isSettling || !isAuctionExpired(selectedCollection.endTime, selectedCollection.status)}
-                                            className={`inline-flex items-center justify-center rounded-full max-w-fit px-6 py-2 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                                account && !isSettling && isAuctionExpired(selectedCollection.endTime, selectedCollection.status)
-                                                    ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black"
-                                                    : "border border-white/12 text-[rgb(186,255,188)]/45"
-                                            }`}
-                                        >
-                                            {isSettling ? "Settling..." : "Settle"}
-                                        </button>
-                                    </div>
                                 </div>
                                 
                                 {(() => {
@@ -817,7 +815,7 @@ export default function Bids({
                                     const averagePower = nfts.length > 0 ? totalPower / nfts.length : 0;
                                     
                                     return (
-                                        <div className="flex-1 grid grid-cols-1 gap-3 text-sm text-white sm:grid-cols-2 w-full">
+                                        <div className="flex-1 grid grid-cols-1 gap-6 text-sm text-white sm:grid-cols-2 w-full">
                                             <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
                                                 <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
                                                     Collection Power
@@ -837,6 +835,44 @@ export default function Bids({
                                         </div>
                                     );
                                 })()}
+                            </div>
+                            <div className="flex flex-row gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handlePlaceBid}
+                                    disabled={!isBidValid || !account || isSubmitting}
+                                    className={`inline-flex items-center justify-center rounded-full w-full px-6 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
+                                        isBidValid && account && !isSubmitting
+                                            ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
+                                            : "border border-white/12 text-[rgb(186,255,188)]/45"
+                                    }`}
+                                >
+                                    {isSubmitting ? "Submitting..." : "Place Bid"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleWithdrawBid}
+                                    disabled={!account || isWithdrawing}
+                                    className={`inline-flex items-center justify-center rounded-full w-full px-6 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
+                                        account && !isWithdrawing
+                                            ? "border border-red-500 bg-red-500/10 text-red-500 hover:cursor-pointer hover:bg-red-500 hover:text-black"
+                                            : "border border-white/12 text-[rgb(186,255,188)]/45"
+                                    }`}
+                                >
+                                    {isWithdrawing ? "Removing..." : "Remove Bid"}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSettleAuction}
+                                    disabled={!account || isSettling || !isAuctionExpired(selectedCollection.endTime, selectedCollection.status)}
+                                    className={`inline-flex items-center justify-center rounded-full w-full px-2 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
+                                        account && !isSettling && isAuctionExpired(selectedCollection.endTime, selectedCollection.status)
+                                            ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black"
+                                            : "border border-white/12 text-[rgb(186,255,188)]/45"
+                                    }`}
+                                >
+                                    {isSettling ? "Settling..." : "Settle Auction"}
+                                </button>
                             </div>
 
                             {txnHash && (
@@ -866,6 +902,21 @@ export default function Bids({
                                         className="text-sm font-orbitron text-orange-500 hover:underline break-all w-full"
                                     >
                                         {settleTxnHash}
+                                    </a>
+                                </div>
+                            )}
+                            {withdrawTxnHash && (
+                                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 w-full">
+                                    <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                                        Withdraw Bid Transaction Submitted
+                                    </p>
+                                    <a
+                                        href={explorer.transaction(withdrawTxnHash)}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-sm font-orbitron text-red-500 hover:underline break-all w-full"
+                                    >
+                                        {withdrawTxnHash}
                                     </a>
                                 </div>
                             )}

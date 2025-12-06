@@ -16,6 +16,7 @@ export interface FormattedListing {
   endTime: string;
   seller: string;
   auctionId: string;
+  feeToken: string;
 }
 
 interface UseMyListingsOptions {
@@ -55,6 +56,7 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         endTime: auction.end_time,
         seller: auction.seller,
         auctionId: auction.auction_id,
+        feeToken: auction.fee_token,
       };
     });
   }, [data]);

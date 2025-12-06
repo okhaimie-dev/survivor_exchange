@@ -3,8 +3,10 @@ import moment from "moment";
 import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
-import { AUCTION_CONTRACT_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, MAX_UINT256 } from "../lib/constants";
 import { formatUSDCompact } from "../lib/utils";
+import { uint256, num } from "starknet";
+import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 
 const formatTimeAgo = (timestamp: string): string => {
     if (!timestamp) return "Unknown";
@@ -88,7 +90,7 @@ interface MyListingsProps {
 }
 
 export default function MyListings({ listings, loading, error }: MyListingsProps) {
-    const { account } = useAccount();
+    const { account, address } = useAccount();
     const explorer = useExplorer();
     const [isEndingAuction, setIsEndingAuction] = useState<string | null>(null);
     const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
@@ -156,25 +158,129 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
     };
 
     const handleSettleAuction = useCallback(async (auctionId: string) => {
-        if (!account) {
+        if (!account || !address) {
+            return;
+        }
+
+        // Find the listing to get seller and feeToken
+        const listing = listings.find(l => l.auctionId === auctionId);
+        if (!listing) {
+            console.error("Listing not found");
+            return;
+        }
+
+        // Check if user is the seller
+        if (address.toLowerCase() !== listing.seller.toLowerCase()) {
+            console.error("Only the seller can settle the auction");
+            return;
+        }
+
+        // If there's no current bid, just settle without swap
+        if (!listing.currentBid || listing.currentBid === 0) {
+            try {
+                setIsSettling(auctionId);
+
+                const response = await account.execute({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "settle_auction",
+                    calldata: [auctionId]
+                });
+
+                setSettleTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
+            } catch (err) {
+                console.error("Error settling auction - contract call failed:", err);
+            } finally {
+                setIsSettling(null);
+            }
             return;
         }
 
         try {
             setIsSettling(auctionId);
 
-            console.log('Executing settle_auction call:', {
-                contract: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "settle_auction",
-                calldata: [auctionId]
-            });
+            const calls: Array<{
+                contractAddress: string;
+                entrypoint: string;
+                calldata: string[];
+            }> = [];
 
-            const response = await account.execute({
+            // 1. Settle the auction (this transfers USDC from vault to seller)
+            calls.push({
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "settle_auction",
                 calldata: [auctionId]
             });
 
+            // 2. Swap USDC to feeToken if they're different
+            // Skip swap if feeToken is already USDC (no need to swap USDC to USDC)
+            const feeTokenAddress = listing.feeToken.toLowerCase();
+            const usdcAddress = USDC_ADDRESS.toLowerCase();
+
+            if (feeTokenAddress !== usdcAddress) {
+                // Calculate USDC amount in wei (USDC has 6 decimals)
+                const usdcAmountWei = BigInt(Math.floor(listing.currentBid));
+
+                // Get swap quote
+                const swapQuote = await getSwapQuote(Number(usdcAmountWei), USDC_ADDRESS, listing.feeToken);
+
+                const routerContract: RouterContract = {
+                    address: EKUBO_ROUTER_ADDRESS,
+                    populate: (method: string, params: unknown[]) => {
+                        const calldata: string[] = [];
+                        params.forEach(param => {
+                            if (param && typeof param === 'object' && 'contract_address' in param) {
+                                const structParam = param as { contract_address: string; amount?: number | bigint };
+                                calldata.push(structParam.contract_address);
+                                if (structParam.amount !== undefined) {
+                                    const amountHex = typeof structParam.amount === 'bigint' 
+                                        ? num.toHex(structParam.amount)
+                                        : num.toHex(BigInt(Math.floor(Number(structParam.amount))));
+                                    calldata.push(amountHex);
+                                }
+                            } else {
+                                const value = typeof param === 'bigint' 
+                                    ? num.toHex(param)
+                                    : num.toHex(BigInt(Math.floor(Number(param))));
+                                calldata.push(value);
+                            }
+                        });
+                        return {
+                            contractAddress: EKUBO_ROUTER_ADDRESS,
+                            entrypoint: method,
+                            calldata
+                        };
+                    }
+                };
+
+                const feeTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === feeTokenAddress);
+                const feeTokenDecimals = feeTokenInfo?.decimals || 18;
+
+                const tokenQuote: TokenQuote = {
+                    tokenAddress: listing.feeToken,
+                    minimumAmount: 0, // Will be calculated from quote.total in generateSwapCalls
+                    quote: swapQuote,
+                    outputTokenDecimals: feeTokenDecimals
+                };
+
+                const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, usdcAmountWei);
+
+                // Approve USDC for swap
+                const usdcApproval = uint256.bnToUint256(MAX_UINT256);
+                calls.push({
+                    contractAddress: USDC_ADDRESS,
+                    entrypoint: "approve",
+                    calldata: [
+                        EKUBO_ROUTER_ADDRESS,
+                        usdcApproval.low.toString(),
+                        usdcApproval.high.toString()
+                    ]
+                });
+
+                // Add swap calls
+                calls.push(...swapCalls);
+            }
+
+            const response = await account.execute(calls);
             setSettleTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
         } catch (err) {
             console.error("Error settling auction - contract call failed:", err);
@@ -190,7 +296,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
         } finally {
             setIsSettling(null);
         }
-    }, [account]);
+    }, [account, address, listings]);
 
     if (loading) {
         return (
