@@ -22,10 +22,20 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
     const [sellerToken, setSellerToken] = useState<string>(USDC_ADDRESS);
+    
+    const dateToLocalDateTimeString = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     const getDefaultDateTime = () => {
         const now = new Date();
         now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
-        return now.toISOString().slice(0, 16);
+        return dateToLocalDateTimeString(now);
     };
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -74,8 +84,8 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     }, [currentPage, filteredNFTs]);
 
     const selectedNFTs = useMemo(
-        () => filteredNFTs.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
-        [selectedNFTIds, filteredNFTs],
+        () => nfts.filter((nft) => selectedNFTIds.includes(nft.tokenId)),
+        [selectedNFTIds, nfts],
     );
 
     const hasSelection = selectedNFTs.length > 0;
@@ -370,7 +380,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 min={(() => {
                                     const now = new Date();
                                     now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
-                                    return now.toISOString().slice(0, 16);
+                                    return dateToLocalDateTimeString(now);
                                 })()}
                                 className={`w-full rounded-xl border px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:ring-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
                                     durationError 
