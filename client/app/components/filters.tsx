@@ -20,7 +20,7 @@ export interface FilterState {
 }
 
 interface FiltersProps {
-    token: string | null;
+    token?: string | null;
     filters: FilterState;
     onFiltersChange: (filters: FilterState) => void;
 }

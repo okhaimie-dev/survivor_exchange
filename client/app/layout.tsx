@@ -1,6 +1,6 @@
 "use client";
 import { Orbitron, Inter } from "next/font/google";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import "./globals.css";
 import Header from "./components/header";
@@ -56,10 +56,10 @@ export default function RootLayout({
         ) : (
           <ApolloGraphQLProvider>
             <StarknetProvider>
-              <>
+              <Suspense>
                 <Header />
                 {children}
-              </>
+              </Suspense>
             </StarknetProvider>
           </ApolloGraphQLProvider>
         )}

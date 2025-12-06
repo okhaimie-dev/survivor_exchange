@@ -22,7 +22,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
     const [sellerToken, setSellerToken] = useState<string>(USDC_ADDRESS);
-    
+
     const dateToLocalDateTimeString = (date: Date): string => {
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -42,6 +42,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [txnHash, setTxnHash] = useState<string | undefined>();
     const [durationError, setDurationError] = useState<string | null>(null);
     const [filters, setFilters] = useState<FilterState>({
+        id: "",
         search: "",
         beast: "",
         type: "",
