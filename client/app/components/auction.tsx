@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useAccount, useExplorer } from "@starknet-react/core";
-import { shortString, byteArray } from "starknet";
+import { byteArray } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
@@ -141,22 +141,38 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             const usdAmount = parseFloat(startingPriceUSD);
             const startingPriceWhole = Math.floor(usdAmount * 1e6);
         
-            const callData = [
-                byteArray.byteArrayFromString(collectionName.trim()),
-                startingPriceWhole,
-                token_ids.length,
-                ...token_ids,
-                BEASTS_NFT_CONTRACT_ADDRESS,
-                0,
-                duration_seconds,
-                sellerToken
+            const collectionNameByteArray = byteArray.byteArrayFromString(collectionName.trim());
+            
+            const calls: Array<{
+                contractAddress: string;
+                entrypoint: string;
+                calldata: (string | number | typeof collectionNameByteArray)[];
+            }> = [
+                {
+                    contractAddress: BEASTS_NFT_CONTRACT_ADDRESS,
+                    entrypoint: "set_approval_for_all",
+                    calldata: [
+                        AUCTION_CONTRACT_ADDRESS,
+                        "1" 
+                    ]
+                },
+                {
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "create_auction",
+                    calldata: [
+                        collectionNameByteArray,
+                        startingPriceWhole.toString(),
+                        token_ids.length.toString(),
+                        ...token_ids.map(id => id.toString()),
+                        BEASTS_NFT_CONTRACT_ADDRESS,
+                        "0",
+                        duration_seconds.toString(),
+                        sellerToken
+                    ]
+                }
             ];
 
-            const response = await account.execute({
-                contractAddress: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "create_auction",
-                calldata: callData
-            });
+            const response = await account.execute(calls);
         
             setTxnHash(response.transaction_hash);
         } catch (err) {
