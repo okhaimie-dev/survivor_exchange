@@ -169,12 +169,6 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
             return;
         }
 
-        // Check if user is the seller
-        if (address.toLowerCase() !== listing.seller.toLowerCase()) {
-            console.error("Only the seller can settle the auction");
-            return;
-        }
-
         // If there's no current bid, just settle without swap
         if (!listing.currentBid || listing.currentBid === 0) {
             try {
