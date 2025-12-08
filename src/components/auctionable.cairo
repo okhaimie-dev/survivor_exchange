@@ -149,26 +149,50 @@ pub mod AuctionableComponent {
 
             auction.assert_does_exist();
             let bidder = get_caller_address();
+            let bidder_felt = bidder.into();
+            auction.assert_bidder_not_seller(bidder_felt);
 
-            auction.assert_bidder_not_seller(bidder.into());
+            // Early checks independent of bid amount
+            let auction_ref: @Auction = @auction;
+            assert(auction_ref.is_active(), Errors::AUCTION_NOT_ACTIVE);
+            auction_ref.assert_not_expired(current_time);
 
-            let mut prev_bid = store.bid(auction_id, bidder.into());
-            let prev_amount: u64 = prev_bid.amount;
-            let new_amount = bid_amount;
-            if new_amount > prev_amount {
-                let diff = (new_amount - prev_amount).into();
-                let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
-                let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-                vault_dispatcher.deposit(auction.auction_id, diff, bidder);
+            // Get bidder's previous bid
+            let bidder_prev_bid = store.bid(auction_id, bidder_felt);
+            let prev_amount = bidder_prev_bid.amount;
+
+            // Compute new total bid and deposit diff based on highest bidder status
+            let is_highest_bidder = auction.highest_bidder == bidder_felt;
+            let mut new_total_bid: u64 = 0;
+            let mut deposit_diff: u64 = 0;
+            if is_highest_bidder {
+                new_total_bid = auction.current_bid + bid_amount;
+                deposit_diff = bid_amount;
+            } else {
+                new_total_bid = bid_amount;
+                deposit_diff = bid_amount - prev_amount;
             }
+            assert(deposit_diff > 0_u64, Errors::BID_TOO_LOW);
 
-            let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
+            // Final bid validation
+            auction_ref.assert_bid_not_low(new_total_bid);
+
+            // Deposit the diff to vault
+            let diff = deposit_diff.into();
+            let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
+            vault_dispatcher.deposit(auction.auction_id, diff, bidder);
+
+            // Update bidder's bid model
+            let mut bid = BidTrait::new(auction_id, bidder_felt, new_total_bid);
             store.set_bid(@bid);
 
-            auction.update_bid(bidder.into(), bid_amount, current_time);
+            // Update auction (asserts already validated)
+            auction.update_bid(bidder_felt, new_total_bid, current_time);
             store.bid_placed(@auction, @bid, get_block_timestamp());
             store.set_auction(@auction);
         }
+
 
         fn withdraw_bid(
             self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,

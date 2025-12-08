@@ -65,7 +65,6 @@ mod test_auction_system {
 
         let bidder = setup::tests::BIDDER();
         set_caller_address(bidder);
-        println!("Is this the issue?");
 
         let initial_bid: u64 = 100;
         // Mock ERC20 is already deployed and always returns true for transfer_from

@@ -25,7 +25,7 @@ pub mod tests {
         'BIDDER2'.try_into().unwrap()
     }
 
-    #[derive(Drop)]
+    #[derive(Copy, Drop)]
     pub struct Systems {
         pub auction_systems: IAuctionMarketplaceDispatcher,
         pub vault_systems: IVaultDispatcher,
