@@ -47,13 +47,8 @@ pub mod AuctionableComponent {
             auction.auction_id = auction_id;
             store.set_auction(@auction);
 
-            // Batch add items (replaces loop)
             self.add_items(world, auction_id, items, collection);
 
-            //store.auction_items_added(auction_id, auction.item_count); // Optional: Post-items
-            //event (now uses updated count)
-
-            // Reload auction for event (item_count now set by add_items)
             let auction = store.auction(auction_id);
             store.auction_created(auction, get_block_timestamp());
 
