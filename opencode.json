@@ -8,5 +8,11 @@
     "write": false,
     "bash": true,
     "webfetch": true
+  },
+  "lsp": {
+    "cairo-lsp": {
+      "command": ["cairo-language-server", "--stdio"],
+      "extensions": [".cairo"]
+    }
   }
 }
