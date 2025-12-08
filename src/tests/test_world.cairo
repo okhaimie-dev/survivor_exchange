@@ -58,7 +58,7 @@ mod test_auction_system {
 
     #[test]
     #[available_gas(l2_gas: 300000000000)]
-    #[fork("MAINNET_LATEST")]
+    //#[fork("MAINNET_LATEST")]
     fn test_bid_initial() {
         let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
