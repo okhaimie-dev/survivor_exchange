@@ -51,34 +51,156 @@ mod test_auction_system {
 
     #[test]
     #[available_gas(l2_gas: 300000000000)]
-    fn test_bid() { //let (world, dispatcher, auction_id) = setup_active_auction();
-    //let mut store: Store = StoreTrait::new(world);
+    fn test_bid_initial() {
+        let (world, systems, auction_id) = setup_active_auction();
+        let mut store: Store = StoreTrait::new(world);
 
-    //let real_auction = store.auction(1); // Try key 1
-    //println!("Real auction_id: {}", real_auction.auction_id);
+        let bidder = setup::tests::BIDDER();
+        set_caller_address(bidder);
 
-    //let vault: Vault = store.vault(auction_id); // Use auction_id
-    //let vault_id = vault.vault_id;
-    //println!("Vault id: {}", vault_id);
+        let initial_bid: u64 = 100;
+        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
 
-    //let bidder = setup::tests::BIDDER();
-    //set_account_address(bidder);
+        // Act: Place initial bid
+        systems.auction_systems.bid(auction_id, initial_bid);
 
-    //let bid_amount: u32 = 200;
-    //set_caller_address(bidder);
+        // Assert
+        let auction = store.auction(auction_id);
+        let bidder_bid = store.bid(auction_id, bidder.into());
+        assert(auction.current_bid == initial_bid, 'wrong current_bid');
+        assert(auction.highest_bidder == bidder.into(), 'wrong highest_bidder');
+        assert(bidder_bid.amount == initial_bid, 'wrong bid amount');
 
-    //let survivor_addr = SURVIVOR_ADDRESS_MAINNET();
-    //start_mock_call(survivor_addr, selector!("transfer_from"), '');
+        // Check vault deposit
+        let vault = store.vault(auction_id);
+        assert(vault.locked_amount == initial_bid.into(), 'wrong vault amount');
+        let share = store.vault_share(auction_id, bidder.into());
+        assert(share.deposited_amount == initial_bid.into(), 'wrong share deposited');
+        assert(share.share_amount == initial_bid.into(), 'wrong share amount');
+    }
 
-    //// Act
-    //dispatcher.auction_systems.bid(auction_id, bid_amount);
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_increase_bid() {
+        let (world, systems, auction_id) = setup_active_auction();
+        let mut store: Store = StoreTrait::new(world);
 
-    //let auction = store.auction(auction_id);
-    //let bidder_bid = store.bid(auction_id, bidder.into());
+        let bidder = setup::tests::BIDDER();
+        set_caller_address(bidder);
 
-    //assert(auction.current_bid == bid_amount, 'wrong current_bid');
-    //assert(auction.highest_bidder == bidder.into(), 'wrong highest_bidder');
-    //assert(bidder_bid.amount == bid_amount, 'wrong bid amount');
-    //assert(auction.status == 2, 'status changed');
+        let initial_bid: u64 = 20;
+        let increased_bid: u64 = 70;
+        let diff: u64 = increased_bid - initial_bid;
+        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
+
+        // Initial bid
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, initial_bid);
+
+        // Increase bid
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, increased_bid);
+
+        // Assert
+        let auction = store.auction(auction_id);
+        let bidder_bid = store.bid(auction_id, bidder.into());
+        assert(auction.current_bid == increased_bid, 'wrong current_bid');
+        assert(auction.highest_bidder == bidder.into(), 'wrong highest_bidder');
+        assert(bidder_bid.amount == increased_bid, 'wrong bid amount');
+
+        // Check vault: total deposited should be full increased_bid
+        let vault = store.vault(auction_id);
+        assert(vault.locked_amount == increased_bid.into(), 'wrong vault amount');
+        let share = store.vault_share(auction_id, bidder.into());
+        assert(share.deposited_amount == increased_bid.into(), 'wrong share deposited');
+        assert(share.share_amount == increased_bid.into(), 'wrong share amount');
+    }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_withdraw_after_outbid() {
+        let (world, systems, auction_id) = setup_active_auction();
+        let mut store: Store = StoreTrait::new(world);
+
+        let bidder1 = setup::tests::BIDDER();
+        let bidder2 = 0x02.try_into().unwrap(); // Another bidder
+        set_caller_address(bidder1);
+
+        let bid1: u64 = 20;
+        let higher_bid: u64 = 50;
+        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
+
+        // Bidder1 places initial bid
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, bid1);
+
+        // Bidder2 outbids
+        set_caller_address(bidder2);
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, higher_bid);
+
+        // Bidder1 withdraws (now outbid)
+        set_caller_address(bidder1);
+        systems.auction_systems.withdraw_bid(auction_id);
+
+        // Assert: Full refund to bidder1
+        let bidder1_bid = store.bid(auction_id, bidder1.into());
+        assert(bidder1_bid.amount == 0, 'bid not cleared');
+
+        let vault = store.vault(auction_id);
+        assert(vault.locked_amount == higher_bid.into(), 'wrong vault after withdraw'); // Only bidder2's bid remains
+
+        let share1 = store.vault_share(auction_id, bidder1.into());
+        assert(share1.share_amount == 0, 'share not zero');
+        assert(share1.claimed == true, 'share not claimed');
+    }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_increase_then_withdraw_full_refund() {
+        let (world, systems, auction_id) = setup_active_auction();
+        let mut store: Store = StoreTrait::new(world);
+
+        let bidder = setup::tests::BIDDER();
+        set_caller_address(bidder);
+
+        let initial_bid: u64 = 20;
+        let increased_bid: u64 = 70;
+        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
+
+        // Initial bid
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, initial_bid);
+
+        // Increase bid (deposits diff=50)
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, increased_bid);
+
+        // Simulate outbid (or end auction) to allow withdraw
+        // For simplicity, assume outbid by another, but to test withdraw, we can end auction if needed
+        // But withdraw checks !highest or !active or expired
+        // To test, let's mock time or outbid
+
+        let bidder2 = 0x02.try_into().unwrap();
+        set_caller_address(bidder2);
+        let higher_bid: u64 = 100;
+        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        systems.auction_systems.bid(auction_id, higher_bid);
+
+        // Now bidder withdraws full 70
+        set_caller_address(bidder);
+        systems.auction_systems.withdraw_bid(auction_id);
+
+        // Assert full cleared
+        let bidder_bid = store.bid(auction_id, bidder.into());
+        assert(bidder_bid.amount == 0, 'bid not cleared');
+
+        let share = store.vault_share(auction_id, bidder.into());
+        assert(share.share_amount == 0, 'share not zero');
+        assert(share.deposited_amount == 0, 'deposited not zero');
+
+        let vault = store.vault(auction_id);
+        assert(vault.locked_amount == higher_bid.into(), 'wrong vault final');
     }
 }
