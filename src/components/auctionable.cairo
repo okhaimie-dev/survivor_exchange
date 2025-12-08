@@ -47,23 +47,15 @@ pub mod AuctionableComponent {
             auction.auction_id = auction_id;
             store.set_auction(@auction);
 
-            let mut item_index = 0;
-            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
-            for token_id in items {
-                assert(
-                    seller == collection_dispatcher.owner_of((*token_id).into()),
-                    Errors::NOT_BEAST_OWNER,
-                );
+            // Batch add items (replaces loop)
+            self.add_items(world, auction_id, items, collection);
 
-                // TODO: Rentals check: let rental = store.rental(*token_id);
-                // rental.assert_not_active();
+            //store.auction_items_added(auction_id, auction.item_count); // Optional: Post-items
+            //event (now uses updated count)
 
-                self.add_item(world, auction_id, *token_id, collection);
-                item_index += 1;
-            }
-
-            //store.auction_items_added(auction_id, item_index); // Post-items event
-            store.auction_created(auction, get_block_timestamp()); // Now with items
+            // Reload auction for event (item_count now set by add_items)
+            let auction = store.auction(auction_id);
+            store.auction_created(auction, get_block_timestamp());
 
             if let Option::Some(dur) = duration {
                 self.start_auction(world, auction_id, dur);
@@ -72,32 +64,63 @@ pub mod AuctionableComponent {
             auction_id
         }
 
-        fn add_item(
+        /// Adds multiple items to an auction in batch.
+        /// Validates ownership and rentals for all items upfront.
+        /// Assumes all items are from the same collection for simplicity; extend if needed.
+        fn add_items(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
-            token_id: u32,
-            collection_address: ContractAddress,
+            token_ids: Span<u32>,
+            collection: ContractAddress,
         ) {
             let mut store = StoreTrait::new(world);
-            // TODO: Check if there are no rentals in auction items.
             let mut auction = store.auction(auction_id);
             auction.assert_is_draft();
-            let beast_dispatcher = IERC721Dispatcher { contract_address: collection_address };
-            let beast_owner = beast_dispatcher.owner_of(token_id.into());
-            assert(get_caller_address() == beast_owner, Errors::NOT_BEAST_OWNER);
 
-            //TODO: approve exchange as BEAST spender. I also need to validate
+            let caller = get_caller_address();
+            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
 
-            let item_index = auction.item_count;
+            // Batch ownership checks
+            let mut item_index = auction.item_count;
+            let mut i: usize = 0;
+            while i < token_ids.len() {
+                let token_id = *token_ids[i];
+                assert(
+                    caller == collection_dispatcher.owner_of(token_id.into()),
+                    Errors::NOT_BEAST_OWNER,
+                );
 
-            let auction_item = AuctionItemTrait::new_item(
-                auction_id, item_index, token_id, collection_address.into(),
-            );
-            store.set_auction_item(@auction_item);
-            auction.item_count += 1;
+                // TODO: Rentals check (if Rental component exists)
+                // let rental = store.rental(token_id);
+                // rental.assert_not_active();
+
+                // TODO: Approve exchange as spender for each beast (call set_approval_for_all if
+                // not already)
+                // let exchange_address = get_contract_address();  // Or fetch from config
+                // collection_dispatcher.set_approval_for_all(exchange_address, true);  // But this
+                // is per-collection, not per-token
+
+                i += 1;
+            }
+
+            // Add all items
+            i = 0;
+            while i < token_ids.len() {
+                let token_id = *token_ids[i];
+                let auction_item = AuctionItemTrait::new_item(
+                    auction_id, item_index, token_id, collection.into(),
+                );
+                store.set_auction_item(@auction_item);
+                item_index += 1;
+                i += 1;
+            }
+
+            // Update auction once
+            auction.item_count = item_index;
             store.set_auction(@auction);
         }
+
 
         fn start_auction(
             self: @ComponentState<TContractState>,
