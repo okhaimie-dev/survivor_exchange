@@ -36,6 +36,7 @@ pub mod utils;
 
 #[cfg(test)]
 pub mod tests {
+    pub mod mocks;
     mod setup;
     mod test_world;
 }

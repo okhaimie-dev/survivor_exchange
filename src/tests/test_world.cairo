@@ -1,16 +1,14 @@
 mod test_auction_system {
-    use dojo_snf_test::{set_account_address, set_caller_address};
-    use snforge_std::start_mock_call;
-    //use survivor_exchange::models::vault::Vault;
+    use dojo_snf_test::set_caller_address;
+    use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
+    use survivor_exchange::tests::mocks::{IMockERC721Dispatcher, IMockERC721DispatcherTrait};
     use survivor_exchange::tests::setup;
-    use survivor_exchange::tests::setup::tests::Systems;
-    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, SURVIVOR_ADDRESS_MAINNET};
+    use survivor_exchange::tests::setup::tests::{MockContracts, Systems};
 
-    fn setup_active_auction() -> (dojo::world::WorldStorage, Systems, u32) {
-        set_account_address(setup::tests::OWNER());
-        let (world, systems) = setup::tests::spawn_auction();
+    fn setup_active_auction() -> (dojo::world::WorldStorage, Systems, MockContracts, u32) {
+        let (world, systems, mocks) = setup::tests::spawn_auction_with_mocks();
 
         let name: ByteArray = "test_auction";
         let starting_price: u64 = 100;
@@ -21,21 +19,40 @@ mod test_auction_system {
         let duration: Option<u64> = Option::Some(3600);
 
         let owner = setup::tests::OWNER();
-        let beast_addr = BEAST_ADDRESS_MAINNET();
-        let survivor_addr = SURVIVOR_ADDRESS_MAINNET();
-        start_mock_call(beast_addr, selector!("owner_of"), owner);
+        // Use deployed mock contracts instead of mainnet addresses
+        let beast_addr = mocks.erc721_address;
+        let fee_token = mocks.erc20_address;
+
         set_caller_address(owner);
         let auction_id = systems
             .auction_systems
-            .create_auction(name, starting_price, items_span, beast_addr, duration, survivor_addr);
+            .create_auction(name, starting_price, items_span, beast_addr, duration, fee_token);
 
-        (world, systems, auction_id)
+        (world, systems, mocks, auction_id)
+    }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_mock_erc721_works() {
+        let erc721_addr = setup::tests::deploy_mock_erc721();
+        let dispatcher = IMockERC721Dispatcher { contract_address: erc721_addr };
+        let owner = dispatcher.owner_of(1_u256);
+        assert(owner == setup::tests::OWNER(), 'mock owner wrong');
+    }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_mock_with_oz_interface() {
+        let erc721_addr = setup::tests::deploy_mock_erc721();
+        let dispatcher = IERC721Dispatcher { contract_address: erc721_addr };
+        let owner = dispatcher.owner_of(1_u256);
+        assert(owner == setup::tests::OWNER(), 'oz mock owner wrong');
     }
 
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_create_auction() {
-        let (world, _dispatcher, auction_id) = setup_active_auction();
+        let (world, _dispatcher, _mocks, auction_id) = setup_active_auction();
 
         let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(auction_id);
@@ -52,15 +69,14 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_bid_initial() {
-        let (world, systems, auction_id) = setup_active_auction();
+        let (world, systems, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();
         set_caller_address(bidder);
 
         let initial_bid: u64 = 100;
-        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
+        // Mock ERC20 is already deployed and always returns true for transfer_from
 
         // Act: Place initial bid
         systems.auction_systems.bid(auction_id, initial_bid);
@@ -83,7 +99,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_increase_bid() {
-        let (world, systems, auction_id) = setup_active_auction();
+        let (world, systems, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();
@@ -91,15 +107,11 @@ mod test_auction_system {
 
         let initial_bid: u64 = 20;
         let increased_bid: u64 = 70;
-        let diff: u64 = increased_bid - initial_bid;
-        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
 
         // Initial bid
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, initial_bid);
 
         // Increase bid
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, increased_bid);
 
         // Assert
@@ -120,24 +132,21 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_withdraw_after_outbid() {
-        let (world, systems, auction_id) = setup_active_auction();
+        let (world, systems, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder1 = setup::tests::BIDDER();
-        let bidder2 = 0x02.try_into().unwrap(); // Another bidder
+        let bidder2 = setup::tests::BIDDER2();
         set_caller_address(bidder1);
 
         let bid1: u64 = 20;
         let higher_bid: u64 = 50;
-        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
 
         // Bidder1 places initial bid
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, bid1);
 
         // Bidder2 outbids
         set_caller_address(bidder2);
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, higher_bid);
 
         // Bidder1 withdraws (now outbid)
@@ -149,7 +158,9 @@ mod test_auction_system {
         assert(bidder1_bid.amount == 0, 'bid not cleared');
 
         let vault = store.vault(auction_id);
-        assert(vault.locked_amount == higher_bid.into(), 'wrong vault after withdraw'); // Only bidder2's bid remains
+        assert(
+            vault.locked_amount == higher_bid.into(), 'wrong vault after withdraw',
+        ); // Only bidder2's bid remains
 
         let share1 = store.vault_share(auction_id, bidder1.into());
         assert(share1.share_amount == 0, 'share not zero');
@@ -159,7 +170,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_increase_then_withdraw_full_refund() {
-        let (world, systems, auction_id) = setup_active_auction();
+        let (world, systems, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();
@@ -167,25 +178,17 @@ mod test_auction_system {
 
         let initial_bid: u64 = 20;
         let increased_bid: u64 = 70;
-        let usdc_addr = survivor_exchange::utils::USDC_ADDRESS_MAINNET();
 
         // Initial bid
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, initial_bid);
 
         // Increase bid (deposits diff=50)
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, increased_bid);
 
-        // Simulate outbid (or end auction) to allow withdraw
-        // For simplicity, assume outbid by another, but to test withdraw, we can end auction if needed
-        // But withdraw checks !highest or !active or expired
-        // To test, let's mock time or outbid
-
-        let bidder2 = 0x02.try_into().unwrap();
+        // Simulate outbid to allow withdraw
+        let bidder2 = setup::tests::BIDDER2();
         set_caller_address(bidder2);
         let higher_bid: u64 = 100;
-        start_mock_call(usdc_addr, selector!("transfer_from"), 0);
         systems.auction_systems.bid(auction_id, higher_bid);
 
         // Now bidder withdraws full 70

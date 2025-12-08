@@ -5,6 +5,8 @@ pub mod tests {
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
         spawn_test_world,
     };
+    use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+    use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
     use survivor_exchange::systems::vault::IVaultDispatcher;
@@ -14,13 +16,23 @@ pub mod tests {
     }
 
     pub fn BIDDER() -> starknet::ContractAddress {
-        0x127fd0f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
+        0x2.try_into().unwrap()
+    }
+
+    pub fn BIDDER2() -> starknet::ContractAddress {
+        0x3.try_into().unwrap()
     }
 
     #[derive(Drop)]
     pub struct Systems {
         pub auction_systems: IAuctionMarketplaceDispatcher,
         pub vault_systems: IVaultDispatcher,
+    }
+
+    #[derive(Drop, Copy)]
+    pub struct MockContracts {
+        pub erc721_address: ContractAddress,
+        pub erc20_address: ContractAddress,
     }
 
     fn namespace_def() -> NamespaceDef {
@@ -50,6 +62,18 @@ pub mod tests {
             .span()
     }
 
+    pub fn deploy_mock_erc721() -> ContractAddress {
+        let contract = declare("MockERC721").unwrap_syscall().contract_class();
+        let (address, _) = contract.deploy(@array![]).unwrap_syscall();
+        address
+    }
+
+    pub fn deploy_mock_erc20() -> ContractAddress {
+        let contract = declare("MockERC20").unwrap_syscall().contract_class();
+        let (address, _) = contract.deploy(@array![]).unwrap_syscall();
+        address
+    }
+
     pub fn spawn_auction() -> (WorldStorage, Systems) {
         // [Setup] World
         let namespace_def = namespace_def();
@@ -64,5 +88,13 @@ pub mod tests {
         };
 
         (world, systems)
+    }
+
+    pub fn spawn_auction_with_mocks() -> (WorldStorage, Systems, MockContracts) {
+        let (world, systems) = spawn_auction();
+        let erc721_address = deploy_mock_erc721();
+        let erc20_address = deploy_mock_erc20();
+        let mocks = MockContracts { erc721_address, erc20_address };
+        (world, systems, mocks)
     }
 }
