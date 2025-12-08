@@ -8,12 +8,10 @@ pub mod tests {
     use snforge_std::{
         CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
     };
-    use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
     use survivor_exchange::systems::vault::IVaultDispatcher;
-    use survivor_exchange::tests::mocks::account::Account;
 
     pub fn OWNER() -> starknet::ContractAddress {
         'OWNER'.try_into().unwrap()
@@ -73,17 +71,6 @@ pub mod tests {
             .span()
     }
 
-    fn setup_account(public_key: felt252) -> ContractAddress {
-        let (account_address, _) = deploy_syscall(
-            class_hash: Account::TEST_CLASS_HASH,
-            contract_address_salt: public_key,
-            calldata: [public_key].span(),
-            deploy_from_zero: false,
-        )
-            .unwrap_syscall();
-        account_address
-    }
-
     pub fn deploy_mock_erc721() -> ContractAddress {
         let contract = declare("MockERC721").unwrap_syscall().contract_class();
         let (address, _) = contract.deploy(@array![]).unwrap_syscall();
@@ -97,26 +84,22 @@ pub mod tests {
     }
 
     pub fn spawn_auction() -> (WorldStorage, Systems, Context) {
-        // [Setup] World
         let namespace_def = namespace_def();
         let world = spawn_test_world([namespace_def].span());
         world.sync_perms_and_inits(contract_defs());
-        // [Setup] Systems
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
         let (vault_address, _) = world.dns(@"vault_systems").unwrap();
-        let owner: ContractAddress = OWNER();
-        let bidder: ContractAddress = BIDDER();
-        let bidder_2: ContractAddress = BIDDER2();
-        let context = Context { owner, bidder, bidder_2 };
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
+
+        let owner: ContractAddress = OWNER();
+        let bidder: ContractAddress = BIDDER();
+        let bidder_2: ContractAddress = BIDDER2();
+        let context = Context { owner, bidder, bidder_2 };
+
         cheat_caller_address(auction_address, owner, CheatSpan::TargetCalls(1));
-        println!("This fails here");
-        //setup_account(bidder.into());
-        //setup_account(bidder_2.into());
-        //set_caller_address(owner);
         (world, systems, context)
     }
 
