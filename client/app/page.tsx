@@ -31,7 +31,7 @@ export default function Home() {
   const token = searchParams.get('token');
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center font-sans dark:bg-black"> 
+    <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black"> 
       <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
         <Hero />
         <BidAuctionMyListings 
