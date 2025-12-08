@@ -67,8 +67,6 @@ graph TD
     BEASTs[BEAST ERC721] <--> AuctionItem
 ```
 
-Detailed: [ARCHITECTURE.md](docs/ARCHITECTURE.md), [MODELS](docs/MODELS.md), [API](docs/API.md).
-
 ## 🚀 Usage Example: Create/Bid Auction
 ```cairo
 // Create bundle auction (2 BEASTs)
@@ -82,17 +80,12 @@ auction.bid(auction_id, 1500);  // > starting_price
 // Settle (anyone post-end_time)
 auction.settle_auction(auction_id);  // NFTs → winner, funds → seller
 ```
-See [USAGE.md](docs/USAGE.md).
 
 ## 🧪 Testing
 ```bash
 sozo test  # 100% coverage: create/bid/withdraw/settle
 ```
 [src/tests/test_world.cairo](src/tests/test_world.cairo).
-
-## 🌐 Deployment
-Local: Docker/Sozo. Mainnet: Update `dojo_release.toml` RPC, `sozo migrate --network=mainnet`.
-Detailed: [DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## 🤝 Contributing
 1. `sozo build && sozo test`

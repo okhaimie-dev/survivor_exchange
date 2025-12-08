@@ -11,6 +11,7 @@ test = "snforge test"
 
 [dependencies]
 dojo = "1.8.0"
+openzeppelin = "2.0.0"
 openzeppelin_token = "2.0.0"
 starknet = "2.13.1"
 

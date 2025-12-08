@@ -1,14 +1,15 @@
 mod test_auction_system {
     use dojo_snf_test::set_caller_address;
-    use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
-    use survivor_exchange::tests::mocks::{IMockERC721Dispatcher, IMockERC721DispatcherTrait};
+    use survivor_exchange::tests::mocks::erc721::{
+        IMockERC721Dispatcher, IMockERC721DispatcherTrait,
+    };
     use survivor_exchange::tests::setup;
-    use survivor_exchange::tests::setup::tests::{MockContracts, Systems};
+    use survivor_exchange::tests::setup::tests::{Context, MockContracts, Systems};
 
-    fn setup_active_auction() -> (dojo::world::WorldStorage, Systems, MockContracts, u32) {
-        let (world, systems, mocks) = setup::tests::spawn_auction_with_mocks();
+    fn setup_active_auction() -> (dojo::world::WorldStorage, Systems, Context, MockContracts, u32) {
+        let (world, systems, context, mocks) = setup::tests::spawn_auction_with_mocks();
 
         let name: ByteArray = "test_auction";
         let starting_price: u64 = 100;
@@ -28,7 +29,7 @@ mod test_auction_system {
             .auction_systems
             .create_auction(name, starting_price, items_span, beast_addr, duration, fee_token);
 
-        (world, systems, mocks, auction_id)
+        (world, systems, context, mocks, auction_id)
     }
 
     #[test]
@@ -42,22 +43,14 @@ mod test_auction_system {
 
     #[test]
     #[available_gas(l2_gas: 300000000000)]
-    fn test_mock_with_oz_interface() {
-        let erc721_addr = setup::tests::deploy_mock_erc721();
-        let dispatcher = IERC721Dispatcher { contract_address: erc721_addr };
-        let owner = dispatcher.owner_of(1_u256);
-        assert(owner == setup::tests::OWNER(), 'oz mock owner wrong');
-    }
-
-    #[test]
-    #[available_gas(l2_gas: 300000000000)]
     fn test_create_auction() {
-        let (world, _dispatcher, _mocks, auction_id) = setup_active_auction();
+        let (world, _dispatcher, context, _mocks, auction_id) = setup_active_auction();
 
         let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(auction_id);
 
-        let owner = setup::tests::OWNER();
+        let owner = context.owner;
+
         assert(auction.seller == owner.into(), 'wrong seller');
         assert(auction.name == "test_auction", 'wrong name');
         assert(auction.starting_price == 100, 'wrong price');
@@ -69,7 +62,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_bid_initial() {
-        let (world, systems, _mocks, auction_id) = setup_active_auction();
+        let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();
@@ -99,7 +92,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_increase_bid() {
-        let (world, systems, _mocks, auction_id) = setup_active_auction();
+        let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();
@@ -132,7 +125,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_withdraw_after_outbid() {
-        let (world, systems, _mocks, auction_id) = setup_active_auction();
+        let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder1 = setup::tests::BIDDER();
@@ -170,7 +163,7 @@ mod test_auction_system {
     #[test]
     #[available_gas(l2_gas: 300000000000)]
     fn test_increase_then_withdraw_full_refund() {
-        let (world, systems, _mocks, auction_id) = setup_active_auction();
+        let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
 
         let bidder = setup::tests::BIDDER();

@@ -14,21 +14,6 @@ pub trait IMockERC20<TContractState> {
     fn balance_of(self: @TContractState, account: ContractAddress) -> u256;
 }
 
-/// Mock ERC721 - returns 0x1 (OWNER) as owner of all tokens
-#[starknet::contract]
-pub mod MockERC721 {
-    use starknet::ContractAddress;
-
-    #[storage]
-    struct Storage {}
-
-    #[abi(embed_v0)]
-    impl MockERC721Impl of super::IMockERC721<ContractState> {
-        fn owner_of(self: @ContractState, token_id: u256) -> ContractAddress {
-            survivor_exchange::tests::setup::tests::OWNER()
-        }
-    }
-}
 
 /// Mock ERC20 - always succeeds transfers
 #[starknet::contract]

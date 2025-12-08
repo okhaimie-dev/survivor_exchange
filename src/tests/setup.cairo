@@ -3,13 +3,15 @@ pub mod tests {
     use dojo::world::{WorldStorage, WorldStorageTrait, world};
     use dojo_snf_test::{
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
-        spawn_test_world,
+        set_account_address, spawn_test_world,
     };
     use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+    use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
     use survivor_exchange::systems::vault::IVaultDispatcher;
+    use survivor_exchange::tests::mocks::account::Account;
 
     pub fn OWNER() -> starknet::ContractAddress {
         0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
@@ -27,6 +29,11 @@ pub mod tests {
     pub struct Systems {
         pub auction_systems: IAuctionMarketplaceDispatcher,
         pub vault_systems: IVaultDispatcher,
+    }
+
+    #[derive(Copy, Drop)]
+    pub struct Context {
+        pub owner: starknet::ContractAddress,
     }
 
     #[derive(Drop, Copy)]
@@ -62,6 +69,17 @@ pub mod tests {
             .span()
     }
 
+    fn setup_account(public_key: felt252) -> ContractAddress {
+        let (account_address, _) = deploy_syscall(
+            class_hash: Account::TEST_CLASS_HASH,
+            contract_address_salt: public_key,
+            calldata: [public_key].span(),
+            deploy_from_zero: false,
+        )
+            .unwrap_syscall();
+        account_address
+    }
+
     pub fn deploy_mock_erc721() -> ContractAddress {
         let contract = declare("MockERC721").unwrap_syscall().contract_class();
         let (address, _) = contract.deploy(@array![]).unwrap_syscall();
@@ -74,7 +92,7 @@ pub mod tests {
         address
     }
 
-    pub fn spawn_auction() -> (WorldStorage, Systems) {
+    pub fn spawn_auction() -> (WorldStorage, Systems, Context) {
         // [Setup] World
         let namespace_def = namespace_def();
         let world = spawn_test_world([namespace_def].span());
@@ -82,19 +100,22 @@ pub mod tests {
         // [Setup] Systems
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
         let (vault_address, _) = world.dns(@"vault_systems").unwrap();
+        let owner: ContractAddress = OWNER();
+        set_account_address(owner);
+        let context = Context { owner };
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
 
-        (world, systems)
+        (world, systems, context)
     }
 
-    pub fn spawn_auction_with_mocks() -> (WorldStorage, Systems, MockContracts) {
-        let (world, systems) = spawn_auction();
+    pub fn spawn_auction_with_mocks() -> (WorldStorage, Systems, Context, MockContracts) {
+        let (world, systems, context) = spawn_auction();
         let erc721_address = deploy_mock_erc721();
         let erc20_address = deploy_mock_erc20();
         let mocks = MockContracts { erc721_address, erc20_address };
-        (world, systems, mocks)
+        (world, systems, context, mocks)
     }
 }
