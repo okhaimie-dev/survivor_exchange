@@ -14,15 +14,15 @@ pub mod tests {
     use survivor_exchange::tests::mocks::account::Account;
 
     pub fn OWNER() -> starknet::ContractAddress {
-        0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
+        'OWNER'.try_into().unwrap()
     }
 
     pub fn BIDDER() -> starknet::ContractAddress {
-        0x2.try_into().unwrap()
+        'BIDDER'.try_into().unwrap()
     }
 
     pub fn BIDDER2() -> starknet::ContractAddress {
-        0x3.try_into().unwrap()
+        'BIDDER2'.try_into().unwrap()
     }
 
     #[derive(Drop)]
@@ -34,6 +34,8 @@ pub mod tests {
     #[derive(Copy, Drop)]
     pub struct Context {
         pub owner: starknet::ContractAddress,
+        pub bidder: starknet::ContractAddress,
+        pub bidder_2: starknet::ContractAddress,
     }
 
     #[derive(Drop, Copy)]
@@ -101,15 +103,18 @@ pub mod tests {
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
         let (vault_address, _) = world.dns(@"vault_systems").unwrap();
         let owner: ContractAddress = OWNER();
-        let context = Context { owner };
+        let bidder: ContractAddress = BIDDER();
+        let bidder_2: ContractAddress = BIDDER2();
+        let context = Context { owner, bidder, bidder_2 };
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
-        //set_account_address(owner);
+        set_account_address(owner);
         println!("This fails here");
-        setup_account(owner.into());
-        println!("True");
+        //setup_account(owner.into());
+        //setup_account(bidder.into());
+        //setup_account(bidder_2.into());
         set_caller_address(owner);
         (world, systems, context)
     }
