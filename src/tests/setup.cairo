@@ -3,7 +3,7 @@ pub mod tests {
     use dojo::world::{WorldStorage, WorldStorageTrait, world};
     use dojo_snf_test::{
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
-        set_account_address, spawn_test_world,
+        set_account_address, set_caller_address, spawn_test_world,
     };
     use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
     use starknet::syscalls::deploy_syscall;
@@ -101,13 +101,16 @@ pub mod tests {
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
         let (vault_address, _) = world.dns(@"vault_systems").unwrap();
         let owner: ContractAddress = OWNER();
-        set_account_address(owner);
         let context = Context { owner };
         let systems = Systems {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
-
+        //set_account_address(owner);
+        println!("This fails here");
+        setup_account(owner.into());
+        println!("True");
+        set_caller_address(owner);
         (world, systems, context)
     }
 

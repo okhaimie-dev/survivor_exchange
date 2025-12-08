@@ -20,15 +20,16 @@ mod test_auction_system {
         let duration: Option<u64> = Option::Some(3600);
 
         let owner = setup::tests::OWNER();
-        // Use deployed mock contracts instead of mainnet addresses
         let beast_addr = mocks.erc721_address;
         let fee_token = mocks.erc20_address;
 
-        set_caller_address(owner);
+        println!("This is where it fails")
+
         let auction_id = systems
             .auction_systems
             .create_auction(name, starting_price, items_span, beast_addr, duration, fee_token);
 
+        println!("Print owner if it gets here: {:?}", owner);
         (world, systems, context, mocks, auction_id)
     }
 
@@ -46,10 +47,10 @@ mod test_auction_system {
     fn test_create_auction() {
         let (world, _dispatcher, context, _mocks, auction_id) = setup_active_auction();
 
+        let owner = context.owner;
+
         let mut store: Store = StoreTrait::new(world);
         let auction = store.auction(auction_id);
-
-        let owner = context.owner;
 
         assert(auction.seller == owner.into(), 'wrong seller');
         assert(auction.name == "test_auction", 'wrong name');
