@@ -12,7 +12,7 @@ pub mod AuctionableComponent {
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
     use survivor_exchange::types::status::AuctionStatus;
-    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, USDC_ADDRESS_MAINNET};
+    use survivor_exchange::utils::USDC_ADDRESS_MAINNET;
 
     #[storage]
     pub struct Storage {}
@@ -83,7 +83,7 @@ pub mod AuctionableComponent {
             // TODO: Check if there are no rentals in auction items.
             let mut auction = store.auction(auction_id);
             auction.assert_is_draft();
-            let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET() };
+            let beast_dispatcher = IERC721Dispatcher { contract_address: collection_address };
             let beast_owner = beast_dispatcher.owner_of(token_id.into());
             assert(get_caller_address() == beast_owner, Errors::NOT_BEAST_OWNER);
 

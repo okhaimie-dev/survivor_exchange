@@ -23,6 +23,10 @@ mod test_auction_system {
         let beast_addr = mocks.erc721_address;
         let fee_token = mocks.erc20_address;
 
+        println!("Owner is: {:?}", owner);
+        println!("Beast addr is: {:?}", beast_addr);
+        println!("Fee token is: {:?}", fee_token);
+
         println!("This is where it fails")
 
         let auction_id = systems

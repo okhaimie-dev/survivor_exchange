@@ -3,9 +3,11 @@ pub mod tests {
     use dojo::world::{WorldStorage, WorldStorageTrait, world};
     use dojo_snf_test::{
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
-        set_account_address, set_caller_address, spawn_test_world,
+        spawn_test_world,
     };
-    use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
+    use snforge_std::{
+        CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
+    };
     use starknet::syscalls::deploy_syscall;
     use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
@@ -110,12 +112,11 @@ pub mod tests {
             auction_systems: IAuctionMarketplaceDispatcher { contract_address: auction_address },
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
-        set_account_address(owner);
+        cheat_caller_address(auction_address, owner, CheatSpan::TargetCalls(1));
         println!("This fails here");
-        //setup_account(owner.into());
         //setup_account(bidder.into());
         //setup_account(bidder_2.into());
-        set_caller_address(owner);
+        //set_caller_address(owner);
         (world, systems, context)
     }
 
