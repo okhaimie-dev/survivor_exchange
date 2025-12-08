@@ -34,12 +34,12 @@ pub mod vault_systems {
             //let vault = store.vault(vault_id);
             //assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
 
-            let survivor_dispatcher = IERC20Dispatcher { contract_address: USDC_ADDRESS_MAINNET() };
+            let dispatcher = IERC20Dispatcher { contract_address: USDC_ADDRESS_MAINNET() };
 
-            survivor_dispatcher.transfer_from(depositor, get_contract_address(), amount);
+            dispatcher.transfer_from(depositor, get_contract_address(), amount);
 
             let mut share = store.vault_share(vault_id, depositor.into());
-            let add_amount: u256 = amount; // TODO: u256 models
+            let add_amount: u256 = amount;
             share.deposited_amount += add_amount;
             share.share_amount += add_amount;
             share.claimed = false;
@@ -59,7 +59,7 @@ pub mod vault_systems {
 
             assert(share.share_amount >= deduct, Errors::INSUFFICIENT_SHARES);
 
-            let auction = store.auction(vault_id); // vault_id == auction_id
+            let auction = store.auction(vault_id);
             auction.assert_does_exist();
             let is_highest = caller.into() == auction.highest_bidder;
             let is_active = auction.status == AuctionStatus::Active.into();

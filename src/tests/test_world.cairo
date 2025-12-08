@@ -19,21 +19,13 @@ mod test_auction_system {
         let items_span = items.span();
         let duration: Option<u64> = Option::Some(3600);
 
-        let owner = setup::tests::OWNER();
         let beast_addr = mocks.erc721_address;
         let fee_token = mocks.erc20_address;
-
-        println!("Owner is: {:?}", owner);
-        println!("Beast addr is: {:?}", beast_addr);
-        println!("Fee token is: {:?}", fee_token);
-
-        println!("This is where it fails")
 
         let auction_id = systems
             .auction_systems
             .create_auction(name, starting_price, items_span, beast_addr, duration, fee_token);
 
-        println!("Print owner if it gets here: {:?}", owner);
         (world, systems, context, mocks, auction_id)
     }
 
@@ -66,6 +58,7 @@ mod test_auction_system {
 
     #[test]
     #[available_gas(l2_gas: 300000000000)]
+    #[fork("MAINNET_LATEST")]
     fn test_bid_initial() {
         let (world, systems, _context, _mocks, auction_id) = setup_active_auction();
         let mut store: Store = StoreTrait::new(world);
