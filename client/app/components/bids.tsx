@@ -654,7 +654,11 @@ export default function Bids({
     }, [account, address, selectedCollectionId, paginatedFilteredAuctions]);
 
     const handleWithdrawBid = useCallback(async () => {
-        if (!account || !selectedCollectionId) {
+        if (!account) {
+            return;
+        }
+        
+        if (selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined) {
             return;
         }
 
@@ -664,11 +668,11 @@ export default function Bids({
 
             const auctionId = parseInt(selectedCollectionId, 10);
 
-            const response = await account.execute({
+            const response = await account.execute([{
                 contractAddress: AUCTION_CONTRACT_ADDRESS,
                 entrypoint: "withdraw_bid",
                 calldata: [auctionId.toString()]
-            });
+            }]);
 
             setWithdrawTxnHash(response.transaction_hash);
         } catch (err) {
@@ -1021,7 +1025,11 @@ export default function Bids({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleWithdrawBid}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleWithdrawBid();
+                                    }}
                                     disabled={!account || isWithdrawing}
                                     className={`inline-flex items-center justify-center rounded-full w-full px-6 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
                                         account && !isWithdrawing
