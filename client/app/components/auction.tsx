@@ -297,7 +297,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                             </p>
                             {hasSelection ? (
                                 <ul className="flex flex-wrap gap-2">
-                                    {selectedNFTs.map((nft) => (
+                                    {selectedNFTs.slice(0, 16).map((nft) => (
                                         <li
                                             key={nft.tokenId}
                                             className="rounded-full border border-[rgb(50,255,52)]/40 px-3 py-1 text-[10px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]"
@@ -305,6 +305,11 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                             {nft.metadataName}
                                         </li>
                                     ))}
+                                    {selectedNFTs.length > 16 && (
+                                        <li className="rounded-full border border-[rgb(50,255,52)]/40 px-3 py-1 text-[10px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]">
+                                            and {selectedNFTs.length - 16} more...
+                                        </li>
+                                    )}
                                 </ul>
                             ) : (
                                 <p className="text-xs text-[rgb(186,255,188)]/60">
