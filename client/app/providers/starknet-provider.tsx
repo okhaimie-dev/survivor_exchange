@@ -4,7 +4,7 @@ import { sepolia, mainnet } from "@starknet-react/chains";
 import { StarknetConfig, jsonRpcProvider, cartridge, braavos, argent } from "@starknet-react/core";
 
 import { ControllerConnector } from "@cartridge/connector";
-import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS, ETH_ADDRESS, STRK_ADDRESS, LORDS_ADDRESS, SURVIVOR_ADDRESS_MAINNET } from "../lib/constants";
+import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS, ETH_ADDRESS, STRK_ADDRESS, LORDS_ADDRESS, SURVIVOR_ADDRESS_MAINNET, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
 
 const provider = jsonRpcProvider({
   rpc: (chain) => {
@@ -65,6 +65,22 @@ const policies = {
           name: "Multi Multihop Swap",
           description: "Execute multiple multihop token swaps",
           entrypoint: "multi_multihop_swap",
+        }
+      ]
+    },
+    [BEASTS_NFT_CONTRACT_ADDRESS]: {
+      namespace: "BEAST NFTs",
+      description: "BEAST NFT collection",
+      methods: [
+        {
+          name: "Approve",
+          description: "Approve a spender for a specific NFT",
+          entrypoint: "approve",
+        },
+        {
+          name: "Transfer",
+          description: "Transfer a BEAST NFT",
+          entrypoint: "transfer",
         }
       ]
     },

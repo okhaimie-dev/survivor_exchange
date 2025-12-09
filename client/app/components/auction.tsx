@@ -158,30 +158,38 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                 contractAddress: string;
                 entrypoint: string;
                 calldata: (string | number | typeof collectionNameByteArray)[];
-            }> = [
-                {
+            }> = [];
+
+            // Approve each NFT individually for better security (instead of set_approval_for_all)
+            // ERC721 approve(to: ContractAddress, token_id: u256)
+            // For u256, we pass [low, high] parts. Since token IDs are typically u32, high = 0
+            for (const tokenId of token_ids) {
+                calls.push({
                     contractAddress: BEASTS_NFT_CONTRACT_ADDRESS,
-                    entrypoint: "set_approval_for_all",
+                    entrypoint: "approve",
                     calldata: [
                         AUCTION_CONTRACT_ADDRESS,
-                        "1" 
+                        tokenId.toString(), // low part of u256
+                        "0" // high part of u256 (token IDs fit in u32, so high is always 0)
                     ]
-                },
-                {
-                    contractAddress: AUCTION_CONTRACT_ADDRESS,
-                    entrypoint: "create_auction",
-                    calldata: [
-                        collectionNameByteArray,
-                        startingPriceWhole.toString(),
-                        token_ids.length.toString(),
-                        ...token_ids.map(id => id.toString()),
-                        BEASTS_NFT_CONTRACT_ADDRESS,
-                        "0",
-                        duration_seconds.toString(),
-                        sellerToken
-                    ]
-                }
-            ];
+                });
+            }
+
+            // Then create the auction
+            calls.push({
+                contractAddress: AUCTION_CONTRACT_ADDRESS,
+                entrypoint: "create_auction",
+                calldata: [
+                    collectionNameByteArray,
+                    startingPriceWhole.toString(),
+                    token_ids.length.toString(),
+                    ...token_ids.map(id => id.toString()),
+                    BEASTS_NFT_CONTRACT_ADDRESS,
+                    "0",
+                    duration_seconds.toString(),
+                    sellerToken
+                ]
+            });
 
             const response = await account.execute(calls);
         
