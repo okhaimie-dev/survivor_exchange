@@ -113,21 +113,16 @@ export function useAuctions() {
           });
 
           const rawNFTs: ERC721Token[] = (response?.tokenBalances?.edges || [])
-            .map((edge) => {
+            .flatMap((edge) => {
               const metadata = edge.node.tokenMetadata;
-              if (!metadata || !('tokenId' in metadata)) return null;
+              if (!metadata || !('tokenId' in metadata)) return [];
               // Normalize contract addresses from GraphQL
-              return {
+              const normalized: ERC721Token = {
                 ...metadata,
                 contractAddress: metadata.contractAddress ? normalizeContractAddress(metadata.contractAddress) : metadata.contractAddress,
               };
-            })
-            .filter((metadata): metadata is ERC721Token => {
-              return metadata !== null;
-            })
-            .filter((metadata): metadata is ERC721Token => {
-              const nftContract = normalizeContractAddress(metadata.contractAddress).toLowerCase();
-              return nftContract === targetContractNormalized;
+              const nftContract = normalizeContractAddress(normalized.contractAddress).toLowerCase();
+              return nftContract === targetContractNormalized ? [normalized] : [];
             });
 
           const formattedNFTs = formatNFTs(rawNFTs);

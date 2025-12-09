@@ -30,17 +30,17 @@ export function useNFTMetadata({ sellerAddress, tokenIds, contractAddress }: Use
         // Normalize seller address before query
         const normalizedSellerAddress = normalizeContractAddress(sellerAddress);
         const response = await fetchMyNFTs(normalizedSellerAddress);
-        const rawNFTs: ERC721Token[] = response?.tokenBalances?.edges
-          ?.map((edge) => {
+        const rawNFTs: ERC721Token[] = (response?.tokenBalances?.edges || [])
+          .flatMap((edge) => {
             const metadata = edge.node.tokenMetadata;
-            if (!metadata || metadata === null || metadata === undefined) return null;
+            if (!metadata || metadata === null || metadata === undefined) return [];
             // Normalize contract addresses from GraphQL
-            return {
+            const normalized: ERC721Token = {
               ...metadata,
               contractAddress: metadata.contractAddress ? normalizeContractAddress(metadata.contractAddress) : metadata.contractAddress,
             };
-          })
-          .filter((metadata): metadata is ERC721Token => metadata !== null && metadata !== undefined) || [];
+            return [normalized];
+          });
         
         const allNfts = formatNFTs(rawNFTs);
         
