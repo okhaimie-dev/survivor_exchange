@@ -264,15 +264,10 @@ pub mod AuctionableComponent {
 
             // Auto-end if active and expired (mimics end() logic for post-expiry)
             if status == AuctionStatus::Active.into() {
-                assert(
-                    current_time >= auction.end_time, Errors::AUCTION_NOT_ENDED,
-                ); // Revert if not expired
-                // TODO: Check no active rentals on items before ending/settling
+                assert(current_time >= auction.end_time, Errors::AUCTION_NOT_ENDED);
 
                 auction.status = AuctionStatus::Ended.into();
-                store.set_auction(@auction); // Persist the Ended status
-                // TODO: Emit AuctionEnded event (auction_id, end_time)
-            // world.emit_event(AuctionEnded { auction_id, end_time: auction.end_time });
+                store.set_auction(@auction);
             } else {
                 // If not Active, must already be Ended
                 assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
