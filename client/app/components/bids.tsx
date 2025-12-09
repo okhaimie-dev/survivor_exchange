@@ -10,7 +10,7 @@ import { uint256, num } from "starknet";
 import { truncateAddress, formatUSD, formatTokenAmount, truncateAuctionName } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
-import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, IMAGE_BASE_URL, SUPPORTED_TOKENS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
 import { convertUSDCToToken } from "../lib/utils/usd-pricing";
 import { getTokenPriceInUSDC, shouldRefetchPrice } from "../lib/utils/token-price-cache"; 
@@ -346,8 +346,7 @@ export default function Bids({
             const balance = BigInt(low) + (BigInt(high) << BigInt(128));
 
             if (balance < tokenAmountWei) {
-                const balanceFormatted = (Number(balance) / Math.pow(10, paymentTokenInfo.decimals)).toFixed(paymentTokenInfo.decimals);
-                setInsufficientFundsError(`Insufficient funds. You have ${balanceFormatted} ${paymentTokenInfo.symbol}, but need ${tokenAmount} ${paymentTokenInfo.symbol}.`);
+                setInsufficientFundsError(`Insufficient funds to place bid.`);
                 setIsSubmitting(false);
                 return;
             }
@@ -362,7 +361,9 @@ export default function Bids({
             }
 
             if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                const approvalAmount = uint256.bnToUint256(tokenAmountWei);
+                // Approve 5% more than the USDC amount needed for the bid
+                const approvalAmountValue = (BigInt(finalUSDAmount) * 105n) / 100n;
+                const approvalAmount = uint256.bnToUint256(approvalAmountValue);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",
@@ -424,7 +425,9 @@ export default function Bids({
 
                 const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, tokenAmountWei);
 
-                const paymentTokenApproval = uint256.bnToUint256(MAX_UINT256);
+                // Approve 5% more than the amount needed for the swap
+                const paymentTokenApprovalAmount = (tokenAmountWei * 105n) / 100n;
+                const paymentTokenApproval = uint256.bnToUint256(paymentTokenApprovalAmount);
                 calls.push({
                     contractAddress: paymentToken,
                     entrypoint: "approve",
@@ -437,7 +440,9 @@ export default function Bids({
 
                 calls.push(...swapCalls);
 
-                const usdcApproval = uint256.bnToUint256(MAX_UINT256);
+                // Approve 5% more than the USDC amount needed for the bid
+                const usdcApprovalAmount = (BigInt(finalUSDAmount) * 105n) / 100n;
+                const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",
@@ -619,8 +624,9 @@ export default function Bids({
 
                 const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, swapInputAmount);
 
-                // Approve USDC for swap
-                const usdcApproval = uint256.bnToUint256(MAX_UINT256);
+                // Approve 5% more than the USDC amount needed for the swap
+                const usdcApprovalAmount = (swapInputAmount * 105n) / 100n;
+                const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",

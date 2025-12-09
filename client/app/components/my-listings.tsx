@@ -3,7 +3,7 @@ import moment from "moment";
 import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
-import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, MAX_UINT256 } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS } from "../lib/constants";
 import { formatUSDCompact, truncateAuctionName } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
@@ -262,8 +262,9 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
                 const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, swapInputAmount);
 
-                // Approve USDC for swap
-                const usdcApproval = uint256.bnToUint256(MAX_UINT256);
+                // Approve 5% more than the USDC amount needed for the swap
+                const usdcApprovalAmount = (swapInputAmount * 105n) / 100n;
+                const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",

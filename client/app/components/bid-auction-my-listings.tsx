@@ -61,6 +61,7 @@ export default function BidAuctionMyListingsRent({
             <div className="w-full h-full">
                 {activeTab === "bid" && (
                     <Bids 
+                        key="bid-tab"
                         auctions={allAuctions || auctions}
                         loading={auctionsLoading}
                         error={auctionsError}
@@ -71,9 +72,17 @@ export default function BidAuctionMyListingsRent({
                         token={token}
                     />
                 )}
-                {activeTab === "auction" && <Auction nfts={nfts} loading={loading} error={error} />}
+                {activeTab === "auction" && (
+                    <Auction 
+                        key="auction-tab"
+                        nfts={nfts} 
+                        loading={loading} 
+                        error={error} 
+                    />
+                )}
                 {activeTab === "my-listings" && (
                     <MyListings 
+                        key="my-listings-tab"
                         listings={listings}
                         loading={listingsLoading}
                         error={listingsError}
