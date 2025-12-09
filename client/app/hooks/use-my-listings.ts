@@ -41,8 +41,20 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     return auctions.map((auction) => {
       const decodedName = byteArrayToString(auction.name);
       
-      const startingPrice = parseFloat(auction.starting_price) || 0;
-      const currentBid = auction.current_bid ? parseFloat(auction.current_bid) : null;
+      // Parse starting_price - handle both decimal and hex strings
+      const startingPriceStr = auction.starting_price || "0";
+      const startingPrice = startingPriceStr.startsWith('0x') || startingPriceStr.startsWith('0X') 
+        ? parseInt(startingPriceStr, 16) 
+        : parseFloat(startingPriceStr);
+      
+      // Parse current_bid - handle both decimal and hex strings, then divide by 1e6
+      const currentBid = auction.current_bid ? (() => {
+        const bidStr = auction.current_bid;
+        const parsed = bidStr.startsWith('0x') || bidStr.startsWith('0X') 
+          ? parseInt(bidStr, 16) 
+          : parseFloat(bidStr);
+        return parsed / 1e6;
+      })() : null;
       const tokenCount = parseInt(auction.item_count, 10) || 0;
 
       return {

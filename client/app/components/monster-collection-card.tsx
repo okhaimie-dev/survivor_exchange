@@ -29,7 +29,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
         },
         {
             label: "Highest Bid",
-            value: collection.highestBid !== undefined ? formatUSD(collection.highestBid/1e6) : "—",
+            value: collection.highestBid !== undefined ? formatUSD(collection.highestBid) : "—",
             suffix: undefined,
         },
     ];

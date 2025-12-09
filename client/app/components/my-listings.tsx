@@ -211,8 +211,8 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
             if (isSeller && feeTokenAddress !== usdcAddress) {
                 // Calculate USDC amount in wei (USDC has 6 decimals)
-                // currentBid is already in USDC wei (6 decimals) from the contract
-                const usdcAmountWei = BigInt(Math.floor(listing.currentBid));
+                // currentBid is now divided by 1e6 for display, so we need to multiply back for contract calls
+                const usdcAmountWei = BigInt(Math.floor(listing.currentBid * 1e6));
                 
                 // generateSwapCalls adds a 1% buffer (101/100), so we need to pass 100/101 of the amount
                 // to ensure the transfer doesn't exceed the balance after settle_auction
@@ -397,7 +397,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
                                 <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Top Bid</p>
-                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.currentBid !== null ? formatUSDCompact(listing.currentBid / 1e6) : "—"}</p>
+                                <p className="font-orbitron text-base tracking-[0.3em]">{listing.currentBid !== null ? formatUSDCompact(listing.currentBid) : "—"}</p>
                             </div>
                         </div>
 

@@ -100,8 +100,20 @@ export default function Bids({
 
     const collections: Collection[] = useMemo(() => {
         return paginatedFilteredAuctions.map((auction) => {
-            const startingPrice = parseFloat(auction.starting_price) || 0;
-            const highestBid = auction.current_bid ? parseFloat(auction.current_bid) : undefined;
+            // Parse starting_price - handle both decimal and hex strings
+            const startingPriceStr = auction.starting_price || "0";
+            const startingPrice = startingPriceStr.startsWith('0x') || startingPriceStr.startsWith('0X') 
+                ? parseInt(startingPriceStr, 16) 
+                : parseFloat(startingPriceStr);
+            
+            // Parse current_bid - handle both decimal and hex strings, then divide by 1e6
+            const highestBid = auction.current_bid ? (() => {
+                const bidStr = auction.current_bid;
+                const parsed = bidStr.startsWith('0x') || bidStr.startsWith('0X') 
+                    ? parseInt(bidStr, 16) 
+                    : parseFloat(bidStr);
+                return parsed / 1e6;
+            })() : undefined;
             
             return {
                 id: auction.auction_id,
@@ -229,12 +241,12 @@ export default function Bids({
             try {
                 if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
                     setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
-                    setConvertedHighestBid(selectedCollection.highestBid ? selectedCollection.highestBid / 1e6 : undefined);
+                    setConvertedHighestBid(selectedCollection.highestBid);
                 } else if (tokenPrice !== null) {
                     setConvertedStartingPrice((selectedCollection.startingPrice / 1e6) / tokenPrice);
                     
                     if (selectedCollection.highestBid !== undefined) {
-                        setConvertedHighestBid((selectedCollection.highestBid / 1e6) / tokenPrice);
+                        setConvertedHighestBid(selectedCollection.highestBid / tokenPrice);
                     } else {
                         setConvertedHighestBid(undefined);
                     }
@@ -243,7 +255,7 @@ export default function Bids({
                     setConvertedStartingPrice(convertedStart);
                     
                     if (selectedCollection.highestBid !== undefined) {
-                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid / 1e6, paymentToken);
+                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid, paymentToken);
                         setConvertedHighestBid(convertedBid);
                     } else {
                         setConvertedHighestBid(undefined);
@@ -252,7 +264,7 @@ export default function Bids({
             } catch (error) {
                 console.error('Error converting prices:', error);
                 setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
-                setConvertedHighestBid(selectedCollection.highestBid ? selectedCollection.highestBid / 1e6 : undefined);
+                setConvertedHighestBid(selectedCollection.highestBid);
             } finally {
                 setIsConvertingPrices(false);
             }
@@ -496,8 +508,14 @@ export default function Bids({
         }
 
         // If there's no current bid, just settle without swap
-        const currentBid = auction.current_bid ? parseFloat(auction.current_bid) : 0;
-        if (!currentBid || currentBid === 0) {
+        // current_bid is in u64 format (needs to be divided by 1e6 for display, but we need raw value for contract)
+        const currentBidRaw = auction.current_bid ? (() => {
+            const bidStr = auction.current_bid;
+            return bidStr.startsWith('0x') || bidStr.startsWith('0X') 
+                ? parseInt(bidStr, 16) 
+                : parseFloat(bidStr);
+        })() : 0;
+        if (!currentBidRaw || currentBidRaw === 0) {
             try {
                 setIsSettling(true);
                 setSettleTxnHash(undefined);
@@ -550,8 +568,8 @@ export default function Bids({
 
             if (isSeller && feeTokenAddress !== usdcAddress) {
                 // Calculate USDC amount in wei (USDC has 6 decimals)
-                // current_bid is already in USDC wei (6 decimals) from the contract
-                const usdcAmountWei = BigInt(Math.floor(currentBid));
+                // current_bid is already in USDC wei (6 decimals) from the contract (u64 format)
+                const usdcAmountWei = BigInt(Math.floor(currentBidRaw));
                 
                 // generateSwapCalls adds a 1% buffer (101/100), so we need to pass 100/101 of the amount
                 // to ensure the transfer doesn't exceed the balance after settle_auction
@@ -886,7 +904,7 @@ export default function Bids({
                                             const decimals = tokenInfo?.decimals || 18;
                                             
                                             if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                                                return formatUSD(selectedCollection.highestBid/1e6);
+                                                return formatUSD(selectedCollection.highestBid);
                                             } else {
                                                 return formatTokenAmount(convertedHighestBid, decimals, symbol);
                                             }

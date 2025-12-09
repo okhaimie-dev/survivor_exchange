@@ -157,8 +157,17 @@ export function sortAuctions(auctions: AuctionWithNFTs[], filters: FilterState):
 
     if (filters.priceSort) {
         sorted.sort((a, b) => {
-            const aPrice = parseFloat(a.current_bid || a.starting_price || "0");
-            const bPrice = parseFloat(b.current_bid || b.starting_price || "0");
+            // Helper to parse value (handles both hex and decimal strings)
+            const parseValue = (value: string | undefined): number => {
+                if (!value) return 0;
+                return value.startsWith('0x') || value.startsWith('0X') 
+                    ? parseInt(value, 16) 
+                    : parseFloat(value);
+            };
+            
+            // current_bid is in u64 format, divide by 1e6 for comparison
+            const aPrice = a.current_bid ? parseValue(a.current_bid) / 1e6 : parseValue(a.starting_price);
+            const bPrice = b.current_bid ? parseValue(b.current_bid) / 1e6 : parseValue(b.starting_price);
             return filters.priceSort === "low-high" ? aPrice - bPrice : bPrice - aPrice;
         });
     }
