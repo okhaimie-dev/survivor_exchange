@@ -137,6 +137,7 @@ pub mod AuctionableComponent {
             store.set_auction(@auction);
         }
 
+
         fn bid(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
@@ -169,6 +170,7 @@ pub mod AuctionableComponent {
                 new_total_bid = auction.current_bid + bid_amount;
                 deposit_diff = bid_amount;
             } else {
+                assert(bid_amount > prev_amount, Errors::BID_TOO_LOW);
                 new_total_bid = bid_amount;
                 deposit_diff = bid_amount - prev_amount;
             }
@@ -192,7 +194,6 @@ pub mod AuctionableComponent {
             store.bid_placed(@auction, @bid, get_block_timestamp());
             store.set_auction(@auction);
         }
-
 
         fn withdraw_bid(
             self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,
