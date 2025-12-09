@@ -794,12 +794,18 @@ export default function Bids({
     const renderSelectedDetails = () => {
         if (!selectedCollection) return null;
 
+        const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
+        const isUserSeller = address && auction?.seller ? (() => {
+            const userAddress = normalizeContractAddress(address).toLowerCase();
+            const sellerAddress = normalizeContractAddress(auction.seller).toLowerCase();
+            return userAddress == sellerAddress;
+        })() : false;
+
         return (
                 <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/80 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
                     <div className="grid gap-8 p-6 grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)] md:items-start">
                         <div className="flex flex-col items-center gap-4 text-center md:items-start md:text-left">
                             {(() => {
-                                const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
                                 const nfts = auction?.nfts || [];
                                 
                                 if (nfts.length === 0) {
@@ -1020,9 +1026,9 @@ export default function Bids({
                                 <button
                                     type="button"
                                     onClick={handlePlaceBid}
-                                    disabled={!isBidValid || !account || isSubmitting}
+                                    disabled={!isBidValid || !account || isSubmitting || isUserSeller}
                                     className={`inline-flex items-center justify-center rounded-full w-full px-6 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                        isBidValid && account && !isSubmitting
+                                        isBidValid && account && !isSubmitting && !isUserSeller
                                             ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                                             : "border border-white/12 text-[rgb(186,255,188)]/45"
                                     }`}
