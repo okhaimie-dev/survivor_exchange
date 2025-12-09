@@ -1,5 +1,5 @@
 pub fn DEFAULT_NS() -> ByteArray {
-    "bm_0_0_8"
+    "bm_0_0_9"
 }
 
 pub const TEN_POW_18: u256 = 1000000000000000000;
