@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
-import { formatUSD } from "../lib/utils";
+import { formatUSD, truncateAuctionName } from "../lib/utils";
 import CountdownTimer from "./countdown-timer";
 
 type MonsterCollectionCardProps = {
@@ -23,7 +23,7 @@ type MonsterCollectionCardProps = {
 export default function MonsterCollectionCard({ collection, isSelected, onSelect, nfts = [] }: MonsterCollectionCardProps) {
     const stats = [
         {
-            label: "Starting",
+            label: "Reserved Price",
             value: formatUSD(collection.startingPrice/1e6),
             suffix: undefined,
         },
@@ -210,7 +210,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     )}
                 </div>
                 <div className="flex flex-col gap-2 text-white">
-                    <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{collection.name}</h3>
+                    <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{truncateAuctionName(collection.name)}</h3>
                     {collection.endTime && (
                         <p className="text-xs text-[rgb(186,255,188)]/70">
                             {collection.status && parseInt(collection.status) === 3 ? (

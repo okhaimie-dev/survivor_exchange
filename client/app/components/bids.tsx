@@ -7,7 +7,7 @@ import Filters, { FilterState } from "./filters";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256, num } from "starknet";
-import { truncateWithEllipsis, truncateAddress, formatUSD, formatTokenAmount } from "../lib/utils";
+import { truncateAddress, formatUSD, formatTokenAmount, truncateAuctionName } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, MAX_UINT256, IMAGE_BASE_URL, SUPPORTED_TOKENS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
@@ -115,9 +115,9 @@ export default function Bids({
                 return parsed / 1e6;
             })() : undefined;
             
-            return {
+                return {
                 id: auction.auction_id,
-                name: truncateWithEllipsis(auction.name),
+                name: truncateAuctionName(auction.name),
                 totalMonsters: parseInt(auction.item_count) || 0,
                 startingPrice,
                 highestBid,
@@ -855,7 +855,7 @@ export default function Bids({
                                 );
                             })()}
                             <h2 className="text-2xl font-orbitron uppercase tracking-[0.12em] text-white">
-                                {selectedCollection.name}
+                                {truncateAuctionName(selectedCollection.name)}
                             </h2>
                             <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Status: {selectedCollection.status}
@@ -877,7 +877,7 @@ export default function Bids({
                             <div className="grid grid-cols-1 gap-3 text-sm text-white sm:grid-cols-2">
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
                                     <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
-                                        Starting
+                                        Reserved Price
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
                                         {isConvertingPrices ? (

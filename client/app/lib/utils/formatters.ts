@@ -7,6 +7,13 @@ export function truncateWithEllipsis(str: string, maxLength: number = 20): strin
     return str.slice(0, maxLength) + '...';
 }
 
+export function truncateAuctionName(name: string, maxLength: number = 17): string {
+    if (!name) return '';
+    const trimmed = name.trim();
+    if (trimmed.length <= maxLength) return trimmed;
+    return trimmed.slice(0, maxLength) + '...';
+}
+
 export function formatPrice(value: number | string | null | undefined): string {
     if (value === null || value === undefined) return "—";
     

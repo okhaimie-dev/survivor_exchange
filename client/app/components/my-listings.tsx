@@ -4,7 +4,7 @@ import { useAccount, useExplorer } from "@starknet-react/core";
 import { useState, useCallback } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, MAX_UINT256 } from "../lib/constants";
-import { formatUSDCompact } from "../lib/utils";
+import { formatUSDCompact, truncateAuctionName } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
@@ -375,7 +375,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                     {listing.id}
                                 </span>
                                 <h3 className="text-lg font-orbitron uppercase tracking-[0.2em] text-white">
-                                    {listing.name}
+                                    {truncateAuctionName(listing.name)}
                                 </h3>
                                 {(() => {
                                     const timeAgo = formatTimeAgo(listing.endTime);
@@ -392,7 +392,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                 <p className="font-orbitron text-xl tracking-[0.3em]">{listing.tokenCount}</p>
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
-                                <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Starting</p>
+                                <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">Reserved Price</p>
                                 <p className="font-orbitron text-base tracking-[0.3em]">{formatUSDCompact(listing.startingPrice / 1e6)}</p>
                             </div>
                             <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
