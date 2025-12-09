@@ -33,7 +33,11 @@ export function normalizeContractAddress(address: string | null | undefined): st
     hexPart = addrStr;
   }
   
-  const padded = hexPart.toLowerCase().padStart(64, '0');
+  // Remove leading zeros first (but keep at least one zero if the whole thing is zeros)
+  hexPart = hexPart.toLowerCase().replace(/^0+/, '') || '0';
+  
+  // Then pad to 64 characters (32 bytes) with leading zeros
+  const padded = hexPart.padStart(64, '0');
   return `0x${padded}`;
 }
 

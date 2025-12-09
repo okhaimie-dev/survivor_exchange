@@ -25,10 +25,17 @@ export function useAuctions() {
   });
 
   const allAuctions: Auction[] = useMemo(() => {
-    const auctions = data?.bm009AuctionModels?.edges?.map((edge) => ({
-      ...edge.node,
-      name: byteArrayToString(edge.node.name) || edge.node.name,
-    })) || [];
+    const auctions = data?.bm009AuctionModels?.edges?.map((edge) => {
+      const auction = edge.node;
+      // Normalize addresses from GraphQL response
+      return {
+        ...auction,
+        name: byteArrayToString(auction.name) || auction.name,
+        seller: auction.seller ? normalizeContractAddress(auction.seller) : auction.seller,
+        highest_bidder: auction.highest_bidder ? normalizeContractAddress(auction.highest_bidder) : auction.highest_bidder,
+        fee_token: auction.fee_token ? normalizeContractAddress(auction.fee_token) : auction.fee_token,
+      };
+    }) || [];
     const filtered = auctions.filter((auction) => {
       const statusNum = parseInt(auction.status);
       return statusNum === 2 || statusNum === 3; // Active (2) and Ended (3)
@@ -98,6 +105,7 @@ export function useAuctions() {
 
       for (const [seller, sellerAuctions] of auctionsBySeller) {
         try {
+          // seller is already normalized from allAuctions useMemo
           const { data: response } = await apolloClient.query<MyNFTsResponse>({
             query: MY_NFTS_QUERY,
             variables: { accountAddress: seller },
@@ -105,9 +113,17 @@ export function useAuctions() {
           });
 
           const rawNFTs: ERC721Token[] = (response?.tokenBalances?.edges || [])
-            .map((edge) => edge.node.tokenMetadata)
+            .map((edge) => {
+              const metadata = edge.node.tokenMetadata;
+              if (!metadata || !('tokenId' in metadata)) return null;
+              // Normalize contract addresses from GraphQL
+              return {
+                ...metadata,
+                contractAddress: metadata.contractAddress ? normalizeContractAddress(metadata.contractAddress) : metadata.contractAddress,
+              };
+            })
             .filter((metadata): metadata is ERC721Token => {
-              if (!metadata || !('tokenId' in metadata)) return false;
+              if (!metadata) return false;
               const nftContract = normalizeContractAddress(metadata.contractAddress).toLowerCase();
               return nftContract === targetContractNormalized;
             });

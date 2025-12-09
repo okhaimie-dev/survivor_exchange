@@ -13,7 +13,9 @@ interface UseMyNFTsOptions {
 
 export function useMyNFTs(options?: UseMyNFTsOptions) {
   const { address: accountAddress } = useAccount();
-  const targetAddress = options?.address || accountAddress;
+  const rawTargetAddress = options?.address || accountAddress;
+  // Normalize address before using in query
+  const targetAddress = rawTargetAddress ? normalizeContractAddress(rawTargetAddress) : undefined;
 
   const { data, loading, error } = useQuery<MyNFTsResponse>(MY_NFTS_QUERY, {
     variables: { accountAddress: targetAddress },
@@ -27,7 +29,12 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
   const rawNFTs: ERC721Token[] = useMemo(() => {
     const allNFTs = data?.tokenBalances?.edges
       ?.map((edge) => edge.node.tokenMetadata)
-      .filter((metadata): metadata is ERC721Token => metadata !== null && metadata !== undefined) || [];
+      .filter((metadata): metadata is ERC721Token => metadata !== null && metadata !== undefined)
+      .map((nft) => ({
+        ...nft,
+        // Normalize contract addresses from GraphQL
+        contractAddress: nft.contractAddress ? normalizeContractAddress(nft.contractAddress) : nft.contractAddress,
+      })) || [];
     
     const targetContractNormalized = normalizeContractAddress(BEASTS_NFT_CONTRACT_ADDRESS).toLowerCase();
     return allNFTs.filter((nft) => {

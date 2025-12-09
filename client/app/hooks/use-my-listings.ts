@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { MY_LISTINGS_QUERY } from '../lib/queries';
 import type { MyListingsResponse, Auction } from '../lib/types';
 import { byteArrayToString } from '../lib/utils';
+import { normalizeContractAddress } from '../lib/utils/normalization';
 import { DEFAULT_POLL_INTERVAL } from '../lib/constants';
 
 export interface FormattedListing {
@@ -24,9 +25,12 @@ interface UseMyListingsOptions {
 }
 
 export function useMyListings({ seller }: UseMyListingsOptions) {
+  // Normalize seller address before query
+  const normalizedSeller = seller ? normalizeContractAddress(seller) : undefined;
+  
   const { data, loading, error } = useQuery<MyListingsResponse>(MY_LISTINGS_QUERY, {
-    variables: { seller: seller || '' },
-    skip: !seller,
+    variables: { seller: normalizedSeller || '' },
+    skip: !normalizedSeller,
     pollInterval: DEFAULT_POLL_INTERVAL,
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
@@ -57,18 +61,23 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
       })() : null;
       const tokenCount = parseInt(auction.item_count, 10) || 0;
 
+      // Normalize addresses from GraphQL response
+      const normalizedSeller = auction.seller ? normalizeContractAddress(auction.seller) : '';
+      const normalizedHighestBidder = auction.highest_bidder ? normalizeContractAddress(auction.highest_bidder) : null;
+      const normalizedFeeToken = auction.fee_token ? normalizeContractAddress(auction.fee_token) : '';
+
       return {
         id: `#${auction.auction_id}`,
         name: decodedName || `Auction ${auction.auction_id}`,
         tokenCount,
         startingPrice,
         currentBid,
-        highestBidder: auction.highest_bidder || null,
+        highestBidder: normalizedHighestBidder,
         status: auction.status || 'pending',
         endTime: auction.end_time,
-        seller: auction.seller,
+        seller: normalizedSeller,
         auctionId: auction.auction_id,
-        feeToken: auction.fee_token,
+        feeToken: normalizedFeeToken,
       };
     });
   }, [data]);

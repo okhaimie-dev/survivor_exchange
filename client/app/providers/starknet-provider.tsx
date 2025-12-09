@@ -1,7 +1,7 @@
 import React from "react";
  
 import { sepolia, mainnet } from "@starknet-react/chains";
-import { StarknetConfig, jsonRpcProvider, cartridge } from "@starknet-react/core";
+import { StarknetConfig, jsonRpcProvider, cartridge, braavos, argent } from "@starknet-react/core";
 
 import { ControllerConnector } from "@cartridge/connector";
 import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS, ETH_ADDRESS, STRK_ADDRESS, LORDS_ADDRESS, SURVIVOR_ADDRESS_MAINNET } from "../lib/constants";
@@ -162,7 +162,7 @@ export function StarknetProvider({ children }: { children: React.ReactNode }) {
       defaultChainId={mainnet.id}
       chains={[mainnet, sepolia]}
       provider={provider}
-      connectors={[controller]}
+      connectors={[controller, argent(), braavos()]}
       explorer={cartridge}
     >
       {children}

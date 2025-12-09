@@ -1,12 +1,13 @@
 import { ControllerConnector } from "@cartridge/connector";
-import { useAccount, useConnect, useDisconnect } from "@starknet-react/core";
+import { useAccount, useDisconnect, useConnect } from "@starknet-react/core";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
+import WalletConnectModal from "./wallet-connect-modal";
 
     export default function Header() {
-        const { connect, connectors } = useConnect();
         const { disconnect } = useDisconnect();
         const { address } = useAccount();
+        const { connectors } = useConnect();
         const controller = useMemo(() => {
             try {
                 return ControllerConnector.fromConnectors(connectors);
@@ -15,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
             }
         }, [connectors]);
         const [username, setUsername] = useState<string | undefined>(undefined);
+        const [isModalOpen, setIsModalOpen] = useState(false);
         
         useEffect(() => {
             if (!address || !controller) {
@@ -70,11 +72,8 @@ import { useEffect, useMemo, useState } from "react";
             return () => window.cancelAnimationFrame(frame);
         }, [address]);
 
-        const handleConnect = async () => {
-            if (!controller) return;
-
-            await connect({ connector: controller });
-            setUsername(await controller?.username() || address || undefined);
+        const handleConnect = () => {
+            setIsModalOpen(true);
         };
 
         const handleDisconnect = async () => {
@@ -82,30 +81,37 @@ import { useEffect, useMemo, useState } from "react";
             setUsername(undefined);
         };
 
+        const handleModalClose = () => {
+            setIsModalOpen(false);
+        };
+
         return (
-            <div className="w-full h-14 bg-black flex flex-row items-center justify-center">
-                <div className="w-full flex flex-row items-center justify-between p-3.5">
-                    <div>
-                        <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} />
-                    </div>
-                    <div>
-                        {
-                            username ? (
-                                <div className="flex items-center gap-3">
-                                    <p className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)]">{username}</p>
-                                    <button
-                                        className="text-white text-sm font-orbitron tracking-wide uppercase hover:cursor-pointer border border-white px-3 py-1 rounded hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]"
-                                        onClick={handleDisconnect}
-                                    >
-                                        Disconnect
-                                    </button>
-                                </div>
-                            ) : (
-                                <button className="text-[rgb(50,255,52)] text-base font-medium font-orbitron tracking-wide uppercase hover:cursor-pointer hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]" onClick={handleConnect}>CONNECT WALLET</button>
-                            )
-                        }
+            <>
+                <div className="w-full h-14 bg-black flex flex-row items-center justify-center">
+                    <div className="w-full flex flex-row items-center justify-between p-3.5">
+                        <div>
+                            <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} />
+                        </div>
+                        <div>
+                            {
+                                username ? (
+                                    <div className="flex items-center gap-3">
+                                        <p className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)]">{username}</p>
+                                        <button
+                                            className="text-white text-sm font-orbitron tracking-wide uppercase hover:cursor-pointer border border-white px-3 py-1 rounded hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]"
+                                            onClick={handleDisconnect}
+                                        >
+                                            Disconnect
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button className="text-[rgb(50,255,52)] text-base font-medium font-orbitron tracking-wide uppercase hover:cursor-pointer hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]" onClick={handleConnect}>CONNECT WALLET</button>
+                                )
+                            }
+                        </div>
                     </div>
                 </div>
-            </div>
+                <WalletConnectModal isOpen={isModalOpen} onClose={handleModalClose} />
+            </>
         )
     }

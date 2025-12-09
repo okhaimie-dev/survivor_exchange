@@ -1,5 +1,6 @@
 import { getSwapQuote } from '../api/ekubo';
 import { USDC_ADDRESS, SUPPORTED_TOKENS } from '../constants';
+import { normalizeContractAddress } from './normalization';
 
 export async function getTokenUSDValue(amount: number, tokenAddress: string): Promise<number> {
   try {
@@ -20,7 +21,7 @@ export async function getTokenAmountForUSD(usdAmount: number, tokenAddress: stri
     
     const quote = await getSwapQuote(usdcAmount, USDC_ADDRESS, tokenAddress);
     
-    const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === tokenAddress.toLowerCase());
+    const tokenInfo = SUPPORTED_TOKENS.find(t => normalizeContractAddress(t.address).toLowerCase() === normalizeContractAddress(tokenAddress).toLowerCase());
     const decimals = tokenInfo?.decimals || 18;
     
     return quote.total / Math.pow(10, decimals);

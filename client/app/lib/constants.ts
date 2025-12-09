@@ -71,8 +71,12 @@ export const SUPPORTED_TOKENS: TokenInfo[] = [
   },
 ];
 
+import { normalizeContractAddress } from './utils/normalization';
+
 export const getTokenByAddress = (address: string): TokenInfo | undefined => {
-  return SUPPORTED_TOKENS.find(token => token.address.toLowerCase() === address.toLowerCase());
+  // Normalize addresses before comparison
+  const normalizedInput = normalizeContractAddress(address).toLowerCase();
+  return SUPPORTED_TOKENS.find(token => normalizeContractAddress(token.address).toLowerCase() === normalizedInput);
 };
 
 export const getTokenBySymbol = (symbol: string): TokenInfo | undefined => {

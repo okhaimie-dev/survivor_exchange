@@ -1,5 +1,6 @@
 import { getSwapQuote } from '../api/ekubo';
 import { USDC_ADDRESS, SUPPORTED_TOKENS } from '../constants';
+import { normalizeContractAddress } from './normalization';
 
 interface CachedPrice {
   price: number; // Price in USDC (e.g., 3000 means 1 ETH = 3000 USDC)
@@ -20,7 +21,7 @@ const pendingRequests = new Map<string, Promise<number>>();
  */
 export async function getTokenPriceInUSDC(tokenAddress: string): Promise<number> {
   // Normalize address
-  const normalizedAddress = tokenAddress.toLowerCase();
+  const normalizedAddress = normalizeContractAddress(tokenAddress).toLowerCase();
   
   // Check cache first
   const cached = priceCache.get(normalizedAddress);
@@ -50,7 +51,7 @@ export async function getTokenPriceInUSDC(tokenAddress: string): Promise<number>
   const requestPromise = (async () => {
     try {
       // Fetch price: 1 token in wei -> USDC
-      const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === normalizedAddress);
+      const tokenInfo = SUPPORTED_TOKENS.find(t => normalizeContractAddress(t.address).toLowerCase() === normalizedAddress);
       const tokenDecimals = tokenInfo?.decimals || 18;
       
       // 1 token in wei
@@ -123,7 +124,7 @@ export async function convertTokenAmountToUSDC(tokenAmount: number, tokenAddress
  * @returns true if price should be refetched
  */
 export function shouldRefetchPrice(tokenAddress: string): boolean {
-  const normalizedAddress = tokenAddress.toLowerCase();
+  const normalizedAddress = normalizeContractAddress(tokenAddress).toLowerCase();
   const cached = priceCache.get(normalizedAddress);
   
   if (!cached) {
