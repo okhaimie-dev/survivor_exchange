@@ -25,7 +25,7 @@ export function useAuctions() {
   });
 
   const allAuctions: Auction[] = useMemo(() => {
-    const auctions = data?.bm008AuctionModels?.edges?.map((edge) => ({
+    const auctions = data?.bm009AuctionModels?.edges?.map((edge) => ({
       ...edge.node,
       name: byteArrayToString(edge.node.name) || edge.node.name,
     })) || [];
@@ -41,7 +41,7 @@ export function useAuctions() {
   }, [data]);
 
   const allAuctionItems: AuctionItem[] = useMemo(() => {
-    return data?.bm008AuctionItemModels?.edges?.map((edge) => edge.node) || [];
+    return data?.bm009AuctionItemModels?.edges?.map((edge) => edge.node) || [];
   }, [data]);
 
   const itemsByAuction = useMemo(() => {

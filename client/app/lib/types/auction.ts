@@ -27,16 +27,16 @@ export interface AuctionNode {
 }
 
 export interface AuctionsResponse {
-  bm008AuctionModels: {
+  bm009AuctionModels: {
     edges: AuctionNode[];
   };
-  bm008AuctionItemModels: {
+  bm009AuctionItemModels: {
     edges: AuctionItemNode[];
   };
 }
 
 export interface MyListingsResponse {
-  bm008AuctionModels: {
+  bm009AuctionModels: {
     edges: AuctionNode[];
   };
 }
