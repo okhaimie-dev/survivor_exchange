@@ -216,7 +216,7 @@ pub mod AuctionableComponent {
             assert(amount > 0.into(), Errors::INSUFFICIENT_SHARES); // Reuse error; prevents noop
 
             // Vault handles auction status/conditions (active/outbid/expired)
-            vault_dispatcher.withdraw(auction_id, bidder, amount);
+            vault_dispatcher.withdraw(auction_id, bidder, bidder, amount); // owner, to
 
             // Clear bid record
             let mut cleared_bid = BidTrait::new(auction_id, bidder.into(), 0);

@@ -3,7 +3,13 @@ use starknet::ContractAddress;
 #[starknet::interface]
 pub trait IVault<TContractState> {
     fn deposit(ref self: TContractState, vault_id: u32, amount: u256, depositor: ContractAddress);
-    fn withdraw(ref self: TContractState, vault_id: u32, to: ContractAddress, amount: u256);
+    fn withdraw(
+        ref self: TContractState,
+        vault_id: u32,
+        owner: ContractAddress,
+        to: ContractAddress,
+        amount: u256,
+    );
     fn balance_of(self: @TContractState, vault_id: u32) -> u256;
     fn share_balance(self: @TContractState, vault_id: u32, user: ContractAddress) -> u256;
     fn disburse_to_seller(
@@ -51,17 +57,28 @@ pub mod vault_systems {
             store.set_vault(@vault);
         }
 
-        fn withdraw(ref self: ContractState, vault_id: u32, to: ContractAddress, amount: u256) {
+        fn withdraw(
+            ref self: ContractState,
+            vault_id: u32,
+            owner: ContractAddress,
+            to: ContractAddress,
+            amount: u256,
+        ) {
             let caller = get_caller_address();
             let mut store = StoreTrait::new(self.world_default());
-            let mut share = store.vault_share(vault_id, caller.into());
+            let mut share = store.vault_share(vault_id, owner.into()); // Key on owner
             let deduct: u256 = amount;
 
             assert(share.share_amount >= deduct, Errors::INSUFFICIENT_SHARES);
 
+            // Auth: direct (owner==caller) or proxy (auction_systems)
+            let world = self.world_default();
+            let (auction_systems_addr, _) = world.dns(@"auction_systems").unwrap();
+            assert(owner == caller || caller == auction_systems_addr, Errors::UNAUTHORIZED);
+
             let auction = store.auction(vault_id);
             auction.assert_does_exist();
-            let is_highest = caller.into() == auction.highest_bidder;
+            let is_highest = owner.into() == auction.highest_bidder; // Check owner
             let is_active = auction.status == AuctionStatus::Active.into();
             let is_outbid_or_ended = !is_highest
                 || !is_active
@@ -69,6 +86,7 @@ pub mod vault_systems {
             assert(is_outbid_or_ended, Errors::CANNOT_WITHDRAW_HIGHEST_ACTIVE);
 
             let vault = store.vault(vault_id);
+            assert(vault.locked_amount >= deduct, Errors::INSUFFICIENT_VAULT_FUNDS); // Extra safety
             let token_address: ContractAddress = vault.token_address.try_into().unwrap();
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher.transfer(to, amount); // From vault balance
