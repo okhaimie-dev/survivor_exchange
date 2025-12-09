@@ -201,27 +201,28 @@ pub mod AuctionableComponent {
             let mut store = StoreTrait::new(world);
 
             let auction = store.auction(auction_id);
-            assert(
-                auction.status == AuctionStatus::Active.into()
-                    || get_block_timestamp() < auction.end_time,
-                Errors::AUCTION_NOT_ACTIVE,
-            );
+            auction.assert_does_exist();
 
-            let mut bid = store.bid(auction_id, bidder.into());
+            // Get bidder's bid for ownership/consistency checks
+            let bid = store.bid(auction_id, bidder.into());
             bid.assert_bid_amount_not_zero();
             bid.assert_is_bid_owner(bidder.into());
             bid.assert_not_highest_bidder(@auction);
 
-            // Refund via vault (raw bid amount)
-            let amount = bid.amount.into();
+            // Use *actual* vault shares to avoid mismatch (bid.amount may desync)
             let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-            vault_dispatcher.withdraw(auction_id, bidder, amount); // to=bidder (default)
+            let amount = vault_dispatcher.share_balance(auction_id, bidder);
+            assert(amount > 0.into(), Errors::INSUFFICIENT_SHARES); // Reuse error; prevents noop
 
-            // Clear bid
+            // Vault handles auction status/conditions (active/outbid/expired)
+            vault_dispatcher.withdraw(auction_id, bidder, amount);
+
+            // Clear bid record
             let mut cleared_bid = BidTrait::new(auction_id, bidder.into(), 0);
             store.set_bid(@cleared_bid);
         }
+
 
         fn end(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
