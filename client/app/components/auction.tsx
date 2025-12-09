@@ -34,7 +34,6 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     
     const getDefaultDateTime = () => {
         const now = new Date();
-        now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
         return dateToLocalDateTimeString(now);
     };
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
@@ -146,7 +145,9 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         try {
             setIsSubmitting(true);
         
-            const duration_seconds = Math.floor((new Date(endDateTime).getTime() - Date.now()) / 1000);
+            const endDateTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+            const duration_seconds = endDateTimestamp - currentTimestamp;
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             
             const usdAmount = parseFloat(startingPriceUSD);
@@ -389,11 +390,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                     setEndDateTime(event.target.value);
                                     setDurationError(null);
                                 }}
-                                min={(() => {
-                                    const now = new Date();
-                                    now.setMinutes(now.getMinutes() + DEFAULT_AUCTION_DURATION_MINUTES);
-                                    return dateToLocalDateTimeString(now);
-                                })()}
+                                min={dateToLocalDateTimeString(new Date())}
                                 className={`w-full rounded-xl border px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:ring-2 [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 [&::-webkit-calendar-picker-indicator]:hover:opacity-100 ${
                                     durationError 
                                         ? "border-red-500 bg-black/60 focus:border-red-500 focus:ring-red-500/35" 
