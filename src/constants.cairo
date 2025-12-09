@@ -1,5 +1,5 @@
 pub fn DEFAULT_NS() -> ByteArray {
-    "bm_0_0_8"
+    "bm_0_0_9"
 }
 
 pub const TEN_POW_18: u256 = 1000000000000000000;
@@ -32,4 +32,7 @@ pub mod Errors {
     pub const INSUFFICIENT_SHARES: felt252 = 'Vault: insufficient shares';
     pub const VAULT_NOT_FOUND: felt252 = 'Vault: not found';
     pub const CANNOT_WITHDRAW_HIGHEST_ACTIVE: felt252 = 'Vault: highest bidder';
+    pub const AUCTION_NOT_DISBURSED: felt252 = 'Auction: funds not disbursed';
+    pub const INSUFFICIENT_VAULT_FUNDS: felt252 = 'Vault: insufficient funds';
+    pub const AUCTION_ALREADY_SETTLED: felt252 = 'Auction: already settled';
 }

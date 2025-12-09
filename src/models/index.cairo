@@ -4,8 +4,8 @@ pub struct Auction {
     #[key]
     pub auction_id: u32,
     pub status: u8,
-    pub starting_price: u32,
-    pub current_bid: u32,
+    pub starting_price: u64,
+    pub current_bid: u64,
     pub item_count: u32,
     pub end_time: u64,
     pub name: ByteArray,
@@ -32,7 +32,7 @@ pub struct Bid {
     pub auction_id: u32,
     #[key]
     pub bidder: felt252,
-    pub amount: u32,
+    pub amount: u64,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]

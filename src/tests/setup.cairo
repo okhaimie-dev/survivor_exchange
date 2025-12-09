@@ -5,22 +5,43 @@ pub mod tests {
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
         spawn_test_world,
     };
+    use snforge_std::{
+        CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
+    };
+    use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
     use survivor_exchange::systems::vault::IVaultDispatcher;
 
     pub fn OWNER() -> starknet::ContractAddress {
-        0x127fd5f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
+        'OWNER'.try_into().unwrap()
     }
 
     pub fn BIDDER() -> starknet::ContractAddress {
-        0x127fd0f1fe78a71f8bcd1fec63e3fe2f0486b6ecd5c86a0466c3a21fa5cfcec.try_into().unwrap()
+        'BIDDER'.try_into().unwrap()
     }
 
-    #[derive(Drop)]
+    pub fn BIDDER2() -> starknet::ContractAddress {
+        'BIDDER2'.try_into().unwrap()
+    }
+
+    #[derive(Copy, Drop)]
     pub struct Systems {
         pub auction_systems: IAuctionMarketplaceDispatcher,
         pub vault_systems: IVaultDispatcher,
+    }
+
+    #[derive(Copy, Drop)]
+    pub struct Context {
+        pub owner: starknet::ContractAddress,
+        pub bidder: starknet::ContractAddress,
+        pub bidder_2: starknet::ContractAddress,
+    }
+
+    #[derive(Drop, Copy)]
+    pub struct MockContracts {
+        pub erc721_address: ContractAddress,
+        pub erc20_address: ContractAddress,
     }
 
     fn namespace_def() -> NamespaceDef {
@@ -50,12 +71,22 @@ pub mod tests {
             .span()
     }
 
-    pub fn spawn_auction() -> (WorldStorage, Systems) {
-        // [Setup] World
+    pub fn deploy_mock_erc721() -> ContractAddress {
+        let contract = declare("MockERC721").unwrap_syscall().contract_class();
+        let (address, _) = contract.deploy(@array![]).unwrap_syscall();
+        address
+    }
+
+    pub fn deploy_mock_erc20() -> ContractAddress {
+        let contract = declare("MockERC20").unwrap_syscall().contract_class();
+        let (address, _) = contract.deploy(@array![]).unwrap_syscall();
+        address
+    }
+
+    pub fn spawn_auction() -> (WorldStorage, Systems, Context) {
         let namespace_def = namespace_def();
         let world = spawn_test_world([namespace_def].span());
         world.sync_perms_and_inits(contract_defs());
-        // [Setup] Systems
         let (auction_address, _) = world.dns(@"auction_systems").unwrap();
         let (vault_address, _) = world.dns(@"vault_systems").unwrap();
         let systems = Systems {
@@ -63,6 +94,20 @@ pub mod tests {
             vault_systems: IVaultDispatcher { contract_address: vault_address },
         };
 
-        (world, systems)
+        let owner: ContractAddress = OWNER();
+        let bidder: ContractAddress = BIDDER();
+        let bidder_2: ContractAddress = BIDDER2();
+        let context = Context { owner, bidder, bidder_2 };
+
+        cheat_caller_address(auction_address, owner, CheatSpan::TargetCalls(1));
+        (world, systems, context)
+    }
+
+    pub fn spawn_auction_with_mocks() -> (WorldStorage, Systems, Context, MockContracts) {
+        let (world, systems, context) = spawn_auction();
+        let erc721_address = deploy_mock_erc721();
+        let erc20_address = deploy_mock_erc20();
+        let mocks = MockContracts { erc721_address, erc20_address };
+        (world, systems, context, mocks)
     }
 }

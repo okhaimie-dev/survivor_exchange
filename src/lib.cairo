@@ -36,6 +36,11 @@ pub mod utils;
 
 #[cfg(test)]
 pub mod tests {
+    pub mod mocks {
+        pub mod account;
+        pub mod erc20;
+        pub mod erc721;
+    }
     mod setup;
     mod test_world;
 }

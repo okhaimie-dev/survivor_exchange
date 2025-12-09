@@ -9,23 +9,12 @@ pub trait IAuctionMarketplace<TContractState> {
     fn create_auction(
         ref self: TContractState,
         name: ByteArray,
-        starting_price: u32,
+        starting_price: u64,
         items: Span<u32>,
         collection: ContractAddress,
         duration: Option<u64>,
         fee_token: ContractAddress,
     ) -> u32;
-
-    /// Adds a single item to a draft auction (convenience; status must be 0; owner only).
-    /// - `auction_id`: The draft auction ID.
-    /// - `token_id`: The BEAST token ID.
-    /// - `collection_address`: The ERC721/ERC1155 address (must be supported).
-    fn add_item(
-        ref self: TContractState,
-        auction_id: u32,
-        token_id: u32,
-        collection_address: ContractAddress,
-    );
 
     /// Adds multiple items to a draft auction (status must be 0; owner only).
     /// - `auction_id`: The draft auction ID.
@@ -46,7 +35,7 @@ pub trait IAuctionMarketplace<TContractState> {
     /// Places a bid in an active English auction (must exceed current_bid).
     /// - `token_id`: The auction's token ID.
     /// - `bid_amount`: The new bid value (transfers ETH/token to escrow).
-    fn bid(ref self: TContractState, auction_id: u32, bid_amount: u32);
+    fn bid(ref self: TContractState, auction_id: u32, bid_amount: u64);
 
     /// Withdraws a non-winning bid from an active auction (refunds from escrow; caller only).
     /// - `auction_id`: The active auction ID.
@@ -93,7 +82,7 @@ pub mod auction_systems {
         fn create_auction(
             ref self: ContractState,
             name: ByteArray,
-            starting_price: u32,
+            starting_price: u64,
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
@@ -112,29 +101,22 @@ pub mod auction_systems {
                 )
         }
 
-        fn add_item(
-            ref self: ContractState,
-            auction_id: u32,
-            token_id: u32,
-            collection_address: ContractAddress,
-        ) {
-            self
-                .auctionable
-                .add_item(self.world_default(), auction_id, token_id, collection_address);
-        }
-
         fn add_items(
             ref self: ContractState,
             auction_id: u32,
             token_ids: Span<u32>,
             collection_address: ContractAddress,
-        ) {}
+        ) {
+            self
+                .auctionable
+                .add_items(self.world_default(), auction_id, token_ids, collection_address);
+        }
 
         fn start_auction(ref self: ContractState, auction_id: u32, duration: u64) {
             self.auctionable.start_auction(self.world_default(), auction_id, duration);
         }
 
-        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u32) {
+        fn bid(ref self: ContractState, auction_id: u32, bid_amount: u64) {
             self.auctionable.bid(self.world_default(), auction_id, bid_amount);
         }
 
@@ -144,24 +126,10 @@ pub mod auction_systems {
 
         fn end_auction(ref self: ContractState, auction_id: u32) {
             self.auctionable.end(self.world_default(), auction_id);
-            // TODO: Implement end logic
-        //let mut store = StoreTrait::new(self.world_default());
-        // - Fetch Auction
-        // - Check expired (now >= end_time) or owner callable
-        // - Update status to 1 (ended)
-        // - Emit event
         }
 
         fn settle_auction(ref self: ContractState, auction_id: u32) {
             self.auctionable.settle(self.world_default(), auction_id);
-            // TODO: Implement settle logic
-        //let mut store = StoreTrait::new(self.world_default());
-        // - Fetch Auction
-        // - Check ended (status == 1)
-        // - Transfer token to highest_bidder (if bid > 0) or back to owner
-        // - Transfer funds to owner (current_bid)
-        // - Update status to 2 (settled)
-        // - Emit event
         }
 
         fn get_auction(self: @ContractState, auction_id: u32) -> Auction {

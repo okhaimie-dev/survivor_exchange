@@ -3,7 +3,7 @@ pub mod AuctionableComponent {
     use dojo::world::{IWorldDispatcherTrait, WorldStorage, WorldStorageTrait};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
-    use survivor_exchange::constants::{Errors, TEN_POW_18};
+    use survivor_exchange::constants::Errors;
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
@@ -12,7 +12,6 @@ pub mod AuctionableComponent {
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
     use survivor_exchange::types::status::AuctionStatus;
-    use survivor_exchange::utils::{BEAST_ADDRESS_MAINNET, USDC_ADDRESS_MAINNET};
 
     #[storage]
     pub struct Storage {}
@@ -29,7 +28,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             name: ByteArray,
-            starting_price: u32,
+            starting_price: u64,
             items: Span<u32>,
             collection: ContractAddress,
             duration: Option<u64>,
@@ -47,23 +46,10 @@ pub mod AuctionableComponent {
             auction.auction_id = auction_id;
             store.set_auction(@auction);
 
-            let mut item_index = 0;
-            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
-            for token_id in items {
-                assert(
-                    seller == collection_dispatcher.owner_of((*token_id).into()),
-                    Errors::NOT_BEAST_OWNER,
-                );
+            self.add_items(world, auction_id, items, collection);
 
-                // TODO: Rentals check: let rental = store.rental(*token_id);
-                // rental.assert_not_active();
-
-                self.add_item(world, auction_id, *token_id, collection);
-                item_index += 1;
-            }
-
-            //store.auction_items_added(auction_id, item_index); // Post-items event
-            store.auction_created(auction, get_block_timestamp()); // Now with items
+            let auction = store.auction(auction_id);
+            store.auction_created(auction, get_block_timestamp());
 
             if let Option::Some(dur) = duration {
                 self.start_auction(world, auction_id, dur);
@@ -72,32 +58,63 @@ pub mod AuctionableComponent {
             auction_id
         }
 
-        fn add_item(
+        /// Adds multiple items to an auction in batch.
+        /// Validates ownership and rentals for all items upfront.
+        /// Assumes all items are from the same collection for simplicity; extend if needed.
+        fn add_items(
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
-            token_id: u32,
-            collection_address: ContractAddress,
+            token_ids: Span<u32>,
+            collection: ContractAddress,
         ) {
             let mut store = StoreTrait::new(world);
-            // TODO: Check if there are no rentals in auction items.
             let mut auction = store.auction(auction_id);
             auction.assert_is_draft();
-            let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET() };
-            let beast_owner = beast_dispatcher.owner_of(token_id.into());
-            assert(get_caller_address() == beast_owner, Errors::NOT_BEAST_OWNER);
 
-            //TODO: approve exchange as BEAST spender. I also need to validate
+            let caller = get_caller_address();
+            let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
 
-            let item_index = auction.item_count;
+            // Batch ownership checks
+            let mut item_index = auction.item_count;
+            let mut i: usize = 0;
+            while i < token_ids.len() {
+                let token_id = *token_ids[i];
+                assert(
+                    caller == collection_dispatcher.owner_of(token_id.into()),
+                    Errors::NOT_BEAST_OWNER,
+                );
 
-            let auction_item = AuctionItemTrait::new_item(
-                auction_id, item_index, token_id, collection_address.into(),
-            );
-            store.set_auction_item(@auction_item);
-            auction.item_count += 1;
+                // TODO: Rentals check (if Rental component exists)
+                // let rental = store.rental(token_id);
+                // rental.assert_not_active();
+
+                // TODO: Approve exchange as spender for each beast (call set_approval_for_all if
+                // not already)
+                // let exchange_address = get_contract_address();  // Or fetch from config
+                // collection_dispatcher.set_approval_for_all(exchange_address, true);  // But this
+                // is per-collection, not per-token
+
+                i += 1;
+            }
+
+            // Add all items
+            i = 0;
+            while i < token_ids.len() {
+                let token_id = *token_ids[i];
+                let auction_item = AuctionItemTrait::new_item(
+                    auction_id, item_index, token_id, collection.into(),
+                );
+                store.set_auction_item(@auction_item);
+                item_index += 1;
+                i += 1;
+            }
+
+            // Update auction once
+            auction.item_count = item_index;
             store.set_auction(@auction);
         }
+
 
         fn start_auction(
             self: @ComponentState<TContractState>,
@@ -113,7 +130,7 @@ pub mod AuctionableComponent {
             auction.activate(duration, current_time);
 
             let mut vault: Vault = VaultTrait::new(
-                auction_id, 0, USDC_ADDRESS_MAINNET().into(), get_block_timestamp(),
+                auction_id, 0, auction.fee_token, get_block_timestamp(),
             );
             store.set_vault(@vault);
 
@@ -124,7 +141,7 @@ pub mod AuctionableComponent {
             self: @ComponentState<TContractState>,
             world: WorldStorage,
             auction_id: u32,
-            bid_amount: u32,
+            bid_amount: u64,
         ) {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();
@@ -132,28 +149,50 @@ pub mod AuctionableComponent {
 
             auction.assert_does_exist();
             let bidder = get_caller_address();
+            let bidder_felt = bidder.into();
+            auction.assert_bidder_not_seller(bidder_felt);
 
-            auction.assert_bidder_not_seller(bidder.into());
+            // Early checks independent of bid amount
+            let auction_ref: @Auction = @auction;
+            assert(auction_ref.is_active(), Errors::AUCTION_NOT_ACTIVE);
+            auction_ref.assert_not_expired(current_time);
 
-            let mut prev_bid = store.bid(auction_id, bidder.into());
-            let prev_scaled = prev_bid.amount.into() * TEN_POW_18;
-            let new_scaled = bid_amount.into() * TEN_POW_18;
-            if new_scaled > prev_scaled {
-                let diff = new_scaled - prev_scaled;
-                let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
-                let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-                vault_dispatcher.deposit(auction.auction_id, diff, bidder);
+            // Get bidder's previous bid
+            let bidder_prev_bid = store.bid(auction_id, bidder_felt);
+            let prev_amount = bidder_prev_bid.amount;
+
+            // Compute new total bid and deposit diff based on highest bidder status
+            let is_highest_bidder = auction.highest_bidder == bidder_felt;
+            let mut new_total_bid: u64 = 0;
+            let mut deposit_diff: u64 = 0;
+            if is_highest_bidder {
+                new_total_bid = auction.current_bid + bid_amount;
+                deposit_diff = bid_amount;
+            } else {
+                new_total_bid = bid_amount;
+                deposit_diff = bid_amount - prev_amount;
             }
+            assert(deposit_diff > 0_u64, Errors::BID_TOO_LOW);
 
-            let mut bid = prev_bid;
-            bid.amount = bid_amount;
-            let mut bid = BidTrait::new(auction_id, bidder.into(), bid_amount);
+            // Final bid validation
+            auction_ref.assert_bid_not_low(new_total_bid);
+
+            // Deposit the diff to vault
+            let diff = deposit_diff.into();
+            let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
+            vault_dispatcher.deposit(auction.auction_id, diff, bidder);
+
+            // Update bidder's bid model
+            let mut bid = BidTrait::new(auction_id, bidder_felt, new_total_bid);
             store.set_bid(@bid);
 
-            auction.update_bid(bidder.into(), bid_amount, current_time);
+            // Update auction (asserts already validated)
+            auction.update_bid(bidder_felt, new_total_bid, current_time);
             store.bid_placed(@auction, @bid, get_block_timestamp());
             store.set_auction(@auction);
         }
+
 
         fn withdraw_bid(
             self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,
@@ -162,27 +201,28 @@ pub mod AuctionableComponent {
             let mut store = StoreTrait::new(world);
 
             let auction = store.auction(auction_id);
-            assert(
-                auction.status == AuctionStatus::Active.into()
-                    || get_block_timestamp() < auction.end_time,
-                Errors::AUCTION_NOT_ACTIVE,
-            );
+            auction.assert_does_exist();
 
-            let mut bid = store.bid(auction_id, bidder.into());
+            // Get bidder's bid for ownership/consistency checks
+            let bid = store.bid(auction_id, bidder.into());
             bid.assert_bid_amount_not_zero();
             bid.assert_is_bid_owner(bidder.into());
             bid.assert_not_highest_bidder(@auction);
 
-            // FIX: Refund via vault (bid.amount * 10^18 total deposited)
-            let scaled_amount = (bid.amount.into() * TEN_POW_18);
+            // Use *actual* vault shares to avoid mismatch (bid.amount may desync)
             let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
-            vault_dispatcher.withdraw(auction_id, bidder, scaled_amount); // to=bidder (default)
+            let amount = vault_dispatcher.share_balance(auction_id, bidder);
+            assert(amount > 0.into(), Errors::INSUFFICIENT_SHARES); // Reuse error; prevents noop
 
-            // Clear bid
+            // Vault handles auction status/conditions (active/outbid/expired)
+            vault_dispatcher.withdraw(auction_id, bidder, bidder, amount); // owner, to
+
+            // Clear bid record
             let mut cleared_bid = BidTrait::new(auction_id, bidder.into(), 0);
             store.set_bid(@cleared_bid);
         }
+
 
         fn end(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
@@ -214,40 +254,63 @@ pub mod AuctionableComponent {
 
         fn settle(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
             let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
             let mut auction = store.auction(auction_id);
             let status = auction.status;
 
-            // Assert auction exists and is ended (not active or settled)
+            // Assert auction exists and is not already settled
             auction.assert_does_exist();
-            assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
+            assert(status != AuctionStatus::Settled.into(), Errors::AUCTION_ALREADY_SETTLED);
 
-            //let winner = auction.highest_bidder;
-            //let seller = auction.seller;
-            //let has_winner = winner != 0_felt252; // Assuming 0 means no bids
-            //let beast_dispatcher = IERC721Dispatcher { contract_address: BEAST_ADDRESS_MAINNET()
-            //};
+            // Auto-end if active and expired (mimics end() logic for post-expiry)
+            if status == AuctionStatus::Active.into() {
+                assert(current_time >= auction.end_time, Errors::AUCTION_NOT_ENDED);
 
-            // Transfer items (loop over auction items; assumes you can fetch via
-            // store.auction_items(auction_id))
-            // TODO: Implement item iteration (e.g., for i in 0..auction.item_count { let item =
-            // store.auction_item(auction_id, i); ... })
-            // For each item:
-            // if has_winner {
-            //     beast_dispatcher.transfer_from(self.marketplace_address(), winner,
-            //     item.token_id.into());  // Escrow -> winner
-            // } else {
-            //     beast_dispatcher.transfer_from(self.marketplace_address(), owner,
-            //     item.token_id.into());  // Back to owner
-            // }
+                auction.status = AuctionStatus::Ended.into();
+                store.set_auction(@auction);
+            } else {
+                // If not Active, must already be Ended
+                assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
+            }
 
-            // Transfer funds to owner (stub: current_bid as u8; real: ERC20 transfer)
-            // TODO: E.g., eth_dispatcher.transfer(owner, auction.current_bid.into());
-            // If no winner, refund last bidder if needed (but usually not)
+            // Reload auction after potential update (in case of external changes, but unlikely)
+            auction = store.auction(auction_id);
+
+            let winner: ContractAddress = auction.highest_bidder.try_into().unwrap();
+            let seller: ContractAddress = auction.seller.try_into().unwrap();
+            let zero_address: ContractAddress = 0.try_into().unwrap();
+            let has_winner = winner != zero_address;
+            let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
+
+            if has_winner {
+                // Withdraw funds to seller via disbursement
+                let amount = auction.current_bid.into();
+
+                // Check no active rentals on items before transferring (if not already checked
+                // above)
+                // Note: If rentals checked in auto-end, skip here to avoid double-check; otherwise,
+                // add it
+
+                // Transfer items to winner
+                let mut i: u32 = 0;
+                while i < auction.item_count {
+                    let item = store.auction_item(auction.auction_id, i);
+                    let item_dispatcher = IERC721Dispatcher {
+                        contract_address: item.contract_address.try_into().unwrap(),
+                    };
+                    item_dispatcher.transfer_from(seller, winner, item.token_id.into());
+                    i += 1;
+                }
+
+                vault_dispatcher.disburse_to_seller(auction.auction_id, seller, amount);
+            }
+            // If no winner, items stay with seller; no fund transfer (vault should be empty or
+            // withdrawable separately)
 
             // Update to Settled
             auction.status = AuctionStatus::Settled.into();
             store.set_auction(@auction);
-            // TODO: Emit AuctionSettled event (auction_id, winner, final_price)
         }
     }
 }

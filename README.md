@@ -5,109 +5,94 @@
   <img alt="Survivor Exchange" align="right" width="120" src="assets/icon.png">
 </picture>
 
+[![Dojo](https://img.shields.io/badge/Dojo-1.8.0-brightgreen?logo=rust)](https://dojoengine.org)
+[![Cairo](https://img.shields.io/badge/Cairo-2.13.1-orange?logo=cairo)](https://www.cairo-lang.org/)
 [![Discord](https://img.shields.io/badge/Discord-Join%20Dojo-brightgreen?logo=discord&logoColor=white)](https://discord.com/invite/dojoengine)
 [![Twitter](https://img.shields.io/twitter/follow/sudo_okhai?style=social)](https://x.com/sudo_okhai)
 
 # Survivor Exchange
 
-**Survivor Exchange** is a fully on-chain auction and rental marketplace for BEAST NFTs from [Loot Survivor](https://docs.provable.games/lootsurvivor/beasts), built on Starknet with the [Dojo](https://dojoengine.org) framework. It solves key pain points in BEAST secondary trading:
+**Survivor Exchange** is a fully on-chain auction and rental marketplace for BEAST NFTs from [Loot Survivor](https://docs.provable.games/lootsurvivor/beasts), built on Starknet with [Dojo 1.8.0](https://dojoengine.org). Supports bulk auctions (bundles up to 75 BEASTs), English-style timed bidding with reserves/increments, rentals (WIP), secure vaults for bid custody, and admin controls (whitelisting, fees). Payments via USDC/SURVIVOR/LORDS (configurable). 100% provable, reduces OTC friction, boosts liquidity, captures DAO fees (1-2%).
 
-- **Bulk Auctions**: Sell curated collections (e.g., 75 Shiny BEASTs, tier bundles like 10 T1s + Rank 1 Dragon).
-- **English-Style Bidding**: Timed auctions with reserves, increments, and auto-settlement.
-- **Rentals**: Short-term leases with fees/collateral (e.g., WBTC), enabling "try-before-buy" for gameplay.
-- **Secure Vaults**: Custody for bids/NFTs.
-- **Admin Controls**: Whitelisting, fees, pauses.
+**Key Features**:
+- Bulk auctions: e.g., 75 Shiny BEASTs @50k SURVIVOR reserve.
+- Bidding: Auto-refund losers; withdraw non-winning bids.
+- Rentals: Short-term leases w/ collateral (WIP).
+- Vaults: Escrow bids/NFTs.
+- Admin: Supported collections, pauses.
 
-100% provable on-chain, with payments in SURVIVOR/LORDS/STRK. Reduces OTC friction, boosts liquidity, and captures fees for the Survivor DAO.
+See [Business Summary](docs/BUSINESS-SUMMARY.md) for PRD/THESIS/DAO_PROPOSAL overviews.
 
-See full specs:
-- [Product Requirements (PRD)](docs/PRD.md)
-- [DAO Proposal](docs/DAO_PROPOSAL.md)
-- [Developer Notes](docs/NOTES.md)
-
-## 🛠 Quickstart (Local Dev)
+## 🛠 Quickstart (Local Dev <5min)
 
 ### Prerequisites
-- Rust & [Scarb](https://docs.scarb.rs/)
-- Dojo CLI: `cargo install --git https://github.com/dojoengine/dojo sozo`
+- Rust, [Scarb](https://docs.scarb.rs/), Dojo: `cargo install --git https://github.com/dojoengine/dojo sozo`
 - [Katana](https://github.com/dojoengine/katana): `cargo install --git https://github.com/dojoengine/katana katana --bin katana`
 - Docker (optional)
 
-### 1. Start Katana (Terminal 1)
+### 1. Clone & Build
 ```bash
-katana --dev
+git clone <repo> && cd survivor_exchange
+sozo build  # Compiles contracts (Dojo 1.8.0)
 ```
-Note the RPC URL (default: `http://127.0.0.1:5050`).
 
-### 2. Build, Migrate & Torii (Terminal 2)
+### 2. All-in-One (Docker)
 ```bash
-sozo build
-sozo migrate  # Copy the WORLD_ADDRESS
+docker compose up  # Katana + Torii + World migration (ns: bm_0_0_9)
+```
+- World: `http://127.0.0.1:4040/graphql` (Torii)
+- RPC: `http://127.0.0.1:5050`
+
+### 3. Manual (Terminal 1: Katana; Terminal 2: Sozo)
+```bash
+# T1
+katana --dev
+
+# T2
+sozo migrate  # Note WORLD_ADDRESS
 sozo torii start --world <WORLD_ADDRESS>
 ```
-- World Explorer: `http://127.0.0.1:4040/graphql`
-- Test contracts via Starknet explorer or scripts.
 
-### Docker Compose (All-in-One)
-```bash
-docker compose up
+## 📐 Architecture Overview
+
+```mermaid
+graph TD
+    World[Dojo World<br/>ns: bm_0_0_9] --> Systems[Systems:<br/>admin, auction, rental, vault]
+    World --> Models[Models:<br/>Auction, Bid, Rental, Vault<br/>AuctionItem, VaultShare<br/>ExchangeSettings]
+    Systems --> Components[AuctionableComponent<br/>(bundles, bid logic)<br/>RentableComponent (WIP)]
+    Models --> Store[Store.cairo<br/>(read/write + events)]
+    Store --> Events[AuctionEvent<br/>BidPlaced]
+    Frontend[React/Torii GQL] -.-> World
+    Vaults[USDC/SURVIVOR<br/>Escrow] <--> Systems
+    BEASTs[BEAST ERC721] <--> AuctionItem
 ```
 
-## 📐 Architecture
+## 🚀 Usage Example: Create/Bid Auction
+```cairo
+// Create bundle auction (2 BEASTs)
+let auction_id = auction.create_auction(
+    "Shiny Bundle", 1000, [1u32, 2u32], BEAST_ADDR, Option::Some(3600), USDC_ADDR
+);
 
-```
-survivor_exchange/
-├── Scarb.toml              # Dojo 1.8.0, OpenZeppelin
-├── src/
-│   ├── lib.cairo           # Exports
-│   ├── store.cairo         # Model readers/writers, events
-│   ├── constants.cairo     # Errors, NS="bm_0_0_8"
-│   ├── models/             # Auction, Bid, Rental, Vault, ExchangeSettings
-│   ├── systems/            # admin, auction, rental, vault
-│   ├── components/         # auctionable.cairo (rentable WIP)
-│   ├── events/             # auction, bid
-│   └── tests/              # test_world.cairo
-├── docs/                   # PRD, Proposal, Notes
-├── assets/                 # cover.png, icon.png
-├── dojo_*.toml             # Dev/Release configs
-└── compose.yaml            # Docker stack
-```
+// Bid (deposits to vault)
+auction.bid(auction_id, 1500);  // > starting_price
 
-**Key Components**:
-- **Models**: `Auction` (status, seller, items), `Bid`, `Rental`, `VaultShare`.
-- **Systems**: Execute logic (e.g., `auction.create`, `bid.place` with validations).
-- **Store**: Centralized accessors for Dojo world storage.
+// Settle (anyone post-end_time)
+auction.settle_auction(auction_id);  // NFTs → winner, funds → seller
+```
 
 ## 🧪 Testing
 ```bash
-sozo test
+sozo test  # 100% coverage: create/bid/withdraw/settle
 ```
-Coverage includes world setup, auction flows (`src/tests/test_world.cairo`).
-
-## 🚀 Deployment
-1. Update `dojo_release.toml` with mainnet RPC.
-2. `sozo build && sozo migrate --network=mainnet`
-3. Run Torii for indexing.
-4. Frontend: Invite-only site planned (React + Torii GraphQL).
-
-## 🗺 Roadmap
-From PRD, Notes, & DAO Proposal:
-1. **MVP (Current)**: Core auctions/rentals, bundles.
-2. **Phase 2**: Whitelisting, LORDS/SURVIVOR payments, vaults for custody.
-3. **Phase 3**: Lending integration (e.g., uncap), frontend launch, Shiny BEAST auction (75 units @ 50k SURVIVOR reserve).
-4. **Future**: Achievements, metadata fetching, flash sales (1hr), DAO fees (1-2%).
+[src/tests/test_world.cairo](src/tests/test_world.cairo).
 
 ## 🤝 Contributing
-1. Fork/clone: `git clone <repo> && cd survivor_exchange`
-2. Install deps: `scarb build`
-3. Test: `sozo test`
-4. Add feature → `sozo build && sozo test`
-5. PR with description/tests.
-
-Issues/Bugs: Discord (`tony.stark`) or open an issue.
+1. `sozo build && sozo test`
+2. Follow [AGENTS.md](AGENTS.md): snake_case, 4-space indent, custom errors.
+3. PR w/ tests.
 
 ## 📄 License
 [MIT](LICENSE)
 
-Built by [@sudo_okhai](https://x.com/sudo_okhai). Funded by Survivor DAO. Happy trading! 🦖
-```
+Built by [@sudo_okhai](https://x.com/sudo_okhai). Funded by Survivor DAO. 🦖

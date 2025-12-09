@@ -11,6 +11,7 @@ test = "snforge test"
 
 [dependencies]
 dojo = "1.8.0"
+openzeppelin = "2.0.0"
 openzeppelin_token = "2.0.0"
 starknet = "2.13.1"
 
@@ -25,3 +26,9 @@ allow-prebuilt-plugins = ["dojo_cairo_macros", "snforge_std"]
 snforge_std = "0.51"
 dojo_snf_test = "1.8.0"
 assert_macros = "2.13"
+
+[[tool.snforge.fork]]
+name = "MAINNET_LATEST"
+# For Cartridge public endpoint: https://api.cartridge.gg/x/starknet/mainnet
+url = "https://api.cartridge.gg/x/starknet/mainnet"
+block_id.tag = "latest"
