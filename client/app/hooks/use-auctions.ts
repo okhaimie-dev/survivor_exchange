@@ -123,7 +123,9 @@ export function useAuctions() {
               };
             })
             .filter((metadata): metadata is ERC721Token => {
-              if (!metadata) return false;
+              return metadata !== null;
+            })
+            .filter((metadata): metadata is ERC721Token => {
               const nftContract = normalizeContractAddress(metadata.contractAddress).toLowerCase();
               return nftContract === targetContractNormalized;
             });
