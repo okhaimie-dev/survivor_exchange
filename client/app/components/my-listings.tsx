@@ -262,8 +262,8 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
                 const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, swapInputAmount);
 
-                // Approve 5% more than the USDC amount needed for the swap
-                const usdcApprovalAmount = (swapInputAmount * 105n) / 100n;
+                // Approve 2% more than the USDC amount needed for the swap
+                const usdcApprovalAmount = (swapInputAmount * 102n) / 100n;
                 const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
