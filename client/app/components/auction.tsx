@@ -147,7 +147,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         
             const endDateTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
             const currentTimestamp = Math.floor(Date.now() / 1000);
-            const duration_seconds = endDateTimestamp - currentTimestamp;
+            const duration_seconds = (endDateTimestamp - currentTimestamp) + 600; // Add 10 minutes buffer
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             
             const usdAmount = parseFloat(startingPriceUSD);
