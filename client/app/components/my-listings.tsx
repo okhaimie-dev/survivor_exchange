@@ -1,13 +1,14 @@
 import Image from "next/image";
 import moment from "moment";
 import { useAccount, useExplorer } from "@starknet-react/core";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
-import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, DEFAULT_PAGE_SIZE } from "../lib/constants";
 import { formatUSDCompact, truncateAuctionName } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
+import Pagination from "./pagination";
 
 const formatTimeAgo = (timestamp: string): string => {
     if (!timestamp) return "Unknown";
@@ -97,6 +98,28 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
     const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
     const [isSettling, setIsSettling] = useState<string | null>(null);
     const [settleTxnHashes, setSettleTxnHashes] = useState<Record<string, string>>({});
+    const [currentPage, setCurrentPage] = useState(1);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [listings]);
+
+    const totalPages = useMemo(() => Math.max(1, Math.ceil(listings.length / DEFAULT_PAGE_SIZE)), [listings.length]);
+
+    const visibleListings = useMemo(() => {
+        const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
+        return listings.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
+    }, [currentPage, listings]);
+
+    const handlePageChange = useCallback(
+        (page: number) => {
+            const nextPage = Math.min(Math.max(page, 1), totalPages);
+            if (nextPage !== currentPage) {
+                setCurrentPage(nextPage);
+            }
+        },
+        [currentPage, totalPages],
+    );
 
     const handleEndAuction = useCallback(async (auctionId: string) => {
         if (!account) {
@@ -355,7 +378,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
             </header>
 
             <div className="flex flex-col gap-4">
-                {listings.map((listing) => (
+                {visibleListings.map((listing) => (
                     <article
                         key={listing.id}
                         className="flex w-full flex-col gap-4 rounded-2xl border border-[rgb(50,255,52)]/25 bg-black/40 p-5 shadow-[0_0_25px_rgba(50,255,52,0.12)] transition hover:cursor-pointer hover:border-[rgb(50,255,52)]/60 hover:shadow-[0_0_40px_rgba(50,255,52,0.18)] sm:flex-row sm:items-center sm:justify-between"
@@ -450,6 +473,12 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                     </article>
                 ))}
             </div>
+
+            {listings.length > 0 && (
+                <div className="flex justify-center">
+                    <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
+                </div>
+            )}
         </section>
     );
 }
