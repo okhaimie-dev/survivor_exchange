@@ -12,7 +12,6 @@ import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, IMAGE_BASE_URL, SUPPORTED_TOKENS, EKUBO_ROUTER_ADDRESS, USDC_ADDRESS } from "../lib/constants";
 import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
-import { convertUSDCToToken } from "../lib/utils/usd-pricing";
 import { getTokenPriceInUSDC, shouldRefetchPrice } from "../lib/utils/token-price-cache"; 
 
 type Collection = {
