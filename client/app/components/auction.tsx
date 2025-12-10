@@ -34,7 +34,8 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     
     const getDefaultDateTime = () => {
         const now = new Date();
-        return dateToLocalDateTimeString(now);
+        const defaultTime = new Date(now.getTime() + 40 * 60 * 1000);
+        return dateToLocalDateTimeString(defaultTime);
     };
     const [endDateTime, setEndDateTime] = useState<string>(getDefaultDateTime());
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,7 +148,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         
             const endDateTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
             const currentTimestamp = Math.floor(Date.now() / 1000);
-            const duration_seconds = (endDateTimestamp - currentTimestamp) + 600; // Add 10 minutes buffer
+            const duration_seconds = endDateTimestamp - currentTimestamp;
             const token_ids = selectedNFTs.map(nft => Number(parseInt(nft.tokenId, 16)));
             
             const usdAmount = parseFloat(startingPriceUSD);
