@@ -267,7 +267,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         return (
                 <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/80 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)] -m-4">
                 <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 h-full">
                         <div>
                             <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Selected NFTs
@@ -317,6 +317,16 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                     Select NFTs from the grid to assemble a collection for auction.
                                 </p>
                             )}
+                        </div>
+                        <div className="mt-auto">
+                            <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3">
+                            <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-1">
+                                Fees
+                            </p>
+                            <p className="text-xs text-[rgb(186,255,188)]/70">
+                                5% to Survivor DAO royalty, 2.5% platform fee
+                            </p>
+                            </div>
                         </div>
                     </div>
 
