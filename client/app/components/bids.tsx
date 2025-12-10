@@ -131,9 +131,9 @@ export default function Bids({
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>(collections[0]?.id ?? "");
     const [bidAmountToken, setBidAmountToken] = useState<string>("");
     const [paymentToken, setPaymentToken] = useState<string>(USDC_ADDRESS);
-    const [convertedStartingPrice, setConvertedStartingPrice] = useState<number>(0);
-    const [convertedHighestBid, setConvertedHighestBid] = useState<number | undefined>(undefined);
-    const [isConvertingPrices, setIsConvertingPrices] = useState(false);
+    const [, setConvertedStartingPrice] = useState<number>(0);
+    const [, setConvertedHighestBid] = useState<number | undefined>(undefined);
+    const [, setIsConvertingPrices] = useState(false);
     const [tokenPrice, setTokenPrice] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
     const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
@@ -895,32 +895,7 @@ export default function Bids({
                             </div>
 
                             <div className="flex gap-4 sm:items-start w-full">
-                                <div className="flex w-[200px] flex-col gap-3">
-                                    <label
-                                        htmlFor="bid-amount-token"
-                                        className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
-                                    >
-                                        Place Your Bid (USDC)
-                                    </label>
-                                    <input
-                                        id="bid-amount-token"
-                                        type="text"
-                                        value={bidAmountToken}
-                                        placeholder="0.00"
-                                        onChange={(event) => {
-                                            const value = event.target.value;
-                                            setBidAmountToken(value);
-                                            
-                                            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
-                                                getTokenPriceInUSDC(paymentToken).then(price => {
-                                                    setTokenPrice(price);
-                                                }).catch(err => {
-                                                    console.error('Error refetching price:', err);
-                                                });
-                                            }
-                                        }}
-                                        className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                    />
+                                <div className="flex flex-col gap-3">
                                     {bidAmountUSD > 0 && paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && (
                                         <p className="text-xs text-[rgb(186,255,188)]/50">
                                             ≈ {(() => {
@@ -954,8 +929,7 @@ export default function Bids({
                                             </option>
                                         ))}
                                     </select>
-                                </div>
-                                
+                                </div>               
                                 {(() => {
                                     const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
                                     const nfts = auction?.nfts || [];
@@ -989,6 +963,91 @@ export default function Bids({
                                     );
                                 })()}
                             </div>
+
+                            <div className="w-full flex gap-4 items-start">
+                                <div className="flex w-[200px] flex-col gap-3">
+                                    <label
+                                        htmlFor="bid-amount-token"
+                                        className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
+                                    >
+                                        Place Your Bid (USDC)
+                                    </label>
+                                    <input
+                                        id="bid-amount-token"
+                                        type="text"
+                                        value={bidAmountToken}
+                                        placeholder="0.00"
+                                        onChange={(event) => {
+                                            const value = event.target.value;
+                                            setBidAmountToken(value);
+                                            
+                                            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
+                                                getTokenPriceInUSDC(paymentToken).then(price => {
+                                                    setTokenPrice(price);
+                                                }).catch(err => {
+                                                    console.error('Error refetching price:', err);
+                                                });
+                                            }
+                                        }}
+                                        className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    />
+                                </div> 
+                                {(() => {
+                                    const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
+                                    const nfts = auction?.nfts || [];
+                                    
+                                    // Calculate power distribution by type
+                                    const powerDistribution = nfts.reduce((acc, nft) => {
+                                        const type = nft.beastType || 'Unknown';
+                                        const power = parseFloat(nft.power || '0');
+                                        const validPower = isNaN(power) ? 0 : power;
+                                        
+                                        if (type === 'Magic' || type === 'Brute' || type === 'Hunter') {
+                                            acc[type] = (acc[type] || 0) + validPower;
+                                        }
+                                        return acc;
+                                    }, {} as Record<string, number>);
+                                    
+                                    const magicPower = powerDistribution['Magic'] || 0;
+                                    const brutePower = powerDistribution['Brute'] || 0;
+                                    const hunterPower = powerDistribution['Hunter'] || 0;
+                                    
+                                    return (
+                                        <div className="flex flex-col gap-3 flex-1">
+                                            <label className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70">
+                                                Power Distribution
+                                            </label>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                        Magic
+                                                    </p>
+                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                        {magicPower.toFixed(1)}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                        Brute
+                                                    </p>
+                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                        {brutePower.toFixed(1)}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                        Hunter
+                                                    </p>
+                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                        {hunterPower.toFixed(1)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                            
                             <div className="flex flex-row gap-2">
                                 <button
                                     type="button"
