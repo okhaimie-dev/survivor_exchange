@@ -32,7 +32,7 @@ pub struct ListedToken {
     pub contract_address: felt252,
     #[key]
     pub token_id: u32,
-    pub auction_id: u32 // 0 if not listed
+    pub auction_id: u32,
 }
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]
