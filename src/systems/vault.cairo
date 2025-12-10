@@ -26,6 +26,7 @@ pub mod vault_systems {
     use survivor_exchange::models::auction::AuctionAssert;
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::types::status::AuctionStatus;
+    use survivor_exchange::utils::USDC_ADDRESS_MAINNET;
     use super::{ContractAddress, IVault};
 
     fn dojo_init(ref self: ContractState) {}
@@ -36,11 +37,10 @@ pub mod vault_systems {
             ref self: ContractState, vault_id: u32, amount: u256, depositor: ContractAddress,
         ) {
             let mut store = StoreTrait::new(self.world_default());
-            let vault = store.vault(vault_id);
+            //let vault = store.vault(vault_id);
             //assert(vault.vault_id != 0, Errors::VAULT_NOT_FOUND);
 
-            let fee_token_address: ContractAddress = vault.token_address.try_into().unwrap();
-            let dispatcher = IERC20Dispatcher { contract_address: fee_token_address };
+            let dispatcher = IERC20Dispatcher { contract_address: USDC_ADDRESS_MAINNET() };
 
             dispatcher.transfer_from(depositor, get_contract_address(), amount);
 

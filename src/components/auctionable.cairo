@@ -12,6 +12,7 @@ pub mod AuctionableComponent {
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
     use survivor_exchange::types::status::AuctionStatus;
+    use survivor_exchange::utils::USDC_ADDRESS_MAINNET;
 
     #[storage]
     pub struct Storage {}
@@ -130,13 +131,12 @@ pub mod AuctionableComponent {
             auction.activate(duration, current_time);
 
             let mut vault: Vault = VaultTrait::new(
-                auction_id, 0, auction.fee_token, get_block_timestamp(),
+                auction_id, 0, USDC_ADDRESS_MAINNET().into(), get_block_timestamp(),
             );
             store.set_vault(@vault);
 
             store.set_auction(@auction);
         }
-
 
         fn bid(
             self: @ComponentState<TContractState>,

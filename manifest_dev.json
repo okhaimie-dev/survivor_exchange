@@ -47,7 +47,7 @@
     },
     {
       "address": "0x370f667eed1e6d58959302268ae757a3c2dd6d408f68c027e9c0675557b97f",
-      "class_hash": "0x6b5a7c4668303c5a2229222c026747f57f54565dda514b97ce4a8e05951a03e",
+      "class_hash": "0x121dcc888b9482d4efcc40aba89763a41ed3fca9640151cc47f9327c9900898",
       "init_calldata": [],
       "tag": "bm_0_0_9-auction_systems",
       "selector": "0x64ae20c90a890b47dfaaec5ef266d1cae502f4b2162ace616226ef5f94b97b7",
@@ -64,7 +64,7 @@
     },
     {
       "address": "0x68c5ee74c0022051ac83e923443f31aff3510f0ac331326b9898d9bcdda43dc",
-      "class_hash": "0x5ed85de650d96200aa5e74ecb10de491506cf4e80660367a22b3b342d2e9caf",
+      "class_hash": "0x1d35ecbd26eeeb23d2c9a83a75761724201eb822548cfbb27786828d64e3663",
       "init_calldata": [],
       "tag": "bm_0_0_9-vault_systems",
       "selector": "0x7fd65902d85b45a9ddaa5912b650c9427075aae3a51c8c50e7c3d0654426b5b",
