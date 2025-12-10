@@ -55,8 +55,6 @@ export default function Bids({
     const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
     const [isSettling, setIsSettling] = useState(false);
     const [settleTxnHash, setSettleTxnHash] = useState<string | undefined>();
-    const [isWithdrawing, setIsWithdrawing] = useState(false);
-    const [withdrawTxnHash, setWithdrawTxnHash] = useState<string | undefined>();
     const [filters, setFilters] = useState<FilterState>({
         id: "",
         search: "",
@@ -230,79 +228,66 @@ export default function Bids({
     }, [paymentToken, isValidPrice]);
 
     useEffect(() => {
-        const convertPrices = async () => {
-            if (!selectedCollection) {
-                setConvertedStartingPrice(0);
-                setConvertedHighestBid(undefined);
-                return;
-            }
+        // Always display prices in USDC, regardless of payment token selection
+        if (!selectedCollection) {
+            setConvertedStartingPrice(0);
+            setConvertedHighestBid(undefined);
+            return;
+        }
 
-            setIsConvertingPrices(true);
-            try {
-                if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                    setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
-                    setConvertedHighestBid(selectedCollection.highestBid);
-                } else if (tokenPrice !== null) {
-                    setConvertedStartingPrice((selectedCollection.startingPrice / 1e6) / tokenPrice);
-                    
-                    if (selectedCollection.highestBid !== undefined) {
-                        setConvertedHighestBid(selectedCollection.highestBid / tokenPrice);
-                    } else {
-                        setConvertedHighestBid(undefined);
-                    }
-                } else {
-                    const convertedStart = await convertUSDCToToken(selectedCollection.startingPrice / 1e6, paymentToken);
-                    setConvertedStartingPrice(convertedStart);
-                    
-                    if (selectedCollection.highestBid !== undefined) {
-                        const convertedBid = await convertUSDCToToken(selectedCollection.highestBid, paymentToken);
-                        setConvertedHighestBid(convertedBid);
-                    } else {
-                        setConvertedHighestBid(undefined);
-                    }
-                }
-            } catch (error) {
-                console.error('Error converting prices:', error);
-                setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
-                setConvertedHighestBid(selectedCollection.highestBid);
-            } finally {
-                setIsConvertingPrices(false);
-            }
-        };
-
-        convertPrices();
-    }, [selectedCollection, paymentToken, tokenPrice]);
+        setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
+        setConvertedHighestBid(selectedCollection.highestBid);
+    }, [selectedCollection]);
 
 
 
+    // bidAmountToken now always represents USDC amount
     const bidAmountUSD = useMemo(() => {
-        const tokenAmount = parseFloat(bidAmountToken);
-        if (Number.isNaN(tokenAmount) || tokenAmount <= 0 || tokenPrice === null || !isValidPrice(tokenPrice)) {
+        const usdcAmount = parseFloat(bidAmountToken);
+        if (Number.isNaN(usdcAmount) || usdcAmount <= 0) {
+            return 0;
+        }
+        return usdcAmount;
+    }, [bidAmountToken]);
+
+    // Calculate equivalent amount in selected payment token
+    const bidAmountInPaymentToken = useMemo(() => {
+        const usdcAmount = parseFloat(bidAmountToken);
+        if (Number.isNaN(usdcAmount) || usdcAmount <= 0) {
             return 0;
         }
         
         if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-            return tokenAmount;
+            return usdcAmount;
         }
         
-        const usdAmount = tokenAmount * tokenPrice;
-        if (!isFinite(usdAmount) || usdAmount === Infinity || usdAmount === -Infinity) {
+        if (tokenPrice === null || !isValidPrice(tokenPrice)) {
             return 0;
         }
         
-        return usdAmount;
+        const tokenAmount = usdcAmount / tokenPrice;
+        if (!isFinite(tokenAmount) || tokenAmount === Infinity || tokenAmount === -Infinity) {
+            return 0;
+        }
+        
+        return tokenAmount;
     }, [bidAmountToken, tokenPrice, paymentToken, isValidPrice]);
 
     const isBidValid = useMemo(() => {
         const numericBid = parseFloat(bidAmountToken);
-        if (Number.isNaN(numericBid) || numericBid <= 0 || tokenPrice === null || !isValidPrice(tokenPrice)) {
+        if (Number.isNaN(numericBid) || numericBid <= 0) {
             return false;
         }
         return true;
-    }, [bidAmountToken, tokenPrice, isValidPrice]);
+    }, [bidAmountToken]);
 
     const handlePlaceBid = useCallback(async () => {
-        if (!account || !address || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid || tokenPrice === null) {
+        if (!account || !address || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !isBidValid) {
+            return;
+        }
+        
+        // If paying with non-USDC token, we need token price
+        if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && (tokenPrice === null || !isValidPrice(tokenPrice))) {
             return;
         }
 
@@ -319,70 +304,62 @@ export default function Bids({
 
             const auctionId = parseInt(selectedCollectionId, 10);
 
-            const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-            if (!paymentTokenInfo) {
-                throw new Error('Invalid payment token');
-            }
-
-            const tokenAmount = parseFloat(bidAmountToken);
-            if (isNaN(tokenAmount) || tokenAmount <= 0) {
+            // bidAmountToken is now always in USDC
+            const usdcAmount = parseFloat(bidAmountToken);
+            if (isNaN(usdcAmount) || usdcAmount <= 0) {
                 throw new Error('Invalid bid amount');
             }
 
-            const tokenAmountWei = BigInt(Math.floor(tokenAmount * Math.pow(10, paymentTokenInfo.decimals)));
+            const finalUSDAmount = Math.floor(usdcAmount * 1e6);
 
-            const balanceResult = await provider.provider.callContract({
-                contractAddress: paymentToken,
-                entrypoint: "balanceOf",
-                calldata: [address]
-            });
-            
-            if (!balanceResult || balanceResult.length < 2) {
-                throw new Error('Invalid balance response');
-            }
-            
-            const low = balanceResult[0];
-            const high = balanceResult[1];
-            const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+            // If paying with a token other than USDC, we need to swap
+            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+                const paymentTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                if (!paymentTokenInfo) {
+                    throw new Error('Invalid payment token');
+                }
 
-            if (balance < tokenAmountWei) {
-                setInsufficientFundsError(`Insufficient funds to place bid.`);
-                setIsSubmitting(false);
-                return;
-            }
+                // Get fresh price if needed
+                let currentTokenPrice = tokenPrice;
+                if (shouldRefetchPrice(paymentToken)) {
+                    currentTokenPrice = await getTokenPriceInUSDC(paymentToken);
+                    setTokenPrice(currentTokenPrice);
+                }
 
-            const usdAmount = bidAmountUSD;
+                if (currentTokenPrice === null || !isValidPrice(currentTokenPrice)) {
+                    throw new Error('Unable to get token price');
+                }
 
-            let finalUSDAmount = Math.floor(usdAmount * 1e6);
-            if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && shouldRefetchPrice(paymentToken)) {
-                const freshPrice = await getTokenPriceInUSDC(paymentToken);
-                setTokenPrice(freshPrice);
-                finalUSDAmount = Math.floor(tokenAmount * freshPrice * 1e6);
-            }
+                // Calculate how much of the payment token we need
+                const tokenAmountNeeded = usdcAmount / currentTokenPrice;
+                const tokenAmountWei = BigInt(Math.floor(tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals)));
 
-            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                // Approve 2% more than the USDC amount needed for the bid
-                const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
-                const approvalAmount = uint256.bnToUint256(approvalAmountValue);
-                calls.push({
-                    contractAddress: USDC_ADDRESS,
-                    entrypoint: "approve",
-                    calldata: [
-                        VAULT_CONTRACT_ADDRESS,
-                        approvalAmount.low.toString(),
-                        approvalAmount.high.toString()
-                    ]
+                // Check balance of payment token
+                const balanceResult = await provider.provider.callContract({
+                    contractAddress: paymentToken,
+                    entrypoint: "balanceOf",
+                    calldata: [address]
                 });
-                calls.push({
-                    contractAddress: AUCTION_CONTRACT_ADDRESS,
-                    entrypoint: "bid",
-                    calldata: [
-                        auctionId.toString(),
-                        finalUSDAmount.toString()
-                    ]
-                });
-            } else {
-                const swapQuote = await getSwapQuote(Number(tokenAmountWei), paymentToken, USDC_ADDRESS);
+                
+                if (!balanceResult || balanceResult.length < 2) {
+                    throw new Error('Invalid balance response');
+                }
+                
+                const low = balanceResult[0];
+                const high = balanceResult[1];
+                const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+
+                if (balance < tokenAmountWei) {
+                    setInsufficientFundsError(`Insufficient funds to place bid.`);
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                // Calculate token amount needed for swap (with some buffer for slippage)
+                const tokenAmountNeededForSwap = (usdcAmount / currentTokenPrice) * 1.02;
+                const tokenAmountWeiForSwap = BigInt(Math.floor(tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals)));
+
+                const swapQuote = await getSwapQuote(Number(tokenAmountWeiForSwap), paymentToken, USDC_ADDRESS);
 
                 const routerContract: RouterContract = {
                     address: EKUBO_ROUTER_ADDRESS,
@@ -423,10 +400,10 @@ export default function Bids({
                     outputTokenDecimals: usdcDecimals
                 };
 
-                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, tokenAmountWei);
+                const swapCalls = generateSwapCalls(routerContract, paymentToken, tokenQuote, tokenAmountWeiForSwap);
 
                 // Approve 2% more than the amount needed for the swap
-                const paymentTokenApprovalAmount = (tokenAmountWei * 102n) / 100n;
+                const paymentTokenApprovalAmount = (tokenAmountWeiForSwap * 102n) / 100n;
                 const paymentTokenApproval = uint256.bnToUint256(paymentTokenApprovalAmount);
                 calls.push({
                     contractAddress: paymentToken,
@@ -461,6 +438,48 @@ export default function Bids({
                         finalUSDAmount.toString()
                     ]
                 });
+            } else {
+                // Paying with USDC directly - check USDC balance
+                const usdcBalanceResult = await provider.provider.callContract({
+                    contractAddress: USDC_ADDRESS,
+                    entrypoint: "balanceOf",
+                    calldata: [address]
+                });
+                
+                if (!usdcBalanceResult || usdcBalanceResult.length < 2) {
+                    throw new Error('Invalid balance response');
+                }
+                
+                const usdcLow = usdcBalanceResult[0];
+                const usdcHigh = usdcBalanceResult[1];
+                const usdcBalance = BigInt(usdcLow) + (BigInt(usdcHigh) << BigInt(128));
+
+                if (usdcBalance < BigInt(finalUSDAmount)) {
+                    setInsufficientFundsError(`Insufficient funds to place bid.`);
+                    setIsSubmitting(false);
+                    return;
+                }
+
+                // Approve 2% more than the USDC amount needed for the bid
+                const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
+                const approvalAmount = uint256.bnToUint256(approvalAmountValue);
+                calls.push({
+                    contractAddress: USDC_ADDRESS,
+                    entrypoint: "approve",
+                    calldata: [
+                        VAULT_CONTRACT_ADDRESS,
+                        approvalAmount.low.toString(),
+                        approvalAmount.high.toString()
+                    ]
+                });
+                calls.push({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "bid",
+                    calldata: [
+                        auctionId.toString(),
+                        finalUSDAmount.toString()
+                    ]
+                });
             }
 
             const response = await account.execute(calls);
@@ -475,7 +494,7 @@ export default function Bids({
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider]);
+    }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider, isValidPrice]);
 
     const isAuctionExpired = useCallback((endTime: string, status: string): boolean => {
         if (!endTime || endTime === "0") return false;
@@ -659,34 +678,6 @@ export default function Bids({
         }
     }, [account, address, selectedCollectionId, paginatedFilteredAuctions]);
 
-    const handleWithdrawBid = useCallback(async () => {
-        if (!account) {
-            return;
-        }
-        
-        if (selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined) {
-            return;
-        }
-
-        try {
-            setIsWithdrawing(true);
-            setWithdrawTxnHash(undefined);
-
-            const auctionId = parseInt(selectedCollectionId, 10);
-
-            const response = await account.execute([{
-                contractAddress: AUCTION_CONTRACT_ADDRESS,
-                entrypoint: "withdraw_bid",
-                calldata: [auctionId.toString()]
-            }]);
-
-            setWithdrawTxnHash(response.transaction_hash);
-        } catch (err) {
-            console.error("Error withdrawing bid:", err);
-        } finally {
-            setIsWithdrawing(false);
-        }
-    }, [account, selectedCollectionId]);
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
         if (!collection) {
@@ -697,7 +688,6 @@ export default function Bids({
         setBidAmountToken("");
         setTxnHash(undefined);
         setSettleTxnHash(undefined);
-        setWithdrawTxnHash(undefined);
         setInsufficientFundsError(null);
     }, []);
 
@@ -708,7 +698,6 @@ export default function Bids({
                 setBidAmountToken("");
                 setTxnHash(undefined);
                 setSettleTxnHash(undefined);
-                setWithdrawTxnHash(undefined);
                 setInsufficientFundsError(null);
             } else {
                 updateSelection(collection);
@@ -892,19 +881,7 @@ export default function Bids({
                                         Reserved Price
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {isConvertingPrices ? (
-                                            "Loading..."
-                                        ) : (() => {
-                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                                            const symbol = tokenInfo?.symbol || "";
-                                            const decimals = tokenInfo?.decimals || 18;
-                                            
-                                            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                                                return formatUSD(selectedCollection.startingPrice/1e6);
-                                            } else {
-                                                return formatTokenAmount(convertedStartingPrice, decimals, symbol);
-                                            }
-                                        })()}
+                                        {formatUSD(selectedCollection.startingPrice / 1e6)}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
@@ -912,19 +889,7 @@ export default function Bids({
                                         Highest Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {isConvertingPrices ? (
-                                            "Loading..."
-                                        ) : selectedCollection.highestBid !== undefined ? (() => {
-                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                                            const symbol = tokenInfo?.symbol || "";
-                                            const decimals = tokenInfo?.decimals || 18;
-                                            
-                                            if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
-                                                return formatUSD(selectedCollection.highestBid);
-                                            } else {
-                                                return formatTokenAmount(convertedHighestBid, decimals, symbol);
-                                            }
-                                        })() : "No bids"}
+                                        {selectedCollection.highestBid !== undefined ? formatUSD(selectedCollection.highestBid) : "No bids"}
                                     </p>
                                 </div>
                             </div>
@@ -935,10 +900,7 @@ export default function Bids({
                                         htmlFor="bid-amount-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
                                     >
-                                        {(() => {
-                                            const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
-                                            return `Place Your Bid (${tokenInfo?.symbol || "USDC"})`;
-                                        })()}
+                                        Place Your Bid (USDC)
                                     </label>
                                     <input
                                         id="bid-amount-token"
@@ -959,9 +921,14 @@ export default function Bids({
                                         }}
                                         className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
-                                    {bidAmountUSD > 0 && (
+                                    {bidAmountUSD > 0 && paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && (
                                         <p className="text-xs text-[rgb(186,255,188)]/50">
-                                            ≈ {formatUSD(bidAmountUSD)}
+                                            ≈ {(() => {
+                                                const tokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase());
+                                                const symbol = tokenInfo?.symbol || "";
+                                                const decimals = tokenInfo?.decimals || 18;
+                                                return formatTokenAmount(bidAmountInPaymentToken, decimals, symbol);
+                                            })()}
                                         </p>
                                     )}
                                     {insufficientFundsError && (
@@ -1037,22 +1004,6 @@ export default function Bids({
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        handleWithdrawBid();
-                                    }}
-                                    disabled={!account || isWithdrawing}
-                                    className={`inline-flex items-center justify-center rounded-full w-full px-6 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
-                                        account && !isWithdrawing
-                                            ? "border border-red-500 bg-red-500/10 text-red-500 hover:cursor-pointer hover:bg-red-500 hover:text-black"
-                                            : "border border-white/12 text-[rgb(186,255,188)]/45"
-                                    }`}
-                                >
-                                    {isWithdrawing ? "Removing..." : "Remove Bid"}
-                                </button>
-                                <button
-                                    type="button"
                                     onClick={handleSettleAuction}
                                     disabled={!account || isSettling || !isAuctionExpired(selectedCollection.endTime, selectedCollection.status)}
                                     className={`inline-flex items-center justify-center rounded-full w-full px-2 h-10 text-sm font-orbitron uppercase tracking-[0.18em] transition ${
@@ -1092,21 +1043,6 @@ export default function Bids({
                                         className="text-sm font-orbitron text-orange-500 hover:underline break-all w-full"
                                     >
                                         {settleTxnHash}
-                                    </a>
-                                </div>
-                            )}
-                            {withdrawTxnHash && (
-                                <div className="rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 w-full">
-                                    <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
-                                        Withdraw Bid Transaction Submitted
-                                    </p>
-                                    <a
-                                        href={explorer.transaction(withdrawTxnHash)}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-sm font-orbitron text-red-500 hover:underline break-all w-full"
-                                    >
-                                        {withdrawTxnHash}
                                     </a>
                                 </div>
                             )}
