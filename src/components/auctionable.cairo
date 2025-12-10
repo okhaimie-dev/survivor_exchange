@@ -189,7 +189,10 @@ pub mod AuctionableComponent {
             // Final bid validation
             auction_ref.assert_bid_not_low(new_total_bid);
 
-            // Deposit the diff to vault
+            // Capture previous highest bidder **before** changes
+            let prev_highest_felt = auction.highest_bidder;
+
+            // Deposit the diff to vault **first**
             let diff = deposit_diff.into();
             let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
@@ -199,10 +202,25 @@ pub mod AuctionableComponent {
             let mut bid = BidTrait::new(auction_id, bidder_felt, new_total_bid);
             store.set_bid(@bid);
 
-            // Update auction (asserts already validated)
+            // Update auction (now reflects new highest bidder/current_bid)
             auction.update_bid(bidder_felt, new_total_bid, current_time);
             store.bid_placed(@auction, @bid, get_block_timestamp());
             store.set_auction(@auction);
+
+            // **Now** refund previous highest bidder (vault will see updated auction)
+            if prev_highest_felt != 0 && !is_highest_bidder {
+                let prev_highest = prev_highest_felt.try_into().unwrap();
+                let prev_share_balance = vault_dispatcher
+                    .share_balance(auction.auction_id, prev_highest);
+                if prev_share_balance > 0_u256 {
+                    vault_dispatcher
+                        .withdraw(
+                            auction.auction_id, prev_highest, prev_highest, prev_share_balance,
+                        );
+                    let mut cleared_bid = BidTrait::new(auction_id, prev_highest_felt, 0_u64);
+                    store.set_bid(@cleared_bid);
+                }
+            }
         }
 
         fn withdraw_bid(
