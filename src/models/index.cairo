@@ -27,6 +27,16 @@ pub struct AuctionItem {
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]
 #[dojo::model]
+pub struct ListedToken {
+    #[key]
+    pub contract_address: felt252,
+    #[key]
+    pub token_id: u32,
+    pub auction_id: u32 // 0 if not listed
+}
+
+#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[dojo::model]
 pub struct Bid {
     #[key]
     pub auction_id: u32,

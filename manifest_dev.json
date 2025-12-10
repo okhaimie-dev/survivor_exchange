@@ -47,7 +47,7 @@
     },
     {
       "address": "0x370f667eed1e6d58959302268ae757a3c2dd6d408f68c027e9c0675557b97f",
-      "class_hash": "0x121dcc888b9482d4efcc40aba89763a41ed3fca9640151cc47f9327c9900898",
+      "class_hash": "0x698162875cb9986540d8b43d0dbd86f6b94c6745f9c7f0b44e89de3f4c70f49",
       "init_calldata": [],
       "tag": "bm_0_0_9-auction_systems",
       "selector": "0x64ae20c90a890b47dfaaec5ef266d1cae502f4b2162ace616226ef5f94b97b7",
@@ -211,6 +211,28 @@
       "class_hash": "0x31056dcf0242470c77dfab9918875bd690f8207e78464386c7f10102b8d9dd8",
       "tag": "bm_0_0_9-ExchangeSettings",
       "selector": "0x2fb595a4b5d67e25aaac18921c84b39a11cc22f430f39120d87231c40448ab3"
+    },
+    {
+      "members": [
+        {
+          "name": "contract_address",
+          "type": "core::felt252",
+          "key": true
+        },
+        {
+          "name": "token_id",
+          "type": "core::integer::u32",
+          "key": true
+        },
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32",
+          "key": false
+        }
+      ],
+      "class_hash": "0x3ab3b1559fe8b361e3df86821e57183391db0a23ad7bf77eaed198c80dd34f1",
+      "tag": "bm_0_0_9-ListedToken",
+      "selector": "0x3e6457cdfeda910503090fc860ae0c028fae209add4a33aabaed23a72e35c2d"
     },
     {
       "members": [
@@ -2593,6 +2615,34 @@
     },
     {
       "type": "struct",
+      "name": "survivor_exchange::models::index::ListedToken",
+      "members": [
+        {
+          "name": "contract_address",
+          "type": "core::felt252"
+        },
+        {
+          "name": "token_id",
+          "type": "core::integer::u32"
+        },
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        }
+      ]
+    },
+    {
+      "type": "struct",
+      "name": "survivor_exchange::models::index::ListedTokenValue",
+      "members": [
+        {
+          "name": "auction_id",
+          "type": "core::integer::u32"
+        }
+      ]
+    },
+    {
+      "type": "struct",
       "name": "survivor_exchange::models::index::Rental",
       "members": [
         {
@@ -2808,6 +2858,12 @@
     {
       "type": "event",
       "name": "survivor_exchange::models::index::m_ExchangeSettings::Event",
+      "kind": "enum",
+      "variants": []
+    },
+    {
+      "type": "event",
+      "name": "survivor_exchange::models::index::m_ListedToken::Event",
       "kind": "enum",
       "variants": []
     },

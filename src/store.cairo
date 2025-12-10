@@ -4,7 +4,8 @@ use dojo::world::WorldStorage;
 use survivor_exchange::events::auction::AuctionEventTrait;
 use survivor_exchange::events::bid::BidPlacedTrait;
 use survivor_exchange::models::index::{
-    Auction, AuctionItem, Bid, ExchangeSettings, Rental, SupportedNFTCollection, Vault, VaultShare,
+    Auction, AuctionItem, Bid, ExchangeSettings, ListedToken, Rental, SupportedNFTCollection, Vault,
+    VaultShare,
 };
 
 
@@ -100,6 +101,16 @@ pub impl StoreImpl of StoreTrait {
     #[inline]
     fn set_vault_share(ref self: Store, vault_share: @VaultShare) {
         self.world.write_model(vault_share)
+    }
+
+    #[inline]
+    fn listed_token(self: Store, contract_address: felt252, token_id: u32) -> ListedToken {
+        self.world.read_model((contract_address, token_id))
+    }
+
+    #[inline]
+    fn set_listed_token(ref self: Store, listed_token: @ListedToken) {
+        self.world.write_model(listed_token)
     }
 
     #[inline]

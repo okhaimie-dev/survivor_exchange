@@ -35,4 +35,5 @@ pub mod Errors {
     pub const AUCTION_NOT_DISBURSED: felt252 = 'Auction: funds not disbursed';
     pub const INSUFFICIENT_VAULT_FUNDS: felt252 = 'Vault: insufficient funds';
     pub const AUCTION_ALREADY_SETTLED: felt252 = 'Auction: already settled';
+    pub const TOKEN_ALREADY_LISTED: felt252 = 'Token already listed';
 }
