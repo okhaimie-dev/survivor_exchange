@@ -895,6 +895,24 @@ export default function Bids({
 
                             <div className="flex gap-4 sm:items-start w-full">
                                 <div className="flex flex-col gap-3">
+                                    <label
+                                        htmlFor="payment-token"
+                                        className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
+                                    >
+                                        Pay With
+                                    </label>
+                                    <select
+                                        id="payment-token"
+                                        value={paymentToken}
+                                        onChange={(event) => setPaymentToken(event.target.value)}
+                                        className="w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
+                                    >
+                                        {SUPPORTED_TOKENS.map((token) => (
+                                            <option key={token.address} value={token.address}>
+                                                {token.symbol}
+                                            </option>
+                                        ))}
+                                    </select>
                                     {bidAmountUSD > 0 && paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && (
                                         <p className="text-xs text-[rgb(186,255,188)]/50">
                                             ≈ {(() => {
@@ -910,24 +928,6 @@ export default function Bids({
                                             {insufficientFundsError}
                                         </p>
                                     )}
-                                    <label
-                                        htmlFor="payment-token"
-                                        className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
-                                    >
-                                        Pay With
-                                    </label>
-                                    <select
-                                        id="payment-token"
-                                        value={paymentToken}
-                                        onChange={(event) => setPaymentToken(event.target.value)}
-                                        className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                                    >
-                                        {SUPPORTED_TOKENS.map((token) => (
-                                            <option key={token.address} value={token.address}>
-                                                {token.symbol}
-                                            </option>
-                                        ))}
-                                    </select>
                                 </div>               
                                 {(() => {
                                     const auction = paginatedFilteredAuctions.find(a => a.auction_id === selectedCollection.id);
@@ -988,7 +988,7 @@ export default function Bids({
                                                 });
                                             }
                                         }}
-                                        className="w-40 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        className="w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     />
                                 </div> 
                                 {(() => {
@@ -1017,27 +1017,27 @@ export default function Bids({
                                                 Power Distribution
                                             </label>
                                             <div className="grid grid-cols-3 gap-3">
-                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
-                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
                                                         Magic
                                                     </p>
-                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                    <p className="font-orbitron text-lg tracking-[0.12em]">
                                                         {magicPower.toFixed(1)}
                                                     </p>
                                                 </div>
-                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
-                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
                                                         Brute
                                                     </p>
-                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                    <p className="font-orbitron text-lg tracking-[0.12em]">
                                                         {brutePower.toFixed(1)}
                                                     </p>
                                                 </div>
-                                                <div className="rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-3 text-center">
-                                                    <p className="text-[rgb(186,255,188)]/70 text-[10px] uppercase tracking-[0.16em] mb-1">
+                                                <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
+                                                    <p className="text-[rgb(186,255,188)]/70 text-[11px] uppercase tracking-[0.16em]">
                                                         Hunter
                                                     </p>
-                                                    <p className="font-orbitron text-lg tracking-[0.12em] text-[rgb(50,255,52)]">
+                                                    <p className="font-orbitron text-lg tracking-[0.12em]">
                                                         {hunterPower.toFixed(1)}
                                                     </p>
                                                 </div>
@@ -1047,7 +1047,7 @@ export default function Bids({
                                 })()}
                             </div>
                             
-                            <div className="flex flex-row gap-2">
+                            <div className="flex flex-row gap-5 max-w-[500px]">
                                 <button
                                     type="button"
                                     onClick={handlePlaceBid}
