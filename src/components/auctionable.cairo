@@ -387,5 +387,60 @@ pub mod AuctionableComponent {
                     };
             store.set_auction(@auction);
         }
+
+        /// View: Whether `settle` would succeed now (items transferable + expired).
+        /// Simulates auto-end: `true` for expired Active + checks pass.
+        fn can_settle(
+            self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,
+        ) -> bool {
+            let store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
+            let auction = store.auction(auction_id);
+            let status = auction.status;
+
+            // Mimic settle asserts (exists + !Settled/!Canceled)
+            if status == AuctionStatus::None.into()
+                || status == AuctionStatus::Settled.into()
+                || status == AuctionStatus::Canceled.into() {
+                return false;
+            }
+
+            // Auto-end sim (settle prefix)
+            let is_ended = if status == AuctionStatus::Active.into() {
+                current_time >= auction.end_time
+            } else {
+                status == AuctionStatus::Ended.into()
+            };
+            if !is_ended {
+                return false;
+            }
+
+            let seller: ContractAddress = auction.seller.try_into().unwrap();
+            let auction_contract: ContractAddress = starknet::get_contract_address();
+            let has_winner = auction.highest_bidder != 0; // felt252 zero-check
+            if !has_winner {
+                return true; // Settle noop (no transfer)
+            }
+
+            // Full pre-flight: owner + approvals (fails on rug/revoke)
+            let mut i: u32 = 0;
+            while i < auction.item_count {
+                let item = store.auction_item(auction_id, i);
+                let nft_dispatcher = IERC721Dispatcher {
+                    contract_address: item.contract_address.try_into().unwrap(),
+                };
+                let owner = nft_dispatcher.owner_of(item.token_id.into());
+                if owner != seller { // Rug: transferred away
+                    return false;
+                }
+                let approved = nft_dispatcher.get_approved(item.token_id.into());
+                let approved_for_all = nft_dispatcher.is_approved_for_all(seller, auction_contract);
+                if !(approved == auction_contract || approved_for_all) {
+                    return false;
+                }
+                i += 1;
+            }
+            true
+        }
     }
 }

@@ -50,6 +50,8 @@ pub trait IAuctionMarketplace<TContractState> {
     fn settle_auction(ref self: TContractState, auction_id: u32);
 
     fn get_auction(self: @TContractState, auction_id: u32) -> Auction;
+
+    fn can_settle(self: @TContractState, auction_id: u32) -> bool;
 }
 
 // dojo decorator
@@ -135,6 +137,10 @@ pub mod auction_systems {
         fn get_auction(self: @ContractState, auction_id: u32) -> Auction {
             let store = StoreTrait::new(self.world_default());
             store.auction(auction_id)
+        }
+
+        fn can_settle(self: @ContractState, auction_id: u32) -> bool {
+            self.auctionable.can_settle(self.world_default(), auction_id)
         }
     }
 
