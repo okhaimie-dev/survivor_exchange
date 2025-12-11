@@ -324,7 +324,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 Fees
                             </p>
                             <p className="text-xs text-[rgb(186,255,188)]/70">
-                                5% to Survivor DAO royalty, 2.5% platform fee
+                                5% to Survivor DAO royalty, <span className="line-through">2.5% platform fee</span>
                             </p>
                             </div>
                         </div>
