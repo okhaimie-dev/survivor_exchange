@@ -2,6 +2,18 @@
 version = 1
 
 [[package]]
+name = "beasts_nft"
+version = "0.1.0"
+source = "git+https://github.com/Provable-Games/beasts.git#cde97d05e636871aadef26c324210a5933a101fc"
+dependencies = [
+ "openzeppelin_access",
+ "openzeppelin_governance",
+ "openzeppelin_introspection",
+ "openzeppelin_token",
+ "openzeppelin_utils",
+]
+
+[[package]]
 name = "dojo"
 version = "1.8.0"
 source = "registry+https://scarbs.xyz/"
@@ -163,6 +175,7 @@ dependencies = [
 name = "survivor_exchange"
 version = "1.8.0"
 dependencies = [
+ "beasts_nft",
  "dojo",
  "dojo_snf_test",
  "openzeppelin",
