@@ -290,6 +290,7 @@ pub mod AuctionableComponent {
             // Assert auction exists and is not already settled
             auction.assert_does_exist();
             assert(status != AuctionStatus::Settled.into(), Errors::AUCTION_ALREADY_SETTLED);
+            assert(status != AuctionStatus::Canceled.into(), Errors::AUCTION_ALREADY_CANCELED);
 
             // Auto-end if active and expired (mimics end() logic for post-expiry)
             if status == AuctionStatus::Active.into() {
@@ -302,40 +303,69 @@ pub mod AuctionableComponent {
                 assert(status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_ENDED);
             }
 
-            // Reload auction after potential update (in case of external changes, but unlikely)
+            // Reload auction after potential update
             auction = store.auction(auction_id);
 
             let winner: ContractAddress = auction.highest_bidder.try_into().unwrap();
             let seller: ContractAddress = auction.seller.try_into().unwrap();
+            let auction_contract: ContractAddress = starknet::get_contract_address();
             let zero_address: ContractAddress = 0.try_into().unwrap();
             let has_winner = winner != zero_address;
             let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
             let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
 
+            let mut can_settle: bool = true;
             if has_winner {
-                // Withdraw funds to seller via disbursement
-                let amount = auction.current_bid.into();
-
-                // Check no active rentals on items before transferring (if not already checked
-                // above)
-                // Note: If rentals checked in auto-end, skip here to avoid double-check; otherwise,
-                // add it
-
-                // Transfer items to winner
+                // Pre-flight: check all items transferable
                 let mut i: u32 = 0;
                 while i < auction.item_count {
                     let item = store.auction_item(auction.auction_id, i);
-                    let item_dispatcher = IERC721Dispatcher {
+                    let nft_dispatcher = IERC721Dispatcher {
                         contract_address: item.contract_address.try_into().unwrap(),
                     };
-                    item_dispatcher.transfer_from(seller, winner, item.token_id.into());
+                    let owner = nft_dispatcher.owner_of(item.token_id.into());
+                    if owner != seller {
+                        can_settle = false;
+                        break;
+                    }
+                    let approved = nft_dispatcher.get_approved(item.token_id.into());
+                    let approved_for_all = nft_dispatcher
+                        .is_approved_for_all(seller, auction_contract);
+                    if !(approved == auction_contract || approved_for_all) {
+                        can_settle = false;
+                        break;
+                    }
                     i += 1;
                 }
 
-                vault_dispatcher.disburse_to_seller(auction.auction_id, seller, amount);
+                if can_settle {
+                    // Withdraw funds to seller via disbursement
+                    let amount = auction.current_bid.into();
+
+                    // TODO: Check no active rentals on items (cross-check rentable)
+
+                    // Transfer items to winner
+                    let mut i: u32 = 0;
+                    while i < auction.item_count {
+                        let item = store.auction_item(auction.auction_id, i);
+                        let item_dispatcher = IERC721Dispatcher {
+                            contract_address: item.contract_address.try_into().unwrap(),
+                        };
+                        item_dispatcher.transfer_from(seller, winner, item.token_id.into());
+                        i += 1;
+                    }
+
+                    vault_dispatcher.disburse_to_seller(auction.auction_id, seller, amount);
+                } else {
+                    // Refund highest bidder (auction_systems authorized)
+                    let shares = vault_dispatcher.share_balance(auction.auction_id, winner);
+                    if shares > 0_u256 {
+                        vault_dispatcher.withdraw(auction.auction_id, winner, winner, shares);
+                    }
+                }
             }
             // If no winner, items stay with seller; no fund transfer (vault should be empty or
-            // withdrawable separately)
+            // withdrawable)
 
             // Delist all items
             let mut i: u32 = 0;
@@ -347,8 +377,14 @@ pub mod AuctionableComponent {
                 i += 1;
             }
 
-            // Update to Settled
-            auction.status = AuctionStatus::Settled.into();
+            // Update to Settled or Canceled
+            auction
+                .status =
+                    if can_settle {
+                        AuctionStatus::Settled.into()
+                    } else {
+                        AuctionStatus::Canceled.into()
+                    };
             store.set_auction(@auction);
         }
     }
