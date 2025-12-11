@@ -47,7 +47,7 @@
     },
     {
       "address": "0x370f667eed1e6d58959302268ae757a3c2dd6d408f68c027e9c0675557b97f",
-      "class_hash": "0x1680320082a50879e219d1c07f1c86fdefd8719c4971092c4d910f6baa90c1d",
+      "class_hash": "0x45314a0a9b606736e4fcd68009d34b25d4ea8d2440ec9952803dc8882dd2a52",
       "init_calldata": [],
       "tag": "bm_0_0_9-auction_systems",
       "selector": "0x64ae20c90a890b47dfaaec5ef266d1cae502f4b2162ace616226ef5f94b97b7",
@@ -3082,6 +3082,22 @@
           "outputs": [
             {
               "type": "survivor_exchange::models::index::Auction"
+            }
+          ],
+          "state_mutability": "view"
+        },
+        {
+          "type": "function",
+          "name": "can_settle",
+          "inputs": [
+            {
+              "name": "auction_id",
+              "type": "core::integer::u32"
+            }
+          ],
+          "outputs": [
+            {
+              "type": "core::bool"
             }
           ],
           "state_mutability": "view"
