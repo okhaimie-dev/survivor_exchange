@@ -31,6 +31,12 @@ export const LORDS_ADDRESS = '0x0124aeb495b947201f5fac96fd1138e326ad86195b98df6d
 export const EKUBO_ROUTER_ADDRESS = '0x0199741822c2dc722f6f605204f35e56dbc23bceed54818168c4c49e4fb8737e';
 export const SURVIVOR_ADDRESS_MAINNET = '0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B';
 
+export const STARKNET_MAINNET_CHAIN_ID = '0x534e5f4d41494e';
+export const STARKNET_MAINNET_CHAIN_ID_DECIMAL = '23448594291968334';
+
+export const EKUBO_API_BASE_URL = 'https://prod-api.ekubo.org';
+export const EKUBO_QUOTER_API_BASE_URL = 'https://prod-api-quoter.ekubo.org';
+
 export interface TokenInfo {
   address: string;
   symbol: string;

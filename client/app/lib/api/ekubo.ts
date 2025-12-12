@@ -1,4 +1,5 @@
 import { num } from "starknet";
+import { STARKNET_MAINNET_CHAIN_ID, STARKNET_MAINNET_CHAIN_ID_DECIMAL, EKUBO_API_BASE_URL, EKUBO_QUOTER_API_BASE_URL } from "../constants";
 
 interface SwapQuote {
   impact: number;
@@ -25,9 +26,9 @@ interface RouteNode {
 
 interface TokenQuote {
   tokenAddress: string;
-  minimumAmount: number | bigint; // Can be in wei (bigint) or decimal (number)
+  minimumAmount: number | bigint;
   quote?: SwapQuote;
-  outputTokenDecimals?: number; // Decimals for the output token
+  outputTokenDecimals?: number;
 }
 
 interface RouterContract {
@@ -41,8 +42,12 @@ interface SwapCall {
   calldata: string[];
 }
 
-export const getPriceChart = async (token: string, otherToken: string) => {
-  const response = await fetch(`https://starknet-mainnet-api.ekubo.org/price/${token}/${otherToken}/history?interval=7000`);
+export const getPriceChart = async (token: string, otherToken: string, chainId: string = STARKNET_MAINNET_CHAIN_ID) => {
+  const response = await fetch(`${EKUBO_API_BASE_URL}/price/${chainId}/${token}/${otherToken}/history?interval=7000`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch price chart: ${response.statusText}`);
+  }
 
   const data = await response.json();
 
@@ -51,14 +56,19 @@ export const getPriceChart = async (token: string, otherToken: string) => {
   };
 };
 
-export const getSwapQuote = async (amount: number, token: string, otherToken: string): Promise<SwapQuote> => {
-  const response = await fetch(`https://starknet-mainnet-quoter-api.ekubo.org/${amount}/${token}/${otherToken}`);
+export const getSwapQuote = async (amount: number, token: string, otherToken: string, chainId: string = STARKNET_MAINNET_CHAIN_ID_DECIMAL): Promise<SwapQuote> => {
+  const negativeAmount = -Math.abs(amount);
+  const response = await fetch(`${EKUBO_QUOTER_API_BASE_URL}/${chainId}/${negativeAmount}/${token}/${otherToken}`);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch swap quote: ${response.statusText}`);
+  }
 
   const data = await response.json();
 
   return {
     impact: data?.price_impact || 0,
-    total: data?.total_calculated || 0,
+    total: Math.abs(Number(data?.total_calculated || 0)),
     splits: data?.splits || [],
   };
 };
@@ -206,4 +216,3 @@ export const generateSwapCalls = (ROUTER_CONTRACT: RouterContract, purchaseToken
 };
 
 export type { SwapQuote, SwapSplit, RouteNode, TokenQuote, RouterContract, SwapCall };
-
