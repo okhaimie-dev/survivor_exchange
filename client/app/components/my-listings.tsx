@@ -1,6 +1,6 @@
 import Image from "next/image";
 import moment from "moment";
-import { useAccount, useExplorer } from "@starknet-react/core";
+import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, DEFAULT_PAGE_SIZE } from "../lib/constants";
@@ -94,10 +94,12 @@ interface MyListingsProps {
 export default function MyListings({ listings, loading, error }: MyListingsProps) {
     const { account, address } = useAccount();
     const explorer = useExplorer();
+    const provider = useProvider();
     const [isEndingAuction, setIsEndingAuction] = useState<string | null>(null);
     const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
     const [isSettling, setIsSettling] = useState<string | null>(null);
     const [settleTxnHashes, setSettleTxnHashes] = useState<Record<string, string>>({});
+    const [refundedAuctions, setRefundedAuctions] = useState<Record<string, boolean>>({});
     const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
@@ -198,6 +200,22 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                 });
 
                 setSettleTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const canSettleResult = await provider.provider.callContract({
+                        contractAddress: AUCTION_CONTRACT_ADDRESS,
+                        entrypoint: "can_settle",
+                        calldata: [auctionId]
+                    });
+                    
+                    if (canSettleResult && canSettleResult.length > 0) {
+                        const canSettle = parseInt(canSettleResult[0], 16);
+                        setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 1 }));
+                    }
+                } catch (checkError) {
+                    console.error("Error checking can_settle:", checkError);
+                }
             } catch (err) {
                 console.error("Error settling auction - contract call failed:", err);
             } finally {
@@ -304,6 +322,22 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
 
             const response = await account.execute(calls);
             setSettleTxnHashes(prev => ({ ...prev, [auctionId]: response.transaction_hash }));
+            
+            try {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const canSettleResult = await provider.provider.callContract({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "can_settle",
+                    calldata: [auctionId]
+                });
+                
+                if (canSettleResult && canSettleResult.length > 0) {
+                    const canSettle = parseInt(canSettleResult[0], 16);
+                    setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 1 }));
+                }
+            } catch (checkError) {
+                console.error("Error checking can_settle:", checkError);
+            }
         } catch (err) {
             console.error("Error settling auction - contract call failed:", err);
             if (err instanceof Error) {
@@ -318,7 +352,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
         } finally {
             setIsSettling(null);
         }
-    }, [account, address, listings]);
+    }, [account, address, listings, provider]);
 
     if (loading) {
         return (
@@ -460,14 +494,21 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                                 </a>
                             )}
                             {settleTxnHashes[listing.auctionId] && (
-                                <a
-                                    href={explorer.transaction(settleTxnHashes[listing.auctionId])}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-xs font-orbitron text-orange-400 hover:underline break-all"
-                                >
-                                    View Settle Transaction
-                                </a>
+                                <div className="flex flex-col gap-1">
+                                    {refundedAuctions[listing.auctionId] && (
+                                        <p className="text-xs text-[rgb(186,255,188)]/70">
+                                            Auction Refunded - All parties have been refunded
+                                        </p>
+                                    )}
+                                    <a
+                                        href={explorer.transaction(settleTxnHashes[listing.auctionId])}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="text-xs font-orbitron text-orange-400 hover:underline break-all"
+                                    >
+                                        View Settle Transaction
+                                    </a>
+                                </div>
                             )}
                         </div>
                     </article>

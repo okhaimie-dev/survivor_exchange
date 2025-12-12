@@ -54,6 +54,7 @@ export default function Bids({
     const [insufficientFundsError, setInsufficientFundsError] = useState<string | null>(null);
     const [isSettling, setIsSettling] = useState(false);
     const [settleTxnHash, setSettleTxnHash] = useState<string | undefined>();
+    const [isRefunded, setIsRefunded] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
         id: "",
         search: "",
@@ -552,6 +553,22 @@ export default function Bids({
                 });
 
                 setSettleTxnHash(response.transaction_hash);
+                
+                try {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    const canSettleResult = await provider.provider.callContract({
+                        contractAddress: AUCTION_CONTRACT_ADDRESS,
+                        entrypoint: "can_settle",
+                        calldata: [auctionId.toString()]
+                    });
+                    
+                    if (canSettleResult && canSettleResult.length > 0) {
+                        const canSettle = parseInt(canSettleResult[0], 16);
+                        setIsRefunded(canSettle === 1);
+                    }
+                } catch (checkError) {
+                    console.error("Error checking can_settle:", checkError);
+                }
             } catch (err) {
                 console.error("Error settling auction:", err);
             } finally {
@@ -661,6 +678,22 @@ export default function Bids({
 
             const response = await account.execute(calls);
             setSettleTxnHash(response.transaction_hash);
+            
+            try {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const canSettleResult = await provider.provider.callContract({
+                    contractAddress: AUCTION_CONTRACT_ADDRESS,
+                    entrypoint: "can_settle",
+                    calldata: [auctionId.toString()]
+                });
+                
+                if (canSettleResult && canSettleResult.length > 0) {
+                    const canSettle = parseInt(canSettleResult[0], 16);
+                    setIsRefunded(canSettle === 1);
+                }
+            } catch (checkError) {
+                console.error("Error checking can_settle:", checkError);
+            }
         } catch (err) {
             console.error("Error settling auction - contract call failed:", err);
             if (err instanceof Error) {
@@ -675,7 +708,7 @@ export default function Bids({
         } finally {
             setIsSettling(false);
         }
-    }, [account, address, selectedCollectionId, paginatedFilteredAuctions]);
+    }, [account, address, selectedCollectionId, paginatedFilteredAuctions, provider]);
 
 
     const updateSelection = useCallback((collection: Collection | undefined) => {
@@ -688,6 +721,7 @@ export default function Bids({
         setTxnHash(undefined);
         setSettleTxnHash(undefined);
         setInsufficientFundsError(null);
+        setIsRefunded(false);
     }, []);
 
     const handleSelectCollection = useCallback(
@@ -1092,8 +1126,13 @@ export default function Bids({
                             {settleTxnHash && (
                                 <div className="rounded-xl border border-orange-500/40 bg-orange-500/10 px-4 py-3 w-full">
                                     <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
-                                        Settle Transaction Submitted
+                                        {isRefunded ? "Auction Refunded" : "Settle Transaction Submitted"}
                                     </p>
+                                    {isRefunded && (
+                                        <p className="text-xs text-[rgb(186,255,188)]/70 mb-2">
+                                            All parties have been refunded
+                                        </p>
+                                    )}
                                     <a
                                         href={explorer.transaction(settleTxnHash)}
                                         target="_blank"
