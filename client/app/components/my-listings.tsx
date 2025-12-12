@@ -211,7 +211,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                     
                     if (canSettleResult && canSettleResult.length > 0) {
                         const canSettle = parseInt(canSettleResult[0], 16);
-                        setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 1 }));
+                        setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 0 }));
                     }
                 } catch (checkError) {
                     console.error("Error checking can_settle:", checkError);
@@ -340,7 +340,7 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                 
                 if (canSettleResult && canSettleResult.length > 0) {
                     const canSettle = parseInt(canSettleResult[0], 16);
-                    setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 1 }));
+                    setRefundedAuctions(prev => ({ ...prev, [auctionId]: canSettle === 0 }));
                 }
             } catch (checkError) {
                 console.error("Error checking can_settle:", checkError);

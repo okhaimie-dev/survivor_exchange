@@ -578,7 +578,7 @@ export default function Bids({
                     
                     if (canSettleResult && canSettleResult.length > 0) {
                         const canSettle = parseInt(canSettleResult[0], 16);
-                        setIsRefunded(canSettle === 1);
+                        setIsRefunded(canSettle === 0);
                     }
                 } catch (checkError) {
                     console.error("Error checking can_settle:", checkError);
@@ -710,7 +710,7 @@ export default function Bids({
                 
                 if (canSettleResult && canSettleResult.length > 0) {
                     const canSettle = parseInt(canSettleResult[0], 16);
-                    setIsRefunded(canSettle === 1);
+                    setIsRefunded(canSettle === 0);
                 }
             } catch (checkError) {
                 console.error("Error checking can_settle:", checkError);
