@@ -25,6 +25,8 @@ type Collection = {
     endTime: string;
     seller: string;
     highestBidder: string;
+    sellerFull: string;
+    highestBidderFull: string;
 };
 
 interface BidsProps {
@@ -124,6 +126,8 @@ export default function Bids({
                 endTime: auction.end_time,
                 seller: truncateAddress(auction.seller),
                 highestBidder: truncateAddress(auction.highest_bidder),
+                sellerFull: auction.seller,
+                highestBidderFull: auction.highest_bidder,
             };
         });
     }, [paginatedFilteredAuctions]);
@@ -917,6 +921,46 @@ export default function Bids({
                             </span>
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
                                 {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} in this collection
+                            </p>
+                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
+                                Seller: <a 
+                                    href={`https://voyager.online/contract/${selectedCollection.sellerFull}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-[rgb(50,255,52)] hover:underline"
+                                >
+                                    {selectedCollection.seller}
+                                </a>
+                            </p>
+                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
+                                Highest Bidder: {(() => {
+                                    const isZeroAddress = !selectedCollection.highestBidderFull || 
+                                        selectedCollection.highestBidderFull === '0x0' || 
+                                        selectedCollection.highestBidderFull === '0' ||
+                                        selectedCollection.highestBidderFull.toLowerCase().startsWith('0x0000') ||
+                                        selectedCollection.highestBidderFull === '0x0000000000000000000000000000000000000000000000000000000000000000';
+                                    
+                                    if (isZeroAddress) {
+                                        return '-';
+                                    }
+                                    
+                                    const isUserBidder = address && selectedCollection.highestBidderFull ? (() => {
+                                        const userAddress = normalizeContractAddress(address).toLowerCase();
+                                        const bidderAddress = normalizeContractAddress(selectedCollection.highestBidderFull).toLowerCase();
+                                        return userAddress === bidderAddress;
+                                    })() : false;
+                                    
+                                    return (
+                                        <a 
+                                            href={`https://voyager.online/contract/${selectedCollection.highestBidderFull}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="hover:text-[rgb(50,255,52)] hover:underline"
+                                        >
+                                            {selectedCollection.highestBidder}{isUserBidder ? ' (you)' : ''}
+                                        </a>
+                                    );
+                                })()}
                             </p>
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]" onClick={() => {
                                 const collectionLink = `${window.location.origin}/?token=${selectedCollection.id}`;
