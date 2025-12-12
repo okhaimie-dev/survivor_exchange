@@ -14,6 +14,10 @@ pub mod models {
     pub mod vault;
 }
 
+pub mod interfaces {
+    pub mod ierc2981;
+}
+
 pub mod types {
     pub mod status;
 }

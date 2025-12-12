@@ -5,6 +5,7 @@ pub mod AuctionableComponent {
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use survivor_exchange::constants::Errors;
+    use survivor_exchange::interfaces::ierc2981::{IERC2981Dispatcher, IERC2981DispatcherTrait};
     use survivor_exchange::models::auction::{
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
@@ -343,6 +344,24 @@ pub mod AuctionableComponent {
                     // Withdraw funds to seller via disbursement
                     let amount = auction.current_bid.into();
 
+                    // Calculate royalty using sample item from the auction
+                    let sample_item = store.auction_item(auction.auction_id, 0);
+                    let royalty_dispatcher = IERC2981Dispatcher {
+                        contract_address: sample_item.contract_address.try_into().unwrap(),
+                    };
+                    let (royalty_receiver, royalty_amount) = royalty_dispatcher
+                        .royalty_info(sample_item.token_id.into(), amount);
+                    let net_amount = if royalty_amount != 0 {
+                        // Pay royalty via vault
+                        // Pay royalty via vault (vault_id: auction.auction_id, to:
+                        // royalty_receiver, amount: royalty_amount)
+                        vault_dispatcher
+                            .pay_royalty(auction.auction_id, royalty_receiver, royalty_amount);
+                        amount - royalty_amount
+                    } else {
+                        amount
+                    };
+
                     // TODO: Check no active rentals on items (cross-check rentable)
 
                     // Transfer items to winner
@@ -356,7 +375,7 @@ pub mod AuctionableComponent {
                         i += 1;
                     }
 
-                    vault_dispatcher.disburse_to_seller(auction.auction_id, seller, amount);
+                    vault_dispatcher.disburse_to_seller(auction.auction_id, seller, net_amount);
                 } else {
                     // Refund highest bidder (auction_systems authorized)
                     let shares = vault_dispatcher.share_balance(auction.auction_id, winner);

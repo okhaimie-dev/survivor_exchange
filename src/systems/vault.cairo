@@ -15,6 +15,8 @@ pub trait IVault<TContractState> {
     fn disburse_to_seller(
         ref self: TContractState, vault_id: u32, seller: ContractAddress, amount: u256,
     );
+
+    fn pay_royalty(ref self: TContractState, vault_id: u32, to: ContractAddress, amount: u256);
 }
 
 #[dojo::contract]
@@ -135,6 +137,29 @@ pub mod vault_systems {
             let token_address: ContractAddress = vault.token_address.try_into().unwrap();
             let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
             token_dispatcher.transfer(seller, amount);
+
+            let mut vault = store.vault(vault_id);
+            vault.locked_amount -= amount;
+            store.set_vault(@vault);
+        }
+
+        fn pay_royalty(ref self: ContractState, vault_id: u32, to: ContractAddress, amount: u256) {
+            let caller = get_caller_address();
+            let world = self.world_default();
+            let (auction_system_address, _) = world.dns(@"auction_systems").unwrap();
+            assert(caller == auction_system_address, Errors::UNAUTHORIZED);
+
+            let mut store = StoreTrait::new(self.world_default());
+            let auction = store.auction(vault_id);
+            auction.assert_does_exist();
+            assert(auction.status == AuctionStatus::Ended.into(), Errors::AUCTION_NOT_DISBURSED);
+
+            let vault = store.vault(vault_id);
+            assert(vault.locked_amount >= amount, Errors::INSUFFICIENT_VAULT_FUNDS);
+
+            let token_address: ContractAddress = vault.token_address.try_into().unwrap();
+            let token_dispatcher = IERC20Dispatcher { contract_address: token_address };
+            token_dispatcher.transfer(to, amount);
 
             let mut vault = store.vault(vault_id);
             vault.locked_amount -= amount;
