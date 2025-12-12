@@ -3,11 +3,11 @@ import moment from "moment";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { FormattedListing } from "../hooks/use-my-listings";
-import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, EKUBO_ROUTER_ADDRESS, SUPPORTED_TOKENS, DEFAULT_PAGE_SIZE } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, SUPPORTED_TOKENS, DEFAULT_PAGE_SIZE } from "../lib/constants";
 import { formatUSDCompact, truncateAuctionName } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
-import { getSwapQuote, generateSwapCalls, type TokenQuote, type RouterContract } from "../lib/api/ekubo";
+import { getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
 import Pagination from "./pagination";
 
 const formatTimeAgo = (timestamp: string): string => {
@@ -255,69 +255,76 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                 // currentBid is now divided by 1e6 for display, so we need to multiply back for contract calls
                 const usdcAmountWei = BigInt(Math.floor(listing.currentBid * 1e6));
                 
-                // generateSwapCalls adds a 1% buffer (101/100), so we need to pass 100/101 of the amount
-                // to ensure the transfer doesn't exceed the balance after settle_auction
-                const swapInputAmount = (usdcAmountWei * 100n) / 101n;
+                // Use exact amount for swap
+                const swapInputAmount = usdcAmountWei;
 
-                // Get swap quote using the adjusted amount
-                const swapQuote = await getSwapQuote(Number(swapInputAmount), USDC_ADDRESS, listing.feeToken);
+                // Get Avnu swap quotes
+                const quotes = await getQuotes({
+                    sellTokenAddress: USDC_ADDRESS,
+                    buyTokenAddress: listing.feeToken,
+                    sellAmount: swapInputAmount,
+                    takerAddress: address,
+                });
 
-                const routerContract: RouterContract = {
-                    address: EKUBO_ROUTER_ADDRESS,
-                    populate: (method: string, params: unknown[]) => {
-                        const calldata: string[] = [];
-                        params.forEach(param => {
-                            if (param && typeof param === 'object' && 'contract_address' in param) {
-                                const structParam = param as { contract_address: string; amount?: number | bigint };
-                                calldata.push(structParam.contract_address);
-                                if (structParam.amount !== undefined) {
-                                    const amountHex = typeof structParam.amount === 'bigint' 
-                                        ? num.toHex(structParam.amount)
-                                        : num.toHex(BigInt(Math.floor(Number(structParam.amount))));
-                                    calldata.push(amountHex);
-                                }
-                            } else {
-                                const value = typeof param === 'bigint' 
-                                    ? num.toHex(param)
-                                    : num.toHex(BigInt(Math.floor(Number(param))));
-                                calldata.push(value);
-                            }
-                        });
-                        return {
-                            contractAddress: EKUBO_ROUTER_ADDRESS,
-                            entrypoint: method,
-                            calldata
-                        };
-                    }
-                };
+                if (!quotes || quotes.length === 0) {
+                    throw new Error('No swap quotes available');
+                }
 
-                const feeTokenInfo = SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === feeTokenAddress);
-                const feeTokenDecimals = feeTokenInfo?.decimals || 18;
+                const bestQuote = quotes[0];
 
-                const tokenQuote: TokenQuote = {
-                    tokenAddress: listing.feeToken,
-                    minimumAmount: 0, // Will be calculated from quote.total in generateSwapCalls
-                    quote: swapQuote,
-                    outputTokenDecimals: feeTokenDecimals
-                };
+                // Build the execute transaction calls from the quote
+                const swapCallsResult = await quoteToCalls({
+                    quoteId: bestQuote.quoteId,
+                    slippage: 0.01, // 1% slippage
+                });
 
-                const swapCalls = generateSwapCalls(routerContract, USDC_ADDRESS, tokenQuote, swapInputAmount);
+                // Avnu SDK returns an object with a 'calls' array
+                const allSwapCalls = swapCallsResult.calls || (Array.isArray(swapCallsResult) ? swapCallsResult : [swapCallsResult]);
+                
+                // Filter out approve calls (we'll add our own)
+                const swapCalls = allSwapCalls.filter(call => {
+                    return call.entrypoint !== 'approve';
+                });
+
+                if (swapCalls.length === 0) {
+                    console.error('No swap calls found after filtering. All calls:', allSwapCalls);
+                    throw new Error('No swap calls available from quote');
+                }
 
                 // Approve 2% more than the USDC amount needed for the swap
                 const usdcApprovalAmount = (swapInputAmount * 102n) / 100n;
                 const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
+
+                // Get the router address from the first swap call (the multi_route_swap call)
+                const routerAddress = swapCalls[0]?.contractAddress;
+                if (!routerAddress) {
+                    console.error('Swap calls structure:', swapCalls);
+                    throw new Error(`Unable to determine router address from swap calls. First call: ${JSON.stringify(swapCalls[0])}`);
+                }
+
                 calls.push({
                     contractAddress: USDC_ADDRESS,
                     entrypoint: "approve",
                     calldata: [
-                        EKUBO_ROUTER_ADDRESS,
+                        routerAddress,
                         usdcApproval.low.toString(),
                         usdcApproval.high.toString()
                     ]
                 });
 
-                // Add swap calls
-                calls.push(...swapCalls);
+                // Add the swap transaction calls
+                swapCalls.forEach(call => {
+                    // Convert calldata to string array (Avnu SDK may return numbers)
+                    const calldataArray = Array.isArray(call.calldata) 
+                        ? call.calldata.map(arg => typeof arg === 'string' ? arg : String(arg))
+                        : [];
+                    
+                    calls.push({
+                        contractAddress: call.contractAddress,
+                        entrypoint: call.entrypoint,
+                        calldata: calldataArray
+                    });
+                });
             }
 
             const response = await account.execute(calls);

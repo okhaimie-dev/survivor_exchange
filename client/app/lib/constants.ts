@@ -28,14 +28,10 @@ export const USDC_ADDRESS = '0x033068F6539f8e6e6b131e6B2B814e6c34A5224bC66947c47
 export const ETH_ADDRESS = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7';
 export const STRK_ADDRESS = '0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d';
 export const LORDS_ADDRESS = '0x0124aeb495b947201f5fac96fd1138e326ad86195b98df6dec9009158a533b49';
-export const EKUBO_ROUTER_ADDRESS = '0x0199741822c2dc722f6f605204f35e56dbc23bceed54818168c4c49e4fb8737e';
 export const SURVIVOR_ADDRESS_MAINNET = '0x042DD777885AD2C116be96d4D634abC90A26A790ffB5871E037Dd5Ae7d2Ec86B';
 
 export const STARKNET_MAINNET_CHAIN_ID = '0x534e5f4d41494e';
 export const STARKNET_MAINNET_CHAIN_ID_DECIMAL = '23448594291968334';
-
-export const EKUBO_API_BASE_URL = 'https://prod-api.ekubo.org';
-export const EKUBO_QUOTER_API_BASE_URL = 'https://prod-api-quoter.ekubo.org';
 
 export interface TokenInfo {
   address: string;

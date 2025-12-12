@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@apollo/client": "^4.0.9",
+    "@avnu/avnu-sdk": "^4.0.0",
     "@cartridge/connector": "^0.11.1",
     "@cartridge/controller": "^0.11.1",
     "@starknet-react/chains": "^5.0.3",

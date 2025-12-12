@@ -1,4 +1,4 @@
-import { getSwapQuote } from '../api/ekubo';
+import { getQuotes } from '@avnu/avnu-sdk';
 import { USDC_ADDRESS, SUPPORTED_TOKENS } from '../constants';
 import { normalizeContractAddress } from './normalization';
 
@@ -55,12 +55,23 @@ export async function getTokenPriceInUSDC(tokenAddress: string): Promise<number>
       const tokenDecimals = tokenInfo?.decimals || 18;
       
       // 1 token in wei
-      const oneTokenWei = Math.pow(10, tokenDecimals);
+      const oneTokenWei = BigInt(Math.pow(10, tokenDecimals));
       
-      const quote = await getSwapQuote(oneTokenWei, tokenAddress, USDC_ADDRESS);
+      const quotes = await getQuotes({
+        sellTokenAddress: tokenAddress,
+        buyTokenAddress: USDC_ADDRESS,
+        sellAmount: oneTokenWei,
+        takerAddress: '0x0', // Not needed for price quotes
+      });
       
-      // Convert result to USDC (USDC has 6 decimals)
-      const priceInUSDC = quote.total / Math.pow(10, 6);
+      if (!quotes || quotes.length === 0) {
+        throw new Error('No quotes available');
+      }
+      
+      const bestQuote = quotes[0];
+      
+      // Convert buyAmount from wei to USDC (USDC has 6 decimals)
+      const priceInUSDC = Number(bestQuote.buyAmount) / Math.pow(10, 6);
       
       // Validate price before caching - reject Infinity, NaN, negative, or zero values
       if (!isFinite(priceInUSDC) || priceInUSDC === Infinity || priceInUSDC === -Infinity || isNaN(priceInUSDC) || priceInUSDC <= 0) {
