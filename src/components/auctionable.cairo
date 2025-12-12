@@ -1,6 +1,5 @@
 #[starknet::component]
 pub mod AuctionableComponent {
-    use beasts_nft::interfaces::{IBeastsDispatcher, IBeastsDispatcherTrait};
     use dojo::world::{IWorldDispatcherTrait, WorldStorage, WorldStorageTrait};
     use openzeppelin_token::erc721::interface::{IERC721Dispatcher, IERC721DispatcherTrait};
     use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
