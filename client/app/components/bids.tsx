@@ -14,6 +14,47 @@ import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, IM
 import { getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
 import { getTokenPriceInUSDC, shouldRefetchPrice } from "../lib/utils/token-price-cache"; 
 
+const getStatusLabel = (status: string): string => {
+    const statusNum = parseInt(status);
+    
+    if (statusNum === 0) return "None";
+    if (statusNum === 1) return "Draft";
+    if (statusNum === 2) return "Active";
+    if (statusNum === 3) return "Ended";
+    if (statusNum === 4) return "Settled";
+    if (statusNum === 5) return "Canceled";
+    
+    return status;
+};
+
+const getStatusStyle = (status: string): string => {
+    const statusNum = parseInt(status);
+    
+    if (statusNum === 0) {
+        return "bg-white/10 text-white/50 border border-white/20";
+    }
+    if (statusNum === 1) {
+        return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    if (statusNum === 2) {
+        return "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40";
+    }
+    if (statusNum === 3) {
+        return "bg-white/10 text-white border border-white/20";
+    }
+    if (statusNum === 4) {
+        return "bg-blue-400/10 text-blue-300 border border-blue-300/30";
+    }
+    if (statusNum === 5) {
+        return "bg-red-400/10 text-red-300 border border-red-300/30";
+    }
+    
+    if (status === "pending" || status === "queued") {
+        return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    return "bg-white/10 text-white border border-white/20";
+};
+
 type Collection = {
     id: string;
     name: string;
@@ -916,8 +957,8 @@ export default function Bids({
                             <h2 className="text-2xl font-orbitron uppercase tracking-[0.12em] text-white">
                                 {truncateAuctionName(selectedCollection.name)}
                             </h2>
-                            <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                Status: {selectedCollection.status}
+                            <span className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-[11px] font-orbitron uppercase tracking-[0.16em] ${getStatusStyle(selectedCollection.status)}`}>
+                                {getStatusLabel(selectedCollection.status)}
                             </span>
                             <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
                                 {selectedCollection.totalMonsters} {selectedCollection.totalMonsters === 1 ? 'NFT' : 'NFTs'} in this collection
