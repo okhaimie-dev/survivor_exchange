@@ -38,9 +38,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   });
 
   const listings: FormattedListing[] = useMemo(() => {
-    if (!data?.bm009AuctionModels?.edges) return [];
+    if (!data?.bm010AuctionModels?.edges) return [];
 
-    const auctions: Auction[] = data.bm009AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
+    const auctions: Auction[] = data.bm010AuctionModels.edges.map((edge: { node: Auction }) => edge.node);
 
     return auctions.map((auction) => {
       const decodedName = byteArrayToString(auction.name);

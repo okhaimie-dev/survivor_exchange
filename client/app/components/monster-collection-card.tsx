@@ -49,6 +49,23 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 isSelected ? "border-[rgb(50,255,52)]/80 shadow-[0_22px_55px_rgba(20,255,80,0.35)]" : ""
             }`}
         >
+            {isSelected && (
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="absolute top-4 right-5 z-20 text-[rgb(50,255,52)] transition-all duration-200 group-hover:scale-110"
+                >
+                    <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+                    <path d="m9 12 2 2 4-4" />
+                </svg>
+            )}
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
                 <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">
                     {collection.totalMonsters} nft{collection.totalMonsters === 1 ? '' : 's'} in this collection
