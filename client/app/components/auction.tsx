@@ -387,7 +387,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                                 ))}
                             </select>
                             <p className="text-xs text-[rgb(186,255,188)]/70">
-                                Buyers can pay with any token. Their payment will be swapped to {SUPPORTED_TOKENS.find(t => t.address === sellerToken)?.symbol || 'your selected token'}.
+                                Buyers can pay with any token. Their payment will be swapped to {SUPPORTED_TOKENS.find(t => t.address === sellerToken)?.symbol || 'your selected token'} (if you settle this auction, else you will receive USDC).
                             </p>
                         </div>
 
