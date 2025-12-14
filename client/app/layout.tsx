@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import "./globals.css";
 import Header from "./components/header";
+import DisclaimerModal from "./components/disclaimer-modal";
 import { StarknetProvider } from "./providers/starknet-provider";
 import { ApolloGraphQLProvider } from "./providers/apollo-provider";
 
@@ -57,6 +58,7 @@ export default function RootLayout({
           <ApolloGraphQLProvider>
             <StarknetProvider>
               <Suspense>
+                <DisclaimerModal />
                 <Header />
                 {children}
               </Suspense>
