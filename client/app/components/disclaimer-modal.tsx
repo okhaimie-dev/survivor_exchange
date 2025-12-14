@@ -47,26 +47,26 @@ export default function DisclaimerModal() {
         <div className="space-y-4 text-white">
           <div className="space-y-3">
             <p className="text-base leading-relaxed">
-              This platform is currently in an <strong className="text-[rgb(50,255,52)]">experimental and testing phase</strong>. 
-              The software is provided "as is" without warranty of any kind.
+              This auction platform is currently in an <strong className="text-[rgb(50,255,52)]">experimental and testing phase</strong>. 
+              By participating in auctions, placing bids, or listing items for sale, you acknowledge that this platform is still under development.
             </p>
             
             <p className="text-base leading-relaxed">
-              <strong className="text-[rgb(50,255,52)]">Use at your own risk.</strong> By using this platform, you acknowledge 
-              that you understand and accept the following risks:
+              <strong className="text-[rgb(50,255,52)]">Participate at your own risk.</strong> You understand and accept the following risks when using this auction platform:
             </p>
 
             <ul className="list-disc list-inside space-y-2 ml-4 text-base leading-relaxed">
-              <li>You may experience loss of funds due to bugs, vulnerabilities, or other technical issues</li>
-              <li>The platform may experience downtime, errors, or unexpected behavior</li>
-              <li>Smart contracts are experimental and may contain undiscovered vulnerabilities</li>
-              <li>Transactions may fail or behave unexpectedly</li>
-              <li>No guarantees are provided regarding the security, functionality, or availability of the platform</li>
+              <li>You may lose funds or assets due to smart contract bugs, vulnerabilities, or technical failures</li>
+              <li>Bids may not be processed correctly, or you may be unable to withdraw funds or assets</li>
+              <li>Auction transactions may fail, be delayed, or execute unexpectedly</li>
+              <li>Listed items may not sell as expected, or auction mechanics may behave incorrectly</li>
+              <li>The platform may experience downtime, preventing you from bidding, listing, or managing auctions</li>
+              <li>Smart contracts are experimental and may contain undiscovered vulnerabilities that could result in loss of funds or assets</li>
             </ul>
 
             <p className="text-base leading-relaxed pt-2">
-              <strong className="text-[rgb(50,255,52)]">Do not use funds you cannot afford to lose.</strong> The developers 
-              and operators of this platform are not responsible for any losses incurred while using this service.
+              <strong className="text-[rgb(50,255,52)]">Only participate with funds and assets you can afford to lose.</strong> The developers 
+              and operators of this auction platform are not responsible for any losses incurred from bidding, listing, or participating in auctions on this platform.
             </p>
           </div>
 
