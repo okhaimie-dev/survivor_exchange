@@ -579,7 +579,7 @@ export default function Bids({
     }, []);
 
     const handleSettleAuction = useCallback(async () => {
-        if (!account || !address || !selectedCollectionId) {
+        if (!account || !address || selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined) {
             return;
         }
 
