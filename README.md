@@ -38,7 +38,7 @@ sozo build  # Compiles contracts (Dojo 1.8.0)
 
 ### 2. All-in-One (Docker)
 ```bash
-docker compose up  # Katana + Torii + World migration (ns: bm_0_0_9)
+docker compose up  # Katana + Torii + World migration (ns: bm_0_1_1)
 ```
 - World: `http://127.0.0.1:4040/graphql` (Torii)
 - RPC: `http://127.0.0.1:5050`
@@ -57,7 +57,7 @@ sozo torii start --world <WORLD_ADDRESS>
 
 ```mermaid
 graph TD
-    World[Dojo World<br/>ns: bm_0_0_9] --> Systems[Systems:<br/>admin, auction, rental, vault]
+    World[Dojo World<br/>ns: bm_0_1_1] --> Systems[Systems:<br/>admin, auction, rental, vault]
     World --> Models[Models:<br/>Auction, Bid, Rental, Vault<br/>AuctionItem, VaultShare<br/>ExchangeSettings]
     Systems --> Components[AuctionableComponent<br/>(bundles, bid logic)<br/>RentableComponent (WIP)]
     Models --> Store[Store.cairo<br/>(read/write + events)]
