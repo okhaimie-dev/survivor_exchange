@@ -184,6 +184,54 @@ export default function Bids({
     const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
 
     const priceRetryIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const nftCarouselRef = useRef<HTMLDivElement>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+
+    const checkScrollButtons = useCallback(() => {
+        const carousel = nftCarouselRef.current;
+        if (!carousel) {
+            setCanScrollLeft(false);
+            setCanScrollRight(false);
+            return;
+        }
+        
+        const hasScroll = carousel.scrollWidth > carousel.clientWidth;
+        setCanScrollLeft(hasScroll && carousel.scrollLeft > 0);
+        setCanScrollRight(hasScroll && carousel.scrollLeft < carousel.scrollWidth - carousel.clientWidth - 1);
+    }, []);
+
+    const scrollNFTs = useCallback((direction: 'left' | 'right') => {
+        const carousel = nftCarouselRef.current;
+        if (!carousel) return;
+        
+        const scrollAmount = 120; // Width of one NFT card + gap
+        const scrollDirection = direction === 'left' ? -scrollAmount : scrollAmount;
+        
+        carousel.scrollBy({
+            left: scrollDirection,
+            behavior: 'smooth'
+        });
+    }, []);
+
+    // Check scroll buttons when selected collection changes
+    useEffect(() => {
+        // Small delay to ensure DOM is updated
+        const timer = setTimeout(() => {
+            checkScrollButtons();
+        }, 100);
+        
+        // Also check on window resize
+        const handleResize = () => {
+            checkScrollButtons();
+        };
+        window.addEventListener('resize', handleResize);
+        
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [selectedCollectionId, checkScrollButtons]);
 
     const selectedCollection = useMemo(
         () => collections.find((collection) => collection.id === selectedCollectionId),
@@ -911,9 +959,41 @@ export default function Bids({
                                     );
                                 }
                                 
+                                const showCarousel = nfts.length > 4;
+                                
                                 return (
-                                    <div className="w-full">
-                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                                    <div className="w-full relative">
+                                        {showCarousel && (
+                                            <>
+                                                {canScrollLeft && (
+                                                    <button
+                                                        onClick={() => scrollNFTs('left')}
+                                                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all shadow-lg"
+                                                        aria-label="Scroll left"
+                                                    >
+                                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                                {canScrollRight && (
+                                                    <button
+                                                        onClick={() => scrollNFTs('right')}
+                                                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all shadow-lg"
+                                                        aria-label="Scroll right"
+                                                    >
+                                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                        <div 
+                                            ref={nftCarouselRef}
+                                            onScroll={checkScrollButtons}
+                                            className="flex gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                                        >
                                             {nfts.map((nft) => {
                                                 const imageSrc = nft.metadata?.image 
                                                     ? nft.metadata.image 
