@@ -38,7 +38,7 @@ export default function RootLayout({
         <title>Loot Auction</title>
         <meta
           name="description"
-          content="Loot Auction is a platform for buying and selling monsters from the game 'Loot survivor'"
+          content="Loot Auction is a platform for auctioning and bidding on monsters from the game 'Loot survivor'"
         />
         <link rel="icon" href="/logo.png" />
       </head>
