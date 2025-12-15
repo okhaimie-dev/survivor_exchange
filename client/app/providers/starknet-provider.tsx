@@ -4,7 +4,7 @@ import { sepolia, mainnet } from "@starknet-react/chains";
 import { StarknetConfig, jsonRpcProvider, braavos, argent, voyager } from "@starknet-react/core";
 
 import { ControllerConnector } from "@cartridge/connector";
-import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, ETH_ADDRESS, STRK_ADDRESS, LORDS_ADDRESS, SURVIVOR_ADDRESS_MAINNET, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
+import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
 
 const provider = jsonRpcProvider({
   rpc: (chain) => {
@@ -39,102 +39,6 @@ const policies = {
           name: "End Auction",
           description: "End an active auction",
           entrypoint: "end_auction",
-        }
-      ]
-    },
-    [BEASTS_NFT_CONTRACT_ADDRESS]: {
-      namespace: "BEAST NFTs",
-      description: "BEAST NFT collection",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender for a specific NFT",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer a BEAST NFT",
-          entrypoint: "transfer",
-        }
-      ]
-    },
-    [USDC_ADDRESS]: {
-      namespace: "USDC",
-      description: "USD Coin token",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender to spend your USDC tokens",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer USDC tokens",
-          entrypoint: "transfer",
-        }
-      ]
-    },
-    [ETH_ADDRESS]: {
-      namespace: "ETH",
-      description: "Ethereum token",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender to spend your ETH tokens",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer ETH tokens",
-          entrypoint: "transfer",
-        }
-      ]
-    },
-    [STRK_ADDRESS]: {
-      namespace: "STRK",
-      description: "Starknet token",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender to spend your STRK tokens",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer STRK tokens",
-          entrypoint: "transfer",
-        }
-      ]
-    },
-    [LORDS_ADDRESS]: {
-      namespace: "LORDS",
-      description: "Lords token",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender to spend your LORDS tokens",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer LORDS tokens",
-          entrypoint: "transfer",
-        }
-      ]
-    },
-    [SURVIVOR_ADDRESS_MAINNET]: {
-      namespace: "Survivor",
-      description: "The native token of the Survivor game",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender to spend your SURVIVOR tokens",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer SURVIVOR tokens",
-          entrypoint: "transfer",
         }
       ]
     }
