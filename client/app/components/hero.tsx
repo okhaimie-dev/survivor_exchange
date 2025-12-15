@@ -9,7 +9,7 @@ export default function Hero() {
                     <Image src="/logo.png" alt="logo" width={500} height={500} draggable={false} className="w-[250px] h-[250px]" />
                 </div>
                 <h1 className="text-4xl font-bold">Loot Auction</h1>
-                <p className="text-lg">Bid, Auction and Rent monsters from the 
+                <p className="text-lg">Bid and Auction monsters from the 
                     <span className="font-bold text-[rgb(50,255,52)]">{" "}
                         <Link href="https://lootsurvivor.io/" target="_blank" className="hover:cursor-pointer hover:underline hover:text-[rgb(50,255,52)]">Loot Survivor</Link>
                     </span>{" "} game

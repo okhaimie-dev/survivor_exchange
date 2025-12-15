@@ -47,7 +47,7 @@ export default function DisclaimerModal() {
         <div className="space-y-4 text-white">
           <div className="space-y-3">
             <p className="text-base leading-relaxed">
-              This auction platform is currently in a <strong className="text-[rgb(50,255,52)]">testing and experimental phase</strong>. 
+              This auction platform is currently in a <strong className="text-[rgb(50,255,52)]">beta phase</strong>. 
               We&apos;re actively developing and improving the platform to provide the best auction experience.
             </p>
             
