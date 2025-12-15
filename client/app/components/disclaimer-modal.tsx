@@ -47,26 +47,23 @@ export default function DisclaimerModal() {
         <div className="space-y-4 text-white">
           <div className="space-y-3">
             <p className="text-base leading-relaxed">
-              This auction platform is currently in an <strong className="text-[rgb(50,255,52)]">experimental and testing phase</strong>. 
-              By participating in auctions, placing bids, or listing items for sale, you acknowledge that this platform is still under development.
+              This auction platform is currently in a <strong className="text-[rgb(50,255,52)]">testing and experimental phase</strong>. 
+              We&apos;re actively developing and improving the platform to provide the best auction experience.
             </p>
             
             <p className="text-base leading-relaxed">
-              <strong className="text-[rgb(50,255,52)]">Participate at your own risk.</strong> You understand and accept the following risks when using this auction platform:
+              Please be aware that:
             </p>
 
             <ul className="list-disc list-inside space-y-2 ml-4 text-base leading-relaxed">
-              <li>You may lose funds or assets due to smart contract bugs, vulnerabilities, or technical failures</li>
-              <li>Bids may not be processed correctly, or you may be unable to withdraw funds or assets</li>
-              <li>Auction transactions may fail, be delayed, or execute unexpectedly</li>
-              <li>Listed items may not sell as expected, or auction mechanics may behave incorrectly</li>
-              <li>The platform may experience downtime, preventing you from bidding, listing, or managing auctions</li>
-              <li>Smart contracts are experimental and may contain undiscovered vulnerabilities that could result in loss of funds or assets</li>
+              <li>The platform and smart contracts are still being tested and may have occasional issues</li>
+              <li>There is a risk of loss of funds due to technical issues, bugs, or vulnerabilities in the smart contracts or other issues</li>
+              <li>We recommend using caution and only participating with funds you&apos;re comfortable with</li>
             </ul>
 
             <p className="text-base leading-relaxed pt-2">
-              <strong className="text-[rgb(50,255,52)]">Only participate with funds and assets you can afford to lose.</strong> The developers 
-              and operators of this auction platform are not responsible for any losses incurred from bidding, listing, or participating in auctions on this platform.
+              By using this platform, you acknowledge that you understand it&apos;s in a testing phase. 
+              We appreciate your participation as we continue to build and refine the platform.
             </p>
           </div>
 
