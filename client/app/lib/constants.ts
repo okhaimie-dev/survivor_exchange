@@ -1,13 +1,13 @@
-export const MARKETPLACE_GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/la/torii/graphql';
+export const MARKETPLACE_GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/bm/torii/graphql';
 export const BEASTS_GRAPHQL_ENDPOINT = 'https://api.cartridge.gg/x/pg-beasts/torii/graphql';
 
-export const IMAGE_BASE_URL = 'https://api.cartridge.gg/x/la/torii';
+export const IMAGE_BASE_URL = 'https://api.cartridge.gg/x/bm/torii';
 
 export const MAINNET_RPC_URL = 'https://api.cartridge.gg/x/starknet/mainnet';
 export const SEPOLIA_RPC_URL = 'https://api.cartridge.gg/x/starknet/sepolia';
 
-export const AUCTION_CONTRACT_ADDRESS = '0x018a38b74f5d8ee2bcf43cb8af067d013a8f0464f5eb1a2e52c7b55b1ca60091';
-export const VAULT_CONTRACT_ADDRESS = '0x00b2988b6ee3b052c1cf4dd41940f9372245ce960aec6407918ef5c4b3c399d1';
+export const AUCTION_CONTRACT_ADDRESS = '0x04604ef40c66d0a7e0ba00f323f21e4c485c48eef1daf2bee0d1be0e602eac13';
+export const VAULT_CONTRACT_ADDRESS = '0x063ce099c649eba7ae064ab5228494389760ef4513b3c803cad425d0e5ad0fee';
 export const BEASTS_NFT_CONTRACT_ADDRESS = '0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4';
 
 export const DEFAULT_PAGE_SIZE = 9;
