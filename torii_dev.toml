@@ -5,7 +5,7 @@ rpc = "https://api.cartridge.gg/x/starknet/mainnet"
 raw = true
 
 [indexing]
-namespaces = ["bm_0_0_9"]
+namespaces = ["bm_0_1_1"]
 pending = true
 world_block = 2210150
 contracts = [
