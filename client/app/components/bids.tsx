@@ -5,6 +5,7 @@ import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import BidPriceChart from "./bid-price-chart";
+import BidsSkeleton from "./bids-skeleton";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
@@ -873,11 +874,7 @@ export default function Bids({
 
     const renderContent = () => {
     if (loading) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">Loading auctions...</p>
-            </div>
-        );
+        return <BidsSkeleton />;
     }
 
     if (error) {

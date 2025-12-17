@@ -4,6 +4,7 @@ import { byteArray } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
+import AuctionSkeleton from "./auction-skeleton";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
@@ -217,11 +218,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     const renderContent = () => {
     if (loading) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
-            </div>
-        );
+        return <AuctionSkeleton />;
     }
 
     if (error) {
