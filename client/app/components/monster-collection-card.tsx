@@ -260,7 +260,7 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 ))}
                 <div className="flex flex-col gap-2 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-4 py-3">
                     <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
-                        Price History
+                        Live Price Chart
                     </p>
                     <BidPriceChart width={200} height={60} />
                 </div>

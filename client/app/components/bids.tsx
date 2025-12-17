@@ -1201,7 +1201,7 @@ export default function Bids({
 
                             <div className="rounded-xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-4 py-4">
                                 <p className="text-[rgb(186,255,188)]/70 text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
-                                    Price History
+                                    Live Price Chart
                                 </p>
                                 <BidPriceChart width={400} height={120} />
                             </div>
