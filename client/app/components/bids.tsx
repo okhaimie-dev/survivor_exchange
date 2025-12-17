@@ -193,6 +193,7 @@ export default function Bids({
     const nftCarouselRef = useRef<HTMLDivElement>(null);
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
+    const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
 
     const checkScrollButtons = useCallback(() => {
         const carousel = nftCarouselRef.current;
@@ -428,7 +429,59 @@ export default function Bids({
         };
     }, [address, provider]);
 
+    // Countdown timer effect
+    useEffect(() => {
+        if (!selectedCollection?.endTime) {
+            setCountdown(null);
+            return;
+        }
 
+        const updateCountdown = () => {
+            try {
+                let endTimeNum: number;
+                const endTime = selectedCollection.endTime;
+                if (endTime.startsWith('0x') || endTime.startsWith('0X')) {
+                    endTimeNum = parseInt(endTime, 16);
+                } else {
+                    endTimeNum = parseInt(endTime, 10);
+                }
+
+                if (isNaN(endTimeNum) || endTimeNum === 0) {
+                    setCountdown(null);
+                    return;
+                }
+
+                const statusNum = parseInt(selectedCollection.status);
+                if (statusNum === 3) {
+                    // Auction ended
+                    setCountdown(null);
+                    return;
+                }
+
+                const now = Math.floor(Date.now() / 1000);
+                const difference = endTimeNum - now;
+
+                if (difference <= 0) {
+                    setCountdown(null);
+                    return;
+                }
+
+                const days = Math.floor(difference / 86400);
+                const hours = Math.floor((difference % 86400) / 3600);
+                const minutes = Math.floor((difference % 3600) / 60);
+                const seconds = difference % 60;
+
+                setCountdown({ days, hours, minutes, seconds });
+            } catch {
+                setCountdown(null);
+            }
+        };
+
+        updateCountdown();
+        const interval = setInterval(updateCountdown, 1000);
+
+        return () => clearInterval(interval);
+    }, [selectedCollection?.endTime, selectedCollection?.status]);
 
     // bidAmountToken now always represents USDC amount
     const bidAmountUSD = useMemo(() => {
@@ -1271,10 +1324,26 @@ export default function Bids({
                                                 })}
                                             </div>
                                         </div>
-                                        <div className="w-full h-54 -mt-[154px] rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-4">
-                                            {/* <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-3">
-                                                Auction Timeline
-                                            </p> */}
+                                        <div className="w-full h-54 -mt-[154px] rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-3 flex flex-col justify-end">
+                                            <div className="flex items-center justify-between">
+                                                <p className="text-[10px] font-orbitron uppercase tracking-[0.16em] text-[rgb(50,255,52)]">
+                                                    COUNTDOWN
+                                                </p>
+                                            </div>
+                                            {countdown ? (
+                                                <div className="flex items-baseline gap-1.5 flex-wrap">
+                                                    <span className="text-white font-orbitron text-base tracking-wider">{countdown.days}</span>
+                                                    <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">days</span>
+                                                    <span className="text-white font-orbitron text-base tracking-wider">{countdown.hours}</span>
+                                                    <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">hrs</span>
+                                                    <span className="text-white font-orbitron text-base tracking-wider">{countdown.minutes}</span>
+                                                    <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">Mins</span>
+                                                    <span className="text-white font-orbitron text-base tracking-wider">{countdown.seconds}</span>
+                                                    <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">Secs</span>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase">Auction ended</p>
+                                            )}
                                         </div>
                                     </div>
                                 );
