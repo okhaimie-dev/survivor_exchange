@@ -472,7 +472,8 @@ export default function Bids({
                 const seconds = difference % 60;
 
                 setCountdown({ days, hours, minutes, seconds });
-            } catch {
+            } catch (error) {
+                console.error('Error updating countdown:', error);
                 setCountdown(null);
             }
         };
@@ -481,7 +482,7 @@ export default function Bids({
         const interval = setInterval(updateCountdown, 1000);
 
         return () => clearInterval(interval);
-    }, [selectedCollection?.endTime, selectedCollection?.status]);
+    }, [selectedCollection]);
 
     // bidAmountToken now always represents USDC amount
     const bidAmountUSD = useMemo(() => {
