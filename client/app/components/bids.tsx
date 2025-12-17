@@ -345,6 +345,8 @@ export default function Bids({
             return;
         }
 
+        let cancelled = false;
+
         const fetchBalances = async () => {
             const balances: Record<string, { amount: string; usdValue: string | null }> = {};
 
@@ -414,11 +416,17 @@ export default function Bids({
                 })
             );
 
-            setTokenBalances(balances);
+            if (!cancelled) {
+                setTokenBalances(balances);
+            }
         };
 
         fetchBalances();
-    }, [address, provider, isValidPrice]);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [address, provider]);
 
 
 
