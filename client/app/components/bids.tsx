@@ -70,6 +70,7 @@ type Collection = {
     highestBidder: string;
     sellerFull: string;
     highestBidderFull: string;
+    executedAt?: string;
 };
 
 interface BidsProps {
@@ -171,6 +172,7 @@ export default function Bids({
                 highestBidder: truncateAddress(auction.highest_bidder),
                 sellerFull: auction.seller,
                 highestBidderFull: auction.highest_bidder,
+                executedAt: auction.executedAt,
             };
         });
     }, [paginatedFilteredAuctions]);
@@ -1101,6 +1103,18 @@ export default function Bids({
                                 
                                 const endTimeFormatted = selectedCollection.endTime ? formatTime(selectedCollection.endTime) : null;
                                 
+                                const formatExecutedAt = (executedAt: string | undefined) => {
+                                    if (!executedAt) return null;
+                                    try {
+                                        const date = new Date(executedAt);
+                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    } catch {
+                                        return null;
+                                    }
+                                };
+                                
+                                const executedAtFormatted = formatExecutedAt(selectedCollection.executedAt);
+                                
                                 const timelineItems = [];
                                 
                                 timelineItems.push({
@@ -1108,6 +1122,7 @@ export default function Bids({
                                     label: 'Auction Created',
                                     active: true,
                                     completed: true,
+                                    time: executedAtFormatted || undefined,
                                 });
                                 
                                 if (selectedCollection.endTime) {

@@ -9,6 +9,7 @@ import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS }
 export interface AuctionWithNFTs extends Auction {
   nfts: FormattedNFT[];
   bids?: Bid[];
+  executedAt?: string;
 }
 
 export function useAuctions() {
@@ -152,20 +153,25 @@ export function useAuctions() {
             const items = itemsByAuction.get(auction.auction_id) || [];
             const matchedNFTs = formattedNFTs.filter((nft) => items.some(item => nft.tokenId === normalizeTokenId(item.token_id)));
             const bids = bidsByAuction.get(auction.auction_id) || [];
+            const executedAt = items.length > 0 && items[0].entity?.executedAt ? items[0].entity.executedAt : undefined;
 
             auctionsWithNFTsData.push({
               ...auction,
               nfts: matchedNFTs,
               bids,
+              executedAt,
             });
           }
         } catch {
           for (const auction of sellerAuctions) {
+            const items = itemsByAuction.get(auction.auction_id) || [];
             const bids = bidsByAuction.get(auction.auction_id) || [];
+            const executedAt = items.length > 0 && items[0].entity?.executedAt ? items[0].entity.executedAt : undefined;
             auctionsWithNFTsData.push({
               ...auction,
               nfts: [],
               bids,
+              executedAt,
             });
           }
         }
@@ -178,6 +184,7 @@ export function useAuctions() {
             ...auction,
             nfts: [],
             bids,
+            executedAt: undefined,
           });
         }
       }

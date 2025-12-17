@@ -3,6 +3,9 @@ export interface AuctionItem {
   contract_address: string;
   item_index: string;
   token_id: string;
+  entity?: {
+    executedAt?: string;
+  };
 }
 
 export interface AuctionItemNode {

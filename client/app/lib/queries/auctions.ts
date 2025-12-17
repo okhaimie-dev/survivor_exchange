@@ -10,6 +10,9 @@ export const AUCTIONS_QUERY = gql`
           contract_address
           item_index
           token_id
+          entity {
+            executedAt
+          }
         }
       }
     }
@@ -98,6 +101,9 @@ export const CONSOLIDATED_QUERY = gql`
           contract_address
           item_index
           token_id
+          entity {
+            executedAt
+          }
         }
       }
     }
