@@ -59,6 +59,7 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
 
     const latestValue = dataPoints[dataPoints.length - 1].y;
     const startingValue = dataPoints[0].y;
+    const averageValue = dataPoints.reduce((sum, p) => sum + p.y, 0) / dataPoints.length;
     const latestX = padding.left + chartWidth;
     const latestY = padding.top + chartHeight - ((latestValue - minY) / rangeY) * chartHeight;
     
@@ -238,7 +239,7 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                                 className="text-[8px] font-orbitron fill-[rgb(186,255,188)]/50 uppercase tracking-wider"
                                 style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                             >
-                                Start
+                                Avg
                             </text>
                             <text
                                 x={statsX}
@@ -247,7 +248,7 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                                 className="text-[10px] font-orbitron fill-[rgb(186,255,188)]/70"
                                 style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                             >
-                                {formatUSDCompact(startingValue)}
+                                {formatUSDCompact(averageValue)}
                             </text>
                         </g>
                     );

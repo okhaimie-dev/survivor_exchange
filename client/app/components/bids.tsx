@@ -1084,7 +1084,92 @@ export default function Bids({
                                     );
                                 })()}
                             </p>
-                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]" onClick={() => {
+                            {(() => {
+                                const statusNum = parseInt(selectedCollection.status);
+                                const formatTime = (timestamp: string) => {
+                                    try {
+                                        let timestampNum: number;
+                                        if (timestamp.startsWith('0x') || timestamp.startsWith('0X')) {
+                                            timestampNum = parseInt(timestamp, 16);
+                                        } else {
+                                            timestampNum = parseInt(timestamp, 10);
+                                        }
+                                        if (isNaN(timestampNum) || timestampNum === 0) return null;
+                                        const date = new Date(timestampNum * 1000);
+                                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                    } catch {
+                                        return null;
+                                    }
+                                };
+                                
+                                const endTimeFormatted = selectedCollection.endTime ? formatTime(selectedCollection.endTime) : null;
+                                
+                                const timelineItems = [];
+                                
+                                timelineItems.push({
+                                    status: 'created',
+                                    label: 'Auction Created',
+                                    active: true,
+                                    completed: true,
+                                });
+                                
+                                if (selectedCollection.endTime) {
+                                    timelineItems.push({
+                                        status: 'settled',
+                                        label: 'Auction Settled',
+                                        active: statusNum >= 3,
+                                        completed: statusNum >= 3,
+                                        time: endTimeFormatted,
+                                    });
+                                }
+                                
+                                return (
+                                    <div className="w-full mt-4 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-4">
+                                        <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-3">
+                                            Auction Timeline
+                                        </p>
+                                        <div className="flex flex-col gap-3">
+                                            {timelineItems.map((item, index) => {
+                                                const isLast = index === timelineItems.length - 1;
+                                                return (
+                                                    <div key={item.status} className="relative flex items-start gap-3">
+                                                        <div className="flex flex-col items-center">
+                                                            <div className={`w-3 h-3 rounded-full border-2 ${
+                                                                item.completed 
+                                                                    ? 'bg-[rgb(50,255,52)] border-[rgb(50,255,52)]' 
+                                                                    : item.active
+                                                                    ? 'bg-[rgb(50,255,52)]/30 border-[rgb(50,255,52)] animate-pulse'
+                                                                    : 'bg-transparent border-[rgb(186,255,188)]/30'
+                                                            }`} />
+                                                            {!isLast && (
+                                                                <div className={`w-0.5 h-full min-h-[32px] mt-1 ${
+                                                                    item.completed || item.active
+                                                                        ? 'bg-[rgb(50,255,52)]/30'
+                                                                        : 'bg-[rgb(186,255,188)]/10'
+                                                                }`} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 pb-2">
+                                                            <p className={`text-xs font-orbitron uppercase tracking-[0.12em] ${
+                                                                item.active ? 'text-[rgb(50,255,52)]' : 'text-[rgb(186,255,188)]/70'
+                                                            }`}>
+                                                                {item.label}
+                                                            </p>
+                                                            {item.time && (
+                                                                <p className="text-[10px] text-[rgb(186,255,188)]/50 mt-1">
+                                                                    {item.time}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            
+                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)] mt-4" onClick={() => {
                                 const collectionLink = `${window.location.origin}/?token=${selectedCollection.id}`;
                                 navigator.clipboard.writeText(collectionLink);
                                 setCopied(true);
