@@ -22,8 +22,18 @@ export interface Auction {
   status: string;
 }
 
+export interface Bid {
+  auction_id: string;
+  bidder: string;
+  amount: string;
+}
+
 export interface AuctionNode {
   node: Auction;
+}
+
+export interface BidNode {
+  node: Bid;
 }
 
 export interface AuctionsResponse {
@@ -32,6 +42,9 @@ export interface AuctionsResponse {
   };
   bm011AuctionItemModels: {
     edges: AuctionItemNode[];
+  };
+  bm011BidModels: {
+    edges: BidNode[];
   };
 }
 

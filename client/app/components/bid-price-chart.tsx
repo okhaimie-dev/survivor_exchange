@@ -2,28 +2,99 @@
 
 import { useMemo } from 'react';
 import { formatUSDCompact } from '../lib/utils/formatters';
+import type { Bid } from '../lib/types';
 
 type BidPriceChartProps = {
     width?: number;
     height?: number;
     className?: string;
+    startingPrice?: number;
+    currentBid?: number;
+    bids?: Bid[];
 };
 
-export default function BidPriceChart({ width = 200, height = 80, className = '' }: BidPriceChartProps) {
+export default function BidPriceChart({ 
+    width = 200, 
+    height = 80, 
+    className = '',
+    startingPrice,
+    currentBid,
+    bids
+}: BidPriceChartProps) {
     const dataPoints = useMemo(() => {
+        const start = startingPrice || 0;
+        const end = currentBid || start;
         const points = 10;
-        const baseValue = 500;
-        const variation = 200;
+        
+        if (bids && bids.length > 0) {
+            const bidAmounts = bids
+                .map(bid => {
+                    const bidStr = bid.amount;
+                    const parsed = bidStr.startsWith('0x') || bidStr.startsWith('0X') 
+                        ? parseInt(bidStr, 16) 
+                        : parseFloat(bidStr);
+                    return parsed / 1e6;
+                })
+                .filter(amount => amount > 0)
+                .sort((a, b) => a - b);
+            
+            if (bidAmounts.length > 0) {
+                const minBid = Math.min(...bidAmounts);
+                const maxBid = Math.max(...bidAmounts);
+                const minPrice = Math.min(start, minBid);
+                const maxPrice = Math.max(end, maxBid);
+                
+                return Array.from({ length: points }, (_, i) => {
+                    const progress = i / (points - 1);
+                    if (progress === 0) {
+                        return { x: i, y: start || minPrice };
+                    }
+                    if (progress === 1) {
+                        return { x: i, y: end || maxPrice };
+                    }
+                    
+                    const targetBidIndex = Math.floor(progress * (bidAmounts.length - 1));
+                    const nextBidIndex = Math.min(targetBidIndex + 1, bidAmounts.length - 1);
+                    const localProgress = (progress * (bidAmounts.length - 1)) - targetBidIndex;
+                    
+                    const value = bidAmounts[targetBidIndex] + 
+                        (bidAmounts[nextBidIndex] - bidAmounts[targetBidIndex]) * localProgress;
+                    
+                    return { x: i, y: Math.max(start, Math.min(value, end || value)) };
+                });
+            }
+        }
+        
+        if (start === 0 && end === 0) {
+            return Array.from({ length: points }, (_, i) => ({
+                x: i,
+                y: 0,
+            }));
+        }
+        
+        const range = end - start;
+        const minPrice = Math.min(start, end);
+        const maxPrice = Math.max(start, end);
+        
+        if (range === 0 && start > 0) {
+            return Array.from({ length: points }, (_, i) => ({
+                x: i,
+                y: start,
+            }));
+        }
+        
+        const padding = Math.abs(range) * 0.1 || (start * 0.05);
         
         return Array.from({ length: points }, (_, i) => {
             const progress = i / (points - 1);
-            const value = baseValue + (progress * variation) + (Math.sin(progress * Math.PI * 2) * 30);
+            const smoothProgress = progress * progress * (3 - 2 * progress);
+            const value = start + (range * smoothProgress);
             return {
                 x: i,
-                y: value,
+                y: Math.max(minPrice - padding, Math.min(value, maxPrice + padding)),
             };
         });
-    }, []);
+    }, [startingPrice, currentBid, bids]);
 
     const maxY = Math.max(...dataPoints.map(p => p.y));
     const minY = Math.min(...dataPoints.map(p => p.y));
@@ -57,13 +128,45 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
 
     const areaPath = `M ${padding.left},${padding.top + chartHeight} L ${points.split(' ').join(' L ')} L ${padding.left + chartWidth},${padding.top + chartHeight} Z`;
 
-    const latestValue = dataPoints[dataPoints.length - 1].y;
-    const startingValue = dataPoints[0].y;
-    const averageValue = dataPoints.reduce((sum, p) => sum + p.y, 0) / dataPoints.length;
-    const latestX = padding.left + chartWidth;
-    const latestY = padding.top + chartHeight - ((latestValue - minY) / rangeY) * chartHeight;
+    const startingValue = startingPrice || 0;
+    const latestValue = currentBid !== undefined && currentBid > 0 ? currentBid : startingValue;
+    const latestDataPointY = dataPoints[dataPoints.length - 1].y;
     
-    const changePercent = ((latestValue - startingValue) / startingValue) * 100;
+    let averageValue: number;
+    const allValues: number[] = [];
+    
+    if (startingValue > 0) {
+        allValues.push(startingValue);
+    }
+    
+    if (bids && bids.length > 0) {
+        const bidAmounts = bids
+            .map(bid => {
+                const bidStr = bid.amount;
+                const parsed = bidStr.startsWith('0x') || bidStr.startsWith('0X') 
+                    ? parseInt(bidStr, 16) 
+                    : parseFloat(bidStr);
+                return parsed / 1e6;
+            })
+            .filter(amount => amount > 0);
+        allValues.push(...bidAmounts);
+    } else if (latestValue > 0 && latestValue !== startingValue) {
+        allValues.push(latestValue);
+    }
+    
+    if (allValues.length > 0) {
+        averageValue = allValues.reduce((sum, val) => sum + val, 0) / allValues.length;
+    } else {
+        averageValue = startingValue || 0;
+    }
+    
+    const latestX = padding.left + chartWidth;
+    const latestY = padding.top + chartHeight - ((latestDataPointY - minY) / rangeY) * chartHeight;
+    
+    let changePercent = 0;
+    if (startingValue > 0 && latestValue > 0) {
+        changePercent = ((latestValue - startingValue) / startingValue) * 100;
+    }
     const isPositive = changePercent >= 0;
 
     return (

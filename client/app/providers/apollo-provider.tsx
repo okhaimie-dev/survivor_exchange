@@ -50,6 +50,11 @@ const client = new ApolloClient({
               return incoming;
             },
           },
+          bm011BidModels: {
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
         },
       },
     },

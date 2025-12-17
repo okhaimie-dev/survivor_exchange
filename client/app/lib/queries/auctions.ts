@@ -29,6 +29,15 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
+    bm011BidModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          bidder
+          amount
+        }
+      }
+    }
   }
 `;
 

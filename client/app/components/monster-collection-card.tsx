@@ -262,7 +262,12 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
                         Live Price Chart
                     </p>
-                    <BidPriceChart width={200} height={60} />
+                    <BidPriceChart 
+                        width={200} 
+                        height={60} 
+                        startingPrice={collection.startingPrice / 1e6}
+                        currentBid={collection.highestBid}
+                    />
                 </div>
             </div>
         </article>

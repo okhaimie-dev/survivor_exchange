@@ -1203,7 +1203,13 @@ export default function Bids({
                                 <p className="text-[rgb(186,255,188)]/70 text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
                                     Live Price Chart
                                 </p>
-                                <BidPriceChart width={400} height={120} />
+                                <BidPriceChart 
+                                    width={400} 
+                                    height={120} 
+                                    startingPrice={selectedCollection.startingPrice / 1e6}
+                                    currentBid={selectedCollection.highestBid}
+                                    bids={auction?.bids}
+                                />
                             </div>
 
                             <div className="flex gap-4 sm:items-start w-full">
