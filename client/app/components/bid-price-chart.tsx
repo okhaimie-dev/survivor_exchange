@@ -10,7 +10,6 @@ type BidPriceChartProps = {
 };
 
 export default function BidPriceChart({ width = 200, height = 80, className = '' }: BidPriceChartProps) {
-    // Generate dummy data points for the chart
     const dataPoints = useMemo(() => {
         const points = 10;
         const baseValue = 500;
@@ -18,7 +17,6 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
         
         return Array.from({ length: points }, (_, i) => {
             const progress = i / (points - 1);
-            // Create a smooth upward trend with some variation
             const value = baseValue + (progress * variation) + (Math.sin(progress * Math.PI * 2) * 30);
             return {
                 x: i,
@@ -31,14 +29,13 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
     const minY = Math.min(...dataPoints.map(p => p.y));
     const rangeY = maxY - minY || 1;
 
-    // Adjust padding to accommodate axis labels - increased spacing for better readability
     const axisLabelWidth = width > 300 ? 60 : 55;
     const axisLabelHeight = 15;
-    const padding = { top: 8, right: 12, bottom: axisLabelHeight + 4, left: axisLabelWidth + 8 };
+    const rightPadding = width > 300 ? 70 : 8;
+    const padding = { top: 8, right: rightPadding, bottom: axisLabelHeight + 4, left: axisLabelWidth + 8 };
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
-    // Generate Y-axis labels (3-4 labels for readability)
     const numYLabels = width > 300 ? 4 : 3;
     const yLabels = useMemo(() => {
         return Array.from({ length: numYLabels }, (_, i) => {
@@ -47,26 +44,26 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
         });
     }, [minY, rangeY, numYLabels]);
 
-    // Generate X-axis labels (show first, middle, last)
     const xLabels = useMemo(() => {
         const indices = [0, Math.floor(dataPoints.length / 2), dataPoints.length - 1];
         return indices.map(i => i);
     }, [dataPoints.length]);
 
-    // Convert data points to SVG coordinates
     const points = dataPoints.map((point, index) => {
         const x = padding.left + (index / (dataPoints.length - 1)) * chartWidth;
         const y = padding.top + chartHeight - ((point.y - minY) / rangeY) * chartHeight;
         return `${x},${y}`;
     }).join(' ');
 
-    // Create area path for gradient fill
     const areaPath = `M ${padding.left},${padding.top + chartHeight} L ${points.split(' ').join(' L ')} L ${padding.left + chartWidth},${padding.top + chartHeight} Z`;
 
-    // Get the latest value for display
     const latestValue = dataPoints[dataPoints.length - 1].y;
+    const startingValue = dataPoints[0].y;
     const latestX = padding.left + chartWidth;
     const latestY = padding.top + chartHeight - ((latestValue - minY) / rangeY) * chartHeight;
+    
+    const changePercent = ((latestValue - startingValue) / startingValue) * 100;
+    const isPositive = changePercent >= 0;
 
     return (
         <div className={className}>
@@ -90,7 +87,6 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     </filter>
                 </defs>
                 
-                {/* Grid lines */}
                 {yLabels.map((label, index) => {
                     const y = padding.top + (chartHeight * (numYLabels - 1 - index) / (numYLabels - 1));
                     return (
@@ -107,14 +103,12 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     );
                 })}
                 
-                {/* Area fill */}
                 <path
                     d={areaPath}
                     fill="url(#chartGradient)"
                     className="transition-opacity duration-200"
                 />
                 
-                {/* Line */}
                 <polyline
                     points={points}
                     fill="none"
@@ -126,7 +120,6 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     className="transition-all duration-200"
                 />
                 
-                {/* Data points */}
                 {dataPoints.map((_, index) => {
                     const x = padding.left + (index / (dataPoints.length - 1)) * chartWidth;
                     const y = padding.top + chartHeight - ((dataPoints[index].y - minY) / rangeY) * chartHeight;
@@ -142,7 +135,6 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     );
                 })}
                 
-                {/* Y-axis labels */}
                 {yLabels.map((label, index) => {
                     const y = padding.top + (chartHeight * (numYLabels - 1 - index) / (numYLabels - 1));
                     return (
@@ -159,7 +151,6 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     );
                 })}
                 
-                {/* X-axis labels */}
                 {xLabels.map((index) => {
                     const x = padding.left + (index / (dataPoints.length - 1)) * chartWidth;
                     const label = index === 0 ? 'Start' : index === dataPoints.length - 1 ? 'Now' : '';
@@ -177,12 +168,11 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                     );
                 })}
                 
-                {/* Current value label - position above or below based on chart position */}
                 {(() => {
                     const labelText = formatUSDCompact(latestValue);
-                    const labelWidth = labelText.length * 5.5; // Approximate width based on char count
-                    const horizontalPadding = 12; // Increased padding for better spacing
-                    const verticalPadding = 6; // Increased padding for better spacing
+                    const labelWidth = labelText.length * 5.5;
+                    const horizontalPadding = 12;
+                    const verticalPadding = 6;
                     const labelX = Math.min(latestX - labelWidth / 2, width - labelWidth / 2 - horizontalPadding);
                     const labelY = latestY < chartHeight / 2 ? latestY - 12 : latestY + 20;
                     
@@ -207,6 +197,57 @@ export default function BidPriceChart({ width = 200, height = 80, className = ''
                                 style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                             >
                                 {labelText}
+                            </text>
+                        </g>
+                    );
+                })()}
+                
+                {(() => {
+                    const statsOffset = width > 300 ? 12 : 24;
+                    const statsX = padding.left + chartWidth + statsOffset;
+                    const statsStartY = padding.top + (width > 300 ? 4 : 2);
+                    const labelSpacing = width > 300 ? 14 : 12;
+                    const sectionSpacing = width > 300 ? 24 : 20;
+                    
+                    return (
+                        <g>
+                            <text
+                                x={statsX}
+                                y={statsStartY}
+                                textAnchor="start"
+                                className="text-[8px] font-orbitron fill-[rgb(186,255,188)]/50 uppercase tracking-wider"
+                                style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
+                            >
+                                Change
+                            </text>
+                            <text
+                                x={statsX}
+                                y={statsStartY + labelSpacing}
+                                textAnchor="start"
+                                className="text-[11px] font-orbitron font-semibold"
+                                fill={isPositive ? "rgb(50,255,52)" : "rgb(255,100,100)"}
+                                style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
+                            >
+                                {isPositive ? '+' : ''}{changePercent.toFixed(1)}%
+                            </text>
+                            
+                            <text
+                                x={statsX}
+                                y={statsStartY + sectionSpacing + labelSpacing}
+                                textAnchor="start"
+                                className="text-[8px] font-orbitron fill-[rgb(186,255,188)]/50 uppercase tracking-wider"
+                                style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
+                            >
+                                Start
+                            </text>
+                            <text
+                                x={statsX}
+                                y={statsStartY + sectionSpacing + (labelSpacing * 2)}
+                                textAnchor="start"
+                                className="text-[10px] font-orbitron fill-[rgb(186,255,188)]/70"
+                                style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
+                            >
+                                {formatUSDCompact(startingValue)}
                             </text>
                         </g>
                     );
