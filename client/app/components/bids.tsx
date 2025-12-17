@@ -4,6 +4,7 @@ import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
+import BidPriceChart from "./bid-price-chart";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
@@ -1111,6 +1112,13 @@ export default function Bids({
                                         {selectedCollection.highestBid !== undefined ? formatUSD(selectedCollection.highestBid) : "No bids"}
                                     </p>
                                 </div>
+                            </div>
+
+                            <div className="rounded-xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-4 py-4">
+                                <p className="text-[rgb(186,255,188)]/70 text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
+                                    Price History
+                                </p>
+                                <BidPriceChart width={400} height={120} />
                             </div>
 
                             <div className="flex gap-4 sm:items-start w-full">
