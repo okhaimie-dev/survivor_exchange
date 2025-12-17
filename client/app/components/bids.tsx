@@ -1228,52 +1228,59 @@ export default function Bids({
                                 }
                                 
                                 return (
-                                    <div className="w-full mt-4 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-4">
-                                        <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-3">
-                                            Auction Timeline
-                                        </p>
-                                        <div className="flex flex-col gap-3">
-                                            {timelineItems.map((item, index) => {
-                                                const isLast = index === timelineItems.length - 1;
-                                                return (
-                                                    <div key={item.status} className="relative flex items-start gap-3">
-                                                        <div className="flex flex-col items-center">
-                                                            <div className={`w-3 h-3 rounded-full border-2 ${
-                                                                item.completed 
-                                                                    ? 'bg-[rgb(50,255,52)] border-[rgb(50,255,52)]' 
-                                                                    : item.active
-                                                                    ? 'bg-[rgb(50,255,52)]/30 border-[rgb(50,255,52)] animate-pulse'
-                                                                    : 'bg-transparent border-[rgb(186,255,188)]/30'
-                                                            }`} />
-                                                            {!isLast && (
-                                                                <div className={`w-0.5 h-full min-h-[32px] mt-1 ${
-                                                                    item.completed || item.active
-                                                                        ? 'bg-[rgb(50,255,52)]/30'
-                                                                        : 'bg-[rgb(186,255,188)]/10'
+                                    <div className="w-full -mt-4">
+                                        <div className="w-full mt-4 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-4">
+                                            <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-3">
+                                                Auction Timeline
+                                            </p>
+                                            <div className="flex flex-col gap-3">
+                                                {timelineItems.map((item, index) => {
+                                                    const isLast = index === timelineItems.length - 1;
+                                                    return (
+                                                        <div key={item.status} className="relative flex items-start gap-3">
+                                                            <div className="flex flex-col items-center">
+                                                                <div className={`w-3 h-3 rounded-full border-2 ${
+                                                                    item.completed 
+                                                                        ? 'bg-[rgb(50,255,52)] border-[rgb(50,255,52)]' 
+                                                                        : item.active
+                                                                        ? 'bg-[rgb(50,255,52)]/30 border-[rgb(50,255,52)] animate-pulse'
+                                                                        : 'bg-transparent border-[rgb(186,255,188)]/30'
                                                                 }`} />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 pb-2">
-                                                            <p className={`text-xs font-orbitron uppercase tracking-[0.12em] ${
-                                                                item.active ? 'text-[rgb(50,255,52)]' : 'text-[rgb(186,255,188)]/70'
-                                                            }`}>
-                                                                {item.label}
-                                                            </p>
-                                                            {item.time && (
-                                                                <p className="text-[10px] text-[rgb(186,255,188)]/50 mt-1">
-                                                                    {item.time}
+                                                                {!isLast && (
+                                                                    <div className={`w-0.5 h-full min-h-[30px] mt-1 ${
+                                                                        item.completed || item.active
+                                                                            ? 'bg-[rgb(50,255,52)]/30'
+                                                                            : 'bg-[rgb(186,255,188)]/10'
+                                                                    }`} />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className={`text-xs font-orbitron uppercase tracking-[0.12em] ${
+                                                                    item.active ? 'text-[rgb(50,255,52)]' : 'text-[rgb(186,255,188)]/70'
+                                                                }`}>
+                                                                    {item.label}
                                                                 </p>
-                                                            )}
+                                                                {item.time && (
+                                                                    <p className="text-[10px] text-[rgb(186,255,188)]/50 mt-1">
+                                                                        {item.time}
+                                                                    </p>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                        <div className="w-full h-54 -mt-[154px] rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-4">
+                                            {/* <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-3">
+                                                Auction Timeline
+                                            </p> */}
                                         </div>
                                     </div>
                                 );
                             })()}
                             
-                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)] mt-4" onClick={() => {
+                            <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]" onClick={() => {
                                 const collectionLink = `${window.location.origin}/?token=${selectedCollection.id}`;
                                 navigator.clipboard.writeText(collectionLink);
                                 setCopied(true);
