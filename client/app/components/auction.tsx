@@ -5,6 +5,7 @@ import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import AuctionSkeleton from "./auction-skeleton";
+import CustomDropdown from "./custom-dropdown";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
@@ -366,23 +367,20 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                         <div className="flex flex-col gap-2">
                             <label
-                                htmlFor="seller-token"
                                 className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
                             >
                                 Receive Payment In
                             </label>
-                            <select
+                            <CustomDropdown
                                 id="seller-token"
                                 value={sellerToken}
-                                onChange={(event) => setSellerToken(event.target.value)}
-                                className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                {SUPPORTED_TOKENS.map((token) => (
-                                    <option key={token.address} value={token.address}>
-                                        {token.symbol} - {token.name}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={setSellerToken}
+                                options={SUPPORTED_TOKENS.map((token) => ({
+                                    value: token.address,
+                                    label: `${token.symbol} - ${token.name}`
+                                }))}
+                                variant="default"
+                            />
                             <p className="text-xs text-[rgb(186,255,188)]/70">
                                 Buyers can pay with any token. Their payment will be swapped to {SUPPORTED_TOKENS.find(t => t.address === sellerToken)?.symbol || 'your selected token'} (if you settle this auction, else you will receive USDC).
                             </p>

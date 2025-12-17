@@ -6,6 +6,7 @@ import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import BidPriceChart from "./bid-price-chart";
 import BidsSkeleton from "./bids-skeleton";
+import CustomDropdown from "./custom-dropdown";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
@@ -186,6 +187,7 @@ export default function Bids({
     const [tokenPrice, setTokenPrice] = useState<number | null>(null);
     const [copied, setCopied] = useState(false);
     const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [tokenBalances, setTokenBalances] = useState<Record<string, { amount: string; usdValue: string | null }>>({});
 
     const priceRetryIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const nftCarouselRef = useRef<HTMLDivElement>(null);
@@ -335,6 +337,88 @@ export default function Bids({
         setConvertedStartingPrice(selectedCollection.startingPrice / 1e6);
         setConvertedHighestBid(selectedCollection.highestBid);
     }, [selectedCollection]);
+
+    // Fetch token balances with USD values
+    useEffect(() => {
+        if (!address || !provider) {
+            setTokenBalances({});
+            return;
+        }
+
+        const fetchBalances = async () => {
+            const balances: Record<string, { amount: string; usdValue: string | null }> = {};
+
+            await Promise.all(
+                SUPPORTED_TOKENS.map(async (token) => {
+                    try {
+                        const balanceResult = await provider.provider.callContract({
+                            contractAddress: token.address,
+                            entrypoint: "balanceOf",
+                            calldata: [address]
+                        });
+
+                        if (balanceResult && balanceResult.length >= 2) {
+                            const low = balanceResult[0];
+                            const high = balanceResult[1];
+                            const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+                            const balanceDecimal = Number(balance) / Math.pow(10, token.decimals);
+                            
+                            // Format token amount
+                            const formattedAmount = balanceDecimal > 0 
+                                ? formatTokenAmount(balanceDecimal, token.decimals)
+                                : '0.00';
+                            
+                            // Calculate USD value
+                            let usdValue: string | null = null;
+                            try {
+                                if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                                    // USDC is 1:1 with USD
+                                    usdValue = formatUSD(balanceDecimal);
+                                } else {
+                                    if (balanceDecimal > 0) {
+                                        const price = await getTokenPriceInUSDC(token.address);
+                                        if (price && isValidPrice(price)) {
+                                            const usdAmount = balanceDecimal * price;
+                                            usdValue = formatUSD(usdAmount);
+                                        }
+                                    } else {
+                                        // Even for 0 balance, show $0.00
+                                        usdValue = formatUSD(0);
+                                    }
+                                }
+                            } catch (error) {
+                                console.error(`Error fetching USD value for ${token.symbol}:`, error);
+                                // If error but balance is 0, still show $0.00
+                                if (balanceDecimal === 0) {
+                                    usdValue = formatUSD(0);
+                                }
+                            }
+                            
+                            balances[token.address] = {
+                                amount: formattedAmount,
+                                usdValue: usdValue || formatUSD(0)
+                            };
+                        } else {
+                            balances[token.address] = {
+                                amount: '0.00',
+                                usdValue: formatUSD(0)
+                            };
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching balance for ${token.symbol}:`, error);
+                        balances[token.address] = {
+                            amount: '0.00',
+                            usdValue: formatUSD(0)
+                        };
+                    }
+                })
+            );
+
+            setTokenBalances(balances);
+        };
+
+        fetchBalances();
+    }, [address, provider, isValidPrice]);
 
 
 
@@ -1227,23 +1311,38 @@ export default function Bids({
                             <div className="flex gap-4 sm:items-start w-full">
                                 <div className="flex flex-col gap-3">
                                     <label
-                                        htmlFor="payment-token"
                                         className="text-[11px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70"
                                     >
                                         Pay With
                                     </label>
-                                    <select
+                                    <CustomDropdown
                                         id="payment-token"
                                         value={paymentToken}
-                                        onChange={(event) => setPaymentToken(event.target.value)}
-                                        className="w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                                    >
-                                        {SUPPORTED_TOKENS.map((token) => (
-                                            <option key={token.address} value={token.address}>
-                                                {token.symbol}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={setPaymentToken}
+                                        options={SUPPORTED_TOKENS.map((token) => {
+                                            const balanceInfo = address && tokenBalances[token.address] !== undefined
+                                                ? tokenBalances[token.address]
+                                                : null;
+                                            
+                                            let balanceDisplay: string;
+                                            if (!address) {
+                                                balanceDisplay = '—';
+                                            } else if (!balanceInfo) {
+                                                balanceDisplay = '...';
+                                            } else {
+                                                // Always show USD value (which will be $0.00 for zero balances)
+                                                balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+                                            }
+                                            
+                                            return {
+                                                value: token.address,
+                                                label: token.symbol,
+                                                balance: balanceDisplay
+                                            };
+                                        })}
+                                        variant="green"
+                                        className="w-40"
+                                    />
                                     {bidAmountUSD > 0 && paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() && (
                                         <p className="text-xs text-[rgb(186,255,188)]/50">
                                             ≈ {(() => {
