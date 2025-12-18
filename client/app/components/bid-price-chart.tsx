@@ -110,7 +110,7 @@ export default function BidPriceChart({
     const numYLabels = width > 300 ? 4 : 3;
     const yLabels = useMemo(() => {
         return Array.from({ length: numYLabels }, (_, i) => {
-            const value = minY + (rangeY * (numYLabels - 1 - i) / (numYLabels - 1));
+            const value = minY + (rangeY * i / (numYLabels - 1));
             return value;
         });
     }, [minY, rangeY, numYLabels]);
