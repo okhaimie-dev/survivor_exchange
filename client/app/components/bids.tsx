@@ -553,6 +553,18 @@ export default function Bids({
                 throw new Error('Invalid bid amount');
             }
 
+            // Check if bid is less than minimum required (reserved price + 2%)
+            if (selectedCollection) {
+                const reservedPriceUSD = selectedCollection.startingPrice / 1e6;
+                const minimumBid = reservedPriceUSD * 1.02; // Reserved price + 2%
+                
+                if (usdcAmount < minimumBid) {
+                    setInsufficientFundsError(`Minimum bid is ${formatUSD(minimumBid)}`);
+                    setIsSubmitting(false);
+                    return;
+                }
+            }
+
             const finalUSDAmount = Math.floor(usdcAmount * 1e6);
 
             // If paying with a token other than USDC, we need to swap
@@ -619,9 +631,10 @@ export default function Bids({
                 const bestQuote = quotes[0];
 
                 // Build the execute transaction calls from the quote
+                const slippage = 0.01; // 1% slippage
                 const swapCallsResult = await quoteToCalls({
                     quoteId: bestQuote.quoteId,
-                    slippage: 0.01, // 1% slippage
+                    slippage: slippage,
                 });
 
                 // Avnu SDK returns an object with a 'calls' array
@@ -674,8 +687,21 @@ export default function Bids({
                     });
                 });
 
-                // Approve the exact USDC amount needed for the bid
-                const usdcApprovalAmount = BigInt(finalUSDAmount);
+                // Calculate the minimum USDC amount we'll receive after swap (accounting for slippage)
+                // buyAmount is in wei (6 decimals for USDC)
+                // Convert to BigInt, handling BigInt, string, and number types
+                let buyAmount: bigint;
+                if (typeof bestQuote.buyAmount === 'bigint') {
+                    buyAmount = bestQuote.buyAmount;
+                } else if (typeof bestQuote.buyAmount === 'string') {
+                    buyAmount = BigInt(bestQuote.buyAmount);
+                } else {
+                    buyAmount = BigInt(Math.floor(Number(bestQuote.buyAmount)));
+                }
+                const minBuyAmount = (buyAmount * BigInt(Math.floor((1 - slippage) * 10000))) / 10000n;
+                
+                // Use the minimum buy amount for approval and bid to ensure we have enough after swap
+                const usdcApprovalAmount = minBuyAmount;
                 const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
                 calls.push({
                     contractAddress: USDC_ADDRESS,
@@ -692,7 +718,7 @@ export default function Bids({
                     entrypoint: "bid",
                     calldata: [
                         auctionId.toString(),
-                        finalUSDAmount.toString()
+                        minBuyAmount.toString()
                     ]
                 });
             } else {
@@ -751,7 +777,7 @@ export default function Bids({
         } finally {
             setIsSubmitting(false);
         }
-    }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider, isValidPrice]);
+    }, [account, address, selectedCollectionId, bidAmountToken, bidAmountUSD, isBidValid, paymentToken, tokenPrice, provider, isValidPrice, selectedCollection]);
 
     const isAuctionExpired = useCallback((endTime: string, status: string): boolean => {
         if (!endTime || endTime === "0") return false;
