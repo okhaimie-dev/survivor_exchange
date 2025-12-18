@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { formatUSDCompact } from '../lib/utils/formatters';
+import { formatUSDSmart } from '../lib/utils/formatters';
 import type { Bid } from '../lib/types';
 
 type BidPriceChartProps = {
@@ -250,7 +250,7 @@ export default function BidPriceChart({
                             className="text-[9px] font-orbitron fill-[rgb(186,255,188)]/60"
                             style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                         >
-                            {formatUSDCompact(label)}
+                            {formatUSDSmart(label)}
                         </text>
                     );
                 })}
@@ -273,7 +273,7 @@ export default function BidPriceChart({
                 })}
                 
                 {(() => {
-                    const labelText = formatUSDCompact(latestValue);
+                    const labelText = formatUSDSmart(latestValue);
                     const labelWidth = labelText.length * 5.5;
                     const horizontalPadding = 12;
                     const verticalPadding = 6;
@@ -351,7 +351,7 @@ export default function BidPriceChart({
                                 className="text-[10px] font-orbitron fill-[rgb(186,255,188)]/70"
                                 style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                             >
-                                {formatUSDCompact(averageValue)}
+                                {formatUSDSmart(averageValue)}
                             </text>
                         </g>
                     );

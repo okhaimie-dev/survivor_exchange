@@ -10,7 +10,7 @@ import CustomDropdown from "./custom-dropdown";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
-import { truncateAddress, formatUSD, formatTokenAmount, truncateAuctionName } from "../lib/utils";
+import { truncateAddress, formatUSD, formatUSDSmart, formatTokenAmount, truncateAuctionName } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { AUCTION_CONTRACT_ADDRESS, VAULT_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, IMAGE_BASE_URL, SUPPORTED_TOKENS, USDC_ADDRESS } from "../lib/constants";
@@ -1393,7 +1393,7 @@ export default function Bids({
                                         Reserved Price
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {formatUSD(selectedCollection.startingPrice / 1e6)}
+                                        {formatUSDSmart(selectedCollection.startingPrice / 1e6)}
                                     </p>
                                 </div>
                                 <div className="rounded-xl border border-white/12 bg-white/5 px-4 py-3 text-center sm:text-left">
@@ -1401,7 +1401,7 @@ export default function Bids({
                                         Highest Bid
                                     </p>
                                     <p className="font-orbitron text-lg tracking-[0.12em]">
-                                        {selectedCollection.highestBid !== undefined ? formatUSD(selectedCollection.highestBid) : "No bids"}
+                                        {selectedCollection.highestBid !== undefined ? formatUSDSmart(selectedCollection.highestBid) : "No bids"}
                                     </p>
                                 </div>
                             </div>

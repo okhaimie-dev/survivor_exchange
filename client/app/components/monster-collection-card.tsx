@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
-import { formatUSD, truncateAuctionName } from "../lib/utils";
+import { formatUSDSmart, truncateAuctionName } from "../lib/utils";
 import CountdownTimer from "./countdown-timer";
 import BidPriceChart from "./bid-price-chart";
 
@@ -25,12 +25,12 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
     const stats = [
         {
             label: "Reserved Price",
-            value: formatUSD(collection.startingPrice/1e6),
+            value: formatUSDSmart(collection.startingPrice/1e6),
             suffix: undefined,
         },
         {
             label: "Highest Bid",
-            value: collection.highestBid !== undefined ? formatUSD(collection.highestBid) : "—",
+            value: collection.highestBid !== undefined ? formatUSDSmart(collection.highestBid) : "—",
             suffix: undefined,
         },
     ];
