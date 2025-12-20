@@ -270,16 +270,32 @@ pub mod AuctionableComponent {
             let is_expired = current_time >= auction.end_time;
 
             // Anyone after expiry, or owner anytime
-            assert(is_expired || is_seller, Errors::UNAUTHORIZED_TO_END);
+            assert(is_seller || is_expired, Errors::UNAUTHORIZED_TO_END);
 
-            // Owner pays a fine to end auction before expiry.
+            let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
+            let has_winner = auction.highest_bidder != 0;
 
-            // TODO: Check no active rentals on items before ending
+            if is_seller && !is_expired {
+                if has_winner {
+                    let winner: ContractAddress = auction.highest_bidder.try_into().unwrap();
+                    let shares = vault_dispatcher.share_balance(auction.auction_id, winner);
+                    if shares > 0_u256 {
+                        vault_dispatcher.withdraw(auction.auction_id, winner, winner, shares);
+                    }
 
-            // Update to Ended
-            auction.status = AuctionStatus::Ended.into();
-            store.set_auction(@auction);
-            // TODO: Emit AuctionEnded event (auction_id, end_time)
+                    let mut cleared_bid = BidTrait::new(auction.auction_id, winner.into(), 0_u64);
+                    store.set_bid(@cleared_bid);
+                }
+
+                // TODO: Check no active rentals on items before ending
+
+                auction.status = AuctionStatus::Canceled.into();
+                store.set_auction(@auction);
+            } else {
+                auction.status = AuctionStatus::Ended.into();
+                store.set_auction(@auction);
+            }
         }
 
         fn settle(self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32) {
