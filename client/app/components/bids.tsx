@@ -18,7 +18,6 @@ import {
   truncateAuctionName,
 } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
-import { normalizeContractAddress } from "../lib/utils/normalization";
 import {
   AUCTION_CONTRACT_ADDRESS,
   VAULT_CONTRACT_ADDRESS,
@@ -27,7 +26,8 @@ import {
   SUPPORTED_TOKENS,
   USDC_ADDRESS,
 } from "../lib/constants";
-import { getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
+import { fetchTokens, getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
+import { normalizeContractAddress } from "../lib/utils/normalization";
 import {
   getTokenPriceInUSDC,
   shouldRefetchPrice,
@@ -161,6 +161,28 @@ export default function Bids({
     setLocalCurrentPage(currentPage);
   }, [currentPage]);
 
+  useEffect(() => {
+    const loadLogos = async () => {
+      try {
+        const page = await fetchTokens({ page: 0, size: 100 });
+        const logos: Record<string, string> = {};
+        SUPPORTED_TOKENS.forEach((token) => {
+          const normalizedSupported = normalizeContractAddress(token.address);
+          const match = page.content.find(
+            (t) => normalizeContractAddress(t.address) === normalizedSupported,
+          );
+          if (match && match.logoUri) {
+            logos[token.address] = match.logoUri;
+          }
+        });
+        setTokenLogos(logos);
+      } catch (error) {
+        console.error("Failed to fetch token logos:", error);
+      }
+    };
+    loadLogos();
+  }, []);
+
   const collections: Collection[] = useMemo(() => {
     return paginatedFilteredAuctions.map((auction) => {
       // Parse starting_price - handle both decimal and hex strings
@@ -204,7 +226,8 @@ export default function Bids({
     collections[0]?.id ?? "",
   );
   const [bidAmountToken, setBidAmountToken] = useState<string>("");
-  const [paymentToken, setPaymentToken] = useState<string>(USDC_ADDRESS);
+  const [paymentToken, setPaymentToken] = useState(USDC_ADDRESS);
+  const [tokenLogos, setTokenLogos] = useState<Record<string, string>>({});
   const [, setConvertedStartingPrice] = useState<number>(0);
   const [, setConvertedHighestBid] = useState<number | undefined>(undefined);
   const [, setIsConvertingPrices] = useState(false);
@@ -1706,6 +1729,7 @@ export default function Bids({
                           value: token.address,
                           label: token.symbol,
                           balance: balanceDisplay,
+                          logo: tokenLogos[token.address],
                         };
                       })}
                       variant="green"
