@@ -1,9 +1,11 @@
 import { gql } from '@apollo/client';
 import type { AuctionsResponse, MyListingsResponse } from '../types';
+import { GRAPHQL_QUERY_LIMIT } from '../constants';
 
+// Reduced limits from 1000000 - prevents massive payloads
 export const AUCTIONS_QUERY = gql`
   query MyQuery {
-    bm011AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm011AuctionItemModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -16,7 +18,7 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
-    bm011AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm011AuctionModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -32,7 +34,7 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
-    bm011BidModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    bm011BidModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -73,18 +75,17 @@ export async function fetchMyListings(_seller: string): Promise<MyListingsRespon
   throw new Error('Use Apollo Client hooks instead. See useMyListings hook.');
 }
 
+// Optimized consolidated query - reduced limits and removed heavy metadata fields
 export const CONSOLIDATED_QUERY = gql`
-  query ConsolidatedQuery($accountAddress: String, $seller: String) {
-    myNFTs: tokenBalances(limit: 1000000, accountAddress: $accountAddress) @skip(if: $skipNFTs) {
+  query ConsolidatedQuery($accountAddress: String, $seller: String, $skipNFTs: Boolean = false, $skipListings: Boolean = false) {
+    myNFTs: tokenBalances(limit: ${GRAPHQL_QUERY_LIMIT}, accountAddress: $accountAddress) @skip(if: $skipNFTs) {
       edges {
         node {
           tokenMetadata {
             ... on ERC721__Token {
               metadataName
-              metadataDescription
               contractAddress
               imagePath
-              metadata
               metadataAttributes
               name
               symbol
@@ -94,7 +95,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctionItems: bm011AuctionItemModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctionItems: bm011AuctionItemModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id
@@ -107,7 +108,7 @@ export const CONSOLIDATED_QUERY = gql`
         }
       }
     }
-    auctions: bm011AuctionModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+    auctions: bm011AuctionModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
       edges {
         node {
           auction_id

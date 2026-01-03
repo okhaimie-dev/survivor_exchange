@@ -128,10 +128,12 @@ export function useAuctions() {
       for (const [seller, sellerAuctions] of auctionsBySeller) {
         try {
           // seller is already normalized from allAuctions useMemo
+          // Using 'cache-first' instead of 'network-only' to leverage Apollo cache
+          // This prevents re-fetching NFT data for sellers we've already queried
           const { data: response } = await apolloClient.query<MyNFTsResponse>({
             query: MY_NFTS_QUERY,
             variables: { accountAddress: seller },
-            fetchPolicy: 'network-only',
+            fetchPolicy: 'cache-first',
           });
 
           const rawNFTs: ERC721Token[] = (response?.tokenBalances?.edges || [])

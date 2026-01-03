@@ -12,9 +12,11 @@ export const BEASTS_NFT_CONTRACT_ADDRESS = '0x046da8955829adf2bda310099a00634519
 
 export const DEFAULT_PAGE_SIZE = 9;
 
-export const GRAPHQL_QUERY_LIMIT = 1000000;
+// Reduced from 1000000 - fetching 1M records caused 30+ MB responses taking 80+ seconds
+export const GRAPHQL_QUERY_LIMIT = 500;
 
-export const DEFAULT_POLL_INTERVAL = 1000;
+// Reduced from 1000ms - polling every second with large payloads overwhelms the connection
+export const DEFAULT_POLL_INTERVAL = 30000;
 
 export const APOLLO_DEFAULT_FETCH_POLICY = 'cache-and-network';
 export const APOLLO_QUERY_FETCH_POLICY = 'network-only';
