@@ -329,11 +329,9 @@ export default function Bids({
   }, []);
 
   useEffect(() => {
-    const intervalRef = priceRetryIntervalRef;
-
     if (priceRetryIntervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+      clearInterval(priceRetryIntervalRef.current);
+      priceRetryIntervalRef.current = null;
     }
 
     const fetchTokenPrice = async (
@@ -390,19 +388,19 @@ export default function Bids({
           const retrySuccess = await fetchTokenPrice(true);
           if (retrySuccess) {
             if (priceRetryIntervalRef.current) {
-              clearInterval(intervalRef.current);
-              intervalRef.current = null;
+              clearInterval(priceRetryIntervalRef.current);
+              priceRetryIntervalRef.current = null;
             }
           }
         }, 5000);
-        intervalRef.current = interval;
+        priceRetryIntervalRef.current = interval;
       }
     });
 
     return () => {
       if (priceRetryIntervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+        clearInterval(priceRetryIntervalRef.current);
+        priceRetryIntervalRef.current = null;
       }
     };
   }, [paymentToken, isValidPrice]);
