@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { BEAST_OPTIONS, TYPE_OPTIONS } from "../lib/constants/filters";
+import CustomDropdown from "./custom-dropdown";
 
 export interface FilterState {
     id: string;
@@ -103,54 +104,57 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Beast
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-beast"
                                 value={filters.beast}
-                                onChange={(e) => updateFilter("beast", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">All Beasts</option>
-                                {BEAST_OPTIONS.map((beast) => (
-                                    <option key={beast} value={beast}>
-                                        {beast}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(value) => updateFilter("beast", value)}
+                                options={[
+                                    { value: "", label: "All Beasts" },
+                                    ...BEAST_OPTIONS.map((beast) => ({
+                                        value: beast,
+                                        label: beast,
+                                    })),
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Type
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-type"
                                 value={filters.type}
-                                onChange={(e) => updateFilter("type", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">All Types</option>
-                                {TYPE_OPTIONS.map((type) => (
-                                    <option key={type} value={type}>
-                                        {type}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(value) => updateFilter("type", value)}
+                                options={[
+                                    { value: "", label: "All Types" },
+                                    ...TYPE_OPTIONS.map((type) => ({
+                                        value: type,
+                                        label: type,
+                                    })),
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Tier
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-tier"
                                 value={filters.tier}
-                                onChange={(e) => updateFilter("tier", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">All Tiers</option>
-                                {[1, 2, 3, 4, 5].map((tier) => (
-                                    <option key={tier} value={tier.toString()}>
-                                        Tier {tier}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={(value) => updateFilter("tier", value)}
+                                options={[
+                                    { value: "", label: "All Tiers" },
+                                    ...[1, 2, 3, 4, 5].map((tier) => ({
+                                        value: tier.toString(),
+                                        label: `Tier ${tier}`,
+                                    })),
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
@@ -165,7 +169,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.levelMin}
                                     onChange={(e) => updateFilter("levelMin", e.target.value)}
                                     placeholder="Min"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                                 <input
                                     type="number"
@@ -174,7 +178,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.levelMax}
                                     onChange={(e) => updateFilter("levelMax", e.target.value)}
                                     placeholder="Max"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                             </div>
                         </div>
@@ -192,7 +196,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.powerMin}
                                     onChange={(e) => updateFilter("powerMin", e.target.value)}
                                     placeholder="Min"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                                 <input
                                     type="number"
@@ -202,7 +206,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.powerMax}
                                     onChange={(e) => updateFilter("powerMax", e.target.value)}
                                     placeholder="Max"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                             </div>
                         </div>
@@ -219,7 +223,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.rankMin}
                                     onChange={(e) => updateFilter("rankMin", e.target.value)}
                                     placeholder="Min"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                                 <input
                                     type="number"
@@ -228,7 +232,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                                     value={filters.rankMax}
                                     onChange={(e) => updateFilter("rankMax", e.target.value)}
                                     placeholder="Max"
-                                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                 />
                             </div>
                         </div>
@@ -237,60 +241,68 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Shiny
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-shiny"
                                 value={filters.shiny}
-                                onChange={(e) => updateFilter("shiny", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">All</option>
-                                <option value="true">True</option>
-                                <option value="false">False</option>
-                            </select>
+                                onChange={(value) => updateFilter("shiny", value)}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "true", label: "True" },
+                                    { value: "false", label: "False" },
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Animated
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-animated"
                                 value={filters.animated}
-                                onChange={(e) => updateFilter("animated", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">All</option>
-                                <option value="true">True</option>
-                                <option value="false">False</option>
-                            </select>
+                                onChange={(value) => updateFilter("animated", value)}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "true", label: "True" },
+                                    { value: "false", label: "False" },
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Sort by Price
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-price-sort"
                                 value={filters.priceSort}
-                                onChange={(e) => updateFilter("priceSort", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">None</option>
-                                <option value="low-high">Low to High</option>
-                                <option value="high-low">High to Low</option>
-                            </select>
+                                onChange={(value) => updateFilter("priceSort", value)}
+                                options={[
+                                    { value: "", label: "None" },
+                                    { value: "low-high", label: "Low to High" },
+                                    { value: "high-low", label: "High to Low" },
+                                ]}
+                                variant="default"
+                            />
                         </div>
 
                         <div className="flex flex-col gap-2">
                             <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
                                 Sort by Token ID
                             </label>
-                            <select
+                            <CustomDropdown
+                                id="filter-token-id-sort"
                                 value={filters.tokenIdSort}
-                                onChange={(e) => updateFilter("tokenIdSort", e.target.value)}
-                                className="rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                <option value="">None</option>
-                                <option value="low-high">Low to High</option>
-                                <option value="high-low">High to Low</option>
-                            </select>
+                                onChange={(value) => updateFilter("tokenIdSort", value)}
+                                options={[
+                                    { value: "", label: "None" },
+                                    { value: "low-high", label: "Low to High" },
+                                    { value: "high-low", label: "High to Low" },
+                                ]}
+                                variant="default"
+                            />
                         </div>
                     </div>
                 </div>

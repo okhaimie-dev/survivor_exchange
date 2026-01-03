@@ -1,8 +1,9 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
-import { formatUSD, truncateAuctionName } from "../lib/utils";
+import { formatUSDSmart, truncateAuctionName } from "../lib/utils";
 import CountdownTimer from "./countdown-timer";
+import BidPriceChart from "./bid-price-chart";
 
 type MonsterCollectionCardProps = {
     collection: {
@@ -24,12 +25,12 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
     const stats = [
         {
             label: "Reserved Price",
-            value: formatUSD(collection.startingPrice/1e6),
+            value: formatUSDSmart(collection.startingPrice/1e6),
             suffix: undefined,
         },
         {
             label: "Highest Bid",
-            value: collection.highestBid !== undefined ? formatUSD(collection.highestBid) : "—",
+            value: collection.highestBid !== undefined ? formatUSDSmart(collection.highestBid) : "—",
             suffix: undefined,
         },
     ];
@@ -257,6 +258,17 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                         ) : null}
                     </div>
                 ))}
+                <div className="flex flex-col gap-2 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-4 py-3">
+                    <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
+                        Live Price Chart
+                    </p>
+                    <BidPriceChart 
+                        width={200} 
+                        height={60} 
+                        startingPrice={collection.startingPrice / 1e6}
+                        currentBid={collection.highestBid}
+                    />
+                </div>
             </div>
         </article>
     );

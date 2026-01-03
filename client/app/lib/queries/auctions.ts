@@ -10,6 +10,9 @@ export const AUCTIONS_QUERY = gql`
           contract_address
           item_index
           token_id
+          entity {
+            executedAt
+          }
         }
       }
     }
@@ -26,6 +29,15 @@ export const AUCTIONS_QUERY = gql`
           seller
           starting_price
           status
+        }
+      }
+    }
+    bm011BidModels(limit: 1000000, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          bidder
+          amount
         }
       }
     }
@@ -89,6 +101,9 @@ export const CONSOLIDATED_QUERY = gql`
           contract_address
           item_index
           token_id
+          entity {
+            executedAt
+          }
         }
       }
     }

@@ -4,9 +4,13 @@ import { byteArray } from "starknet";
 import MonsterCard from "./monster-card";
 import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
+import AuctionSkeleton from "./auction-skeleton";
+import CustomDropdown from "./custom-dropdown";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
+import { fetchTokens } from "@avnu/avnu-sdk";
+import { normalizeContractAddress } from "../lib/utils/normalization";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -22,6 +26,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [collectionName, setCollectionName] = useState<string>("");
     const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
     const [sellerToken, setSellerToken] = useState<string>(USDC_ADDRESS);
+    const [tokenLogos, setTokenLogos] = useState<Record<string, string>>({});
 
     const dateToLocalDateTimeString = (date: Date): string => {
         const year = date.getFullYear();
@@ -76,6 +81,28 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     useEffect(() => {
         setCurrentPage(1);
     }, [filters]);
+
+    useEffect(() => {
+        const loadLogos = async () => {
+            try {
+                const page = await fetchTokens({ page: 0, size: 100 });
+                const logos: Record<string, string> = {};
+                SUPPORTED_TOKENS.forEach((token) => {
+                    const normalizedSupported = normalizeContractAddress(token.address);
+                    const match = page.content.find(
+                        (t) => normalizeContractAddress(t.address) === normalizedSupported,
+                    );
+                    if (match && match.logoUri) {
+                        logos[token.address] = match.logoUri;
+                    }
+                });
+                setTokenLogos(logos);
+            } catch (error) {
+                console.error("Failed to fetch token logos:", error);
+            }
+        };
+        loadLogos();
+    }, []);
 
     const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / DEFAULT_PAGE_SIZE)), [filteredNFTs.length]);
 
@@ -217,11 +244,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     const renderContent = () => {
     if (loading) {
-        return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">Loading your NFTs...</p>
-            </div>
-        );
+        return <AuctionSkeleton />;
     }
 
     if (error) {
@@ -240,33 +263,25 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         );
         }
 
-    const row1 = visibleNFTs.slice(0, 3);
-    const row2 = visibleNFTs.slice(3, 6);
-    const row3 = visibleNFTs.slice(6, 9);
-
-    const renderRow = (rowNFTs: FormattedNFT[]) => (
-        <div className="flex w-full gap-6">
-            {rowNFTs.map((nft) => (
-                <div key={nft.tokenId} className="flex-1">
-                        <MonsterCard
-                            nft={nft}
-                            selected={selectedNFTIds.includes(nft.tokenId)}
-                            onToggle={() => toggleCardSelection(nft.tokenId)}
-                        />
-                </div>
+    const renderGrid = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
+            {visibleNFTs.map((nft) => (
+                <MonsterCard
+                    key={nft.tokenId}
+                    nft={nft}
+                    selected={selectedNFTIds.includes(nft.tokenId)}
+                    onToggle={() => toggleCardSelection(nft.tokenId)}
+                />
             ))}
-            {Array.from({ length: 3 - rowNFTs.length }).map((_, idx) => (
-                <div key={`empty-${idx}`} className="flex-1" />
-            ))}
-                </div>
+        </div>
     );
 
     const renderSelectedSummary = () => {
         if (!hasSelection) return null;
 
         return (
-                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/80 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)] -m-4">
-                <div className="grid gap-8 p-6 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
+                <section className="mx-auto w-full max-w-6xl overflow-hidden rounded-2xl border border-[rgb(50,255,52)]/80 bg-black/55 shadow-[0_16px_40px_rgba(5,20,5,0.35)] mt-6">
+                <div className="grid gap-8 p-4 md:p-6 grid-cols-1 md:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] md:items-start">
                     <div className="flex flex-col gap-4 h-full">
                         <div>
                             <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
@@ -369,23 +384,21 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                         <div className="flex flex-col gap-2">
                             <label
-                                htmlFor="seller-token"
                                 className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70"
                             >
                                 Receive Payment In
                             </label>
-                            <select
+                            <CustomDropdown
                                 id="seller-token"
                                 value={sellerToken}
-                                onChange={(event) => setSellerToken(event.target.value)}
-                                className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35"
-                            >
-                                {SUPPORTED_TOKENS.map((token) => (
-                                    <option key={token.address} value={token.address}>
-                                        {token.symbol} - {token.name}
-                                    </option>
-                                ))}
-                            </select>
+                                onChange={setSellerToken}
+                                options={SUPPORTED_TOKENS.map((token) => ({
+                                    value: token.address,
+                                    label: token.symbol,
+                                    logo: tokenLogos[token.address]
+                                }))}
+                                variant="default"
+                            />
                             <p className="text-xs text-[rgb(186,255,188)]/70">
                                 Buyers can pay with any token. Their payment will be swapped to {SUPPORTED_TOKENS.find(t => t.address === sellerToken)?.symbol || 'your selected token'} (if you settle this auction, else you will receive USDC).
                             </p>
@@ -484,18 +497,14 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                 {filteredNFTs.length > 0 && (
                     <>
-                        {renderRow(row1)}
-                        
-                        {renderRow(row2)}
-                        
-                        {renderRow(row3)}
-                        
+                        {renderGrid()}
+
                         {hasSelection && renderSelectedSummary()}
                     </>
             )}
 
             {filteredNFTs.length > 0 && (
-                <div className="flex justify-center">
+                <div className="flex justify-center mt-6">
                     <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={handlePageChange} />
                 </div>
             )}

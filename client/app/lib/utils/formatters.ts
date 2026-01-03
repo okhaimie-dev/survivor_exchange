@@ -116,6 +116,61 @@ export function formatUSD(value: number | string | null | undefined, decimals: n
   }).format(numValue);
 }
 
+/**
+ * Formats USD with smart decimal places:
+ * - Shows up to 3 decimal places
+ * - If first non-zero digit is at position 1 or 2, show 2 decimal places
+ * - If first non-zero digit is at position 3, show 3 decimal places
+ * - If first non-zero digit is at position 4+, fallback to 2 decimal places
+ */
+export function formatUSDSmart(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return "—";
+  
+  // Format to 6 decimal places first to avoid floating point precision issues
+  // Then analyze the string to find first non-zero digit
+  const valueStr = numValue.toFixed(6);
+  const decimalIndex = valueStr.indexOf('.');
+  
+  if (decimalIndex === -1) {
+    // No decimal point, show 2 decimal places
+    return formatUSD(numValue, 2);
+  }
+  
+  // Find first non-zero digit after decimal point
+  const decimalPart = valueStr.substring(decimalIndex + 1);
+  let firstNonZeroIndex = -1;
+  
+  for (let i = 0; i < decimalPart.length; i++) {
+    if (decimalPart[i] !== '0') {
+      firstNonZeroIndex = i + 1; // +1 because position 1 is first digit after decimal
+      break;
+    }
+  }
+  
+  // If no non-zero digits found (e.g., 1.000000), show 2 decimal places
+  if (firstNonZeroIndex === -1) {
+    return formatUSD(numValue, 2);
+  }
+  
+  // Determine decimal places based on position of first non-zero digit
+  let decimals: number;
+  if (firstNonZeroIndex === 1 || firstNonZeroIndex === 2) {
+    // First or second digit after decimal, show 2 decimal places
+    decimals = 2;
+  } else if (firstNonZeroIndex === 3) {
+    // Third digit after decimal, show 3 decimal places
+    decimals = 3;
+  } else {
+    // Fourth or later digit, fallback to 2 decimal places
+    decimals = 2;
+  }
+  
+  return formatUSD(numValue, decimals);
+}
+
 export function formatUSDCompact(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return "—";
   

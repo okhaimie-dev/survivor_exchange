@@ -65,6 +65,16 @@ export async function getTokenPriceInUSDC(tokenAddress: string): Promise<number>
       });
       
       if (!quotes || quotes.length === 0) {
+        // If we have expired cache, use it as fallback instead of throwing
+        const expiredCache = priceCache.get(normalizedAddress);
+        if (expiredCache) {
+          const expiredPrice = expiredCache.price;
+          // Only use expired cache if it's valid (not Infinity, NaN, etc.)
+          if (isFinite(expiredPrice) && expiredPrice !== Infinity && expiredPrice !== -Infinity && !isNaN(expiredPrice) && expiredPrice > 0) {
+            console.warn('No quotes available, using expired cache as fallback');
+            return expiredPrice;
+          }
+        }
         throw new Error('No quotes available');
       }
       

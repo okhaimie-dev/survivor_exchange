@@ -1,21 +1,10 @@
 import React from "react";
-
+ 
 import { sepolia, mainnet } from "@starknet-react/chains";
-import {
-  StarknetConfig,
-  jsonRpcProvider,
-  braavos,
-  argent,
-  voyager,
-} from "@starknet-react/core";
+import { StarknetConfig, jsonRpcProvider, braavos, argent, voyager } from "@starknet-react/core";
 
 import { ControllerConnector } from "@cartridge/connector";
-import {
-  MAINNET_RPC_URL,
-  SEPOLIA_RPC_URL,
-  AUCTION_CONTRACT_ADDRESS,
-  BEASTS_NFT_CONTRACT_ADDRESS,
-} from "../lib/constants";
+import { MAINNET_RPC_URL, SEPOLIA_RPC_URL, AUCTION_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
 
 const provider = jsonRpcProvider({
   rpc: (chain) => {
@@ -34,8 +23,7 @@ const policies = {
   contracts: {
     [AUCTION_CONTRACT_ADDRESS]: {
       namespace: "Survivor Exchange",
-      description:
-        "A place where you can auction your Loot Survivor game monsters",
+      description: "A place where you can auction your Loot Survivor game monsters",
       methods: [
         {
           name: "Create Auction",
@@ -51,27 +39,11 @@ const policies = {
           name: "End Auction",
           description: "End an active auction",
           entrypoint: "end_auction",
-        },
-      ],
-    },
-    [BEASTS_NFT_CONTRACT_ADDRESS]: {
-      namespace: "BEAST NFTs",
-      description: "BEAST NFT collection",
-      methods: [
-        {
-          name: "Approve",
-          description: "Approve a spender for a specific NFT",
-          entrypoint: "approve",
-        },
-        {
-          name: "Transfer",
-          description: "Transfer a BEAST NFT",
-          entrypoint: "transfer",
-        },
-      ],
-    },
-  },
-};
+        }
+      ]
+    }
+  }
+}
 
 const controller = new ControllerConnector({
   policies,

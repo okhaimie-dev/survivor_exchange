@@ -105,27 +105,27 @@ import { truncateAddress } from "../lib/utils/formatters";
 
         return (
             <>
-            <div className="w-full h-14 bg-black flex flex-row items-center justify-center">
-                <div className="w-full flex flex-row items-center justify-between p-3.5">
-                    <div>
-                        <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} />
+            <div className="w-full min-h-14 bg-black flex flex-row items-center justify-center px-3 md:px-3.5 py-3">
+                <div className="w-full flex flex-row items-center justify-between gap-2">
+                    <div className="flex-shrink-0">
+                        <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} className="w-10 h-10 md:w-12 md:h-12" />
                     </div>
-                    <div>
+                    <div className="flex-shrink min-w-0">
                         {
                                 address ? (
-                                <div className="flex items-center gap-3">
-                                        <p className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)]">
+                                <div className="flex items-center gap-2 md:gap-3">
+                                        <p className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-xs md:text-sm truncate max-w-[100px] md:max-w-none">
                                             {username || truncateAddress(address)}
                                         </p>
                                     <button
-                                        className="text-white text-sm font-orbitron tracking-wide uppercase hover:cursor-pointer border border-white px-3 py-1 rounded hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]"
+                                        className="text-white text-xs md:text-sm font-orbitron tracking-wide uppercase hover:cursor-pointer border border-white px-2 py-1 md:px-3 md:py-1 rounded hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)] whitespace-nowrap"
                                         onClick={handleDisconnect}
                                     >
                                         Disconnect
                                     </button>
                                 </div>
                             ) : (
-                                <button className="text-[rgb(50,255,52)] text-base font-medium font-orbitron tracking-wide uppercase hover:cursor-pointer hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)]" onClick={handleConnect}>CONNECT WALLET</button>
+                                <button className="text-[rgb(50,255,52)] text-xs md:text-base font-medium font-orbitron tracking-wide uppercase hover:cursor-pointer hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)] whitespace-nowrap" onClick={handleConnect}>Connect Wallet</button>
                             )
                         }
                     </div>

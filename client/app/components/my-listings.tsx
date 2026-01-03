@@ -2,6 +2,7 @@ import Image from "next/image";
 import moment from "moment";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useState, useCallback, useMemo, useEffect } from "react";
+import MyListingsSkeleton from "./my-listings-skeleton";
 import { FormattedListing } from "../hooks/use-my-listings";
 import { AUCTION_CONTRACT_ADDRESS, USDC_ADDRESS, SUPPORTED_TOKENS, DEFAULT_PAGE_SIZE } from "../lib/constants";
 import { formatUSDCompact, truncateAuctionName } from "../lib/utils";
@@ -370,8 +371,8 @@ export default function MyListings({ listings, loading, error }: MyListingsProps
                         Review and manage every collection you have introduced to the Loot Auction habitat.
                     </p>
                 </header>
-                <div className="flex items-center justify-center py-12">
-                    <p className="text-[rgb(186,255,188)]/70">Loading listings...</p>
+                <div className="flex flex-col gap-4">
+                    <MyListingsSkeleton />
                 </div>
             </section>
         );

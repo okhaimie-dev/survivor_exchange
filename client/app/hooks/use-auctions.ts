@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
 import { useQuery, useApolloClient } from '@apollo/client/react';
 import { AUCTIONS_QUERY, MY_NFTS_QUERY } from '../lib/queries';
-import type { AuctionsResponse, Auction, AuctionItem, MyNFTsResponse, FormattedNFT, ERC721Token } from '../lib/types';
+import type { AuctionsResponse, Auction, AuctionItem, Bid, MyNFTsResponse, FormattedNFT, ERC721Token } from '../lib/types';
 import { formatNFTs, byteArrayToString } from '../lib/utils';
 import { normalizeTokenId, normalizeContractAddress } from '../lib/utils/normalization';
 import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, BEASTS_NFT_CONTRACT_ADDRESS } from '../lib/constants';
 
 export interface AuctionWithNFTs extends Auction {
   nfts: FormattedNFT[];
+  bids?: Bid[];
+  executedAt?: string;
 }
 
 export function useAuctions() {
@@ -51,6 +53,16 @@ export function useAuctions() {
     return data?.bm011AuctionItemModels?.edges?.map((edge) => edge.node) || [];
   }, [data]);
 
+  const allBids: Bid[] = useMemo(() => {
+    return data?.bm011BidModels?.edges?.map((edge) => {
+      const bid = edge.node;
+      return {
+        ...bid,
+        bidder: bid.bidder ? normalizeContractAddress(bid.bidder) : bid.bidder,
+      };
+    }) || [];
+  }, [data]);
+
   const itemsByAuction = useMemo(() => {
     const map = new Map<string, AuctionItem[]>();
     for (const item of allAuctionItems) {
@@ -60,6 +72,16 @@ export function useAuctions() {
     }
     return map;
   }, [allAuctionItems]);
+
+  const bidsByAuction = useMemo(() => {
+    const map = new Map<string, Bid[]>();
+    for (const bid of allBids) {
+      const existing = map.get(bid.auction_id) || [];
+      existing.push(bid);
+      map.set(bid.auction_id, existing);
+    }
+    return map;
+  }, [allBids]);
 
   const paginatedAuctions = useMemo(() => {
     const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
@@ -130,17 +152,26 @@ export function useAuctions() {
           for (const auction of sellerAuctions) {
             const items = itemsByAuction.get(auction.auction_id) || [];
             const matchedNFTs = formattedNFTs.filter((nft) => items.some(item => nft.tokenId === normalizeTokenId(item.token_id)));
+            const bids = bidsByAuction.get(auction.auction_id) || [];
+            const executedAt = items.length > 0 && items[0].entity?.executedAt ? items[0].entity.executedAt : undefined;
 
             auctionsWithNFTsData.push({
               ...auction,
               nfts: matchedNFTs,
+              bids,
+              executedAt,
             });
           }
         } catch {
           for (const auction of sellerAuctions) {
+            const items = itemsByAuction.get(auction.auction_id) || [];
+            const bids = bidsByAuction.get(auction.auction_id) || [];
+            const executedAt = items.length > 0 && items[0].entity?.executedAt ? items[0].entity.executedAt : undefined;
             auctionsWithNFTsData.push({
               ...auction,
               nfts: [],
+              bids,
+              executedAt,
             });
           }
         }
@@ -148,9 +179,12 @@ export function useAuctions() {
 
       for (const auction of allAuctions) {
         if (!itemsByAuction.has(auction.auction_id)) {
+          const bids = bidsByAuction.get(auction.auction_id) || [];
           auctionsWithNFTsData.push({
             ...auction,
             nfts: [],
+            bids,
+            executedAt: undefined,
           });
         }
       }
@@ -161,7 +195,7 @@ export function useAuctions() {
     };
 
     fetchAllAuctionNFTs();
-  }, [allAuctions, itemsByAuction, apolloClient]);
+  }, [allAuctions, itemsByAuction, bidsByAuction, apolloClient]);
 
   // Only show loading on initial load, not when updating existing data
   const isLoading = (!hasInitialData.current && (loading || isProcessingNFTs));
