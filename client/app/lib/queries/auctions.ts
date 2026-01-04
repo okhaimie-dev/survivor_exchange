@@ -75,7 +75,8 @@ export async function fetchMyListings(_seller: string): Promise<MyListingsRespon
   throw new Error('Use Apollo Client hooks instead. See useMyListings hook.');
 }
 
-// Optimized consolidated query - reduced limits and removed heavy metadata fields
+// Optimized consolidated query - reduced limits to 500 (from 1M) and removed 'metadataDescription'.
+// The 'metadata' field is included for NFT image display.
 export const CONSOLIDATED_QUERY = gql`
   query ConsolidatedQuery($accountAddress: String, $seller: String, $skipNFTs: Boolean = false, $skipListings: Boolean = false) {
     myNFTs: tokenBalances(limit: ${GRAPHQL_QUERY_LIMIT}, accountAddress: $accountAddress) @skip(if: $skipNFTs) {
@@ -86,6 +87,7 @@ export const CONSOLIDATED_QUERY = gql`
               metadataName
               contractAddress
               imagePath
+              metadata
               metadataAttributes
               name
               symbol
