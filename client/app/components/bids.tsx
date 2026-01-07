@@ -120,6 +120,8 @@ export default function Bids({
   const [isSettling, setIsSettling] = useState(false);
   const [settleTxnHash, setSettleTxnHash] = useState<string | undefined>();
   const [isRefunded, setIsRefunded] = useState(false);
+  const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+  const [offerTxnHash, setOfferTxnHash] = useState<string | undefined>();
   const [filters, setFilters] = useState<FilterState>({
     id: "",
     search: "",
@@ -909,6 +911,106 @@ export default function Bids({
     selectedCollection,
   ]);
 
+  const handleMakeOffer = useCallback(async () => {
+    if (
+      !account ||
+      !address ||
+      selectedCollectionId === "" ||
+      selectedCollectionId === null ||
+      selectedCollectionId === undefined ||
+      !isBidValid
+    ) {
+      return;
+    }
+
+    setInsufficientFundsError(null);
+
+    try {
+      setIsSubmittingOffer(true);
+
+      const auctionId = parseInt(selectedCollectionId, 10);
+      const usdcAmount = parseFloat(bidAmountToken);
+      if (isNaN(usdcAmount) || usdcAmount <= 0) {
+        throw new Error("Invalid offer amount");
+      }
+
+      const finalUSDAmount = Math.floor(usdcAmount * 1e6);
+
+      // Check USDC balance
+      const usdcBalanceResult = await provider.provider.callContract({
+        contractAddress: USDC_ADDRESS,
+        entrypoint: "balanceOf",
+        calldata: [address],
+      });
+
+      if (!usdcBalanceResult || usdcBalanceResult.length < 2) {
+        throw new Error("Invalid balance response");
+      }
+
+      const usdcLow = usdcBalanceResult[0];
+      const usdcHigh = usdcBalanceResult[1];
+      const usdcBalance = BigInt(usdcLow) + (BigInt(usdcHigh) << BigInt(128));
+
+      if (usdcBalance < BigInt(finalUSDAmount)) {
+        setInsufficientFundsError(`Insufficient funds to make offer.`);
+        setIsSubmittingOffer(false);
+        return;
+      }
+
+      const calls: Array<{
+        contractAddress: string;
+        entrypoint: string;
+        calldata: string[];
+      }> = [];
+
+      // Approve USDC for vault
+      const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
+      const approvalAmount = uint256.bnToUint256(approvalAmountValue);
+      calls.push({
+        contractAddress: USDC_ADDRESS,
+        entrypoint: "approve",
+        calldata: [
+          VAULT_CONTRACT_ADDRESS,
+          approvalAmount.low.toString(),
+          approvalAmount.high.toString(),
+        ],
+      });
+
+      // Make offer - following same Option pattern as create_auction
+      // Pass a very large duration to effectively mean "no expiration"
+      // Using 10 years in seconds as the expiration duration
+      const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60; // ~315,360,000 seconds
+      calls.push({
+        contractAddress: AUCTION_CONTRACT_ADDRESS,
+        entrypoint: "make_offer",
+        calldata: [
+          auctionId.toString(),           // auction_id: u32
+          finalUSDAmount.toString(),       // offer_amount: u64
+          "0",                             // Option::Some variant (same pattern as create_auction)
+          TEN_YEARS_IN_SECONDS.toString(), // expires_in: large value for no practical expiration
+        ],
+      });
+
+      const response = await account.execute(calls);
+      setOfferTxnHash(response.transaction_hash);
+      setBidAmountToken("");
+    } catch (err) {
+      console.error("Error making offer:", err);
+      if (err instanceof Error && err.message.includes("balance")) {
+        setInsufficientFundsError("Insufficient funds");
+      }
+    } finally {
+      setIsSubmittingOffer(false);
+    }
+  }, [
+    account,
+    address,
+    selectedCollectionId,
+    bidAmountToken,
+    isBidValid,
+    provider,
+  ]);
+
   const isAuctionExpired = useCallback(
     (endTime: string, status: string): boolean => {
       if (!endTime || endTime === "0") return false;
@@ -1172,6 +1274,7 @@ export default function Bids({
     setSelectedCollectionId(collection.id);
     setBidAmountToken("");
     setTxnHash(undefined);
+    setOfferTxnHash(undefined);
     setSettleTxnHash(undefined);
     setInsufficientFundsError(null);
     setIsRefunded(false);
@@ -1183,6 +1286,7 @@ export default function Bids({
         setSelectedCollectionId("");
         setBidAmountToken("");
         setTxnHash(undefined);
+        setOfferTxnHash(undefined);
         setSettleTxnHash(undefined);
         setInsufficientFundsError(null);
       } else {
@@ -1975,20 +2079,34 @@ export default function Bids({
                   })()}
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 md:gap-5 w-full max-w-full md:max-w-[500px]">
+                <div className="flex flex-row gap-2 md:gap-3 w-full max-w-full md:max-w-[550px]">
                   <button
                     type="button"
                     onClick={handlePlaceBid}
                     disabled={
                       !isBidValid || !account || isSubmitting || isUserSeller
                     }
-                    className={`inline-flex items-center justify-center rounded-full w-full px-4 md:px-6 h-10 text-xs md:text-sm font-orbitron uppercase tracking-[0.14em] md:tracking-[0.18em] transition ${
+                    className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
                       isBidValid && account && !isSubmitting && !isUserSeller
                         ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                     }`}
                   >
-                    {isSubmitting ? "Submitting..." : "Place Bid"}
+                    {isSubmitting ? "..." : "Place Bid"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMakeOffer}
+                    disabled={
+                      !isBidValid || !account || isSubmittingOffer || isUserSeller
+                    }
+                    className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                      isBidValid && account && !isSubmittingOffer && !isUserSeller
+                        ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
+                        : "border border-white/12 text-[rgb(186,255,188)]/45"
+                    }`}
+                  >
+                    {isSubmittingOffer ? "..." : "Make Offer"}
                   </button>
                   <button
                     type="button"
@@ -2001,7 +2119,7 @@ export default function Bids({
                         selectedCollection.status,
                       )
                     }
-                    className={`inline-flex items-center justify-center rounded-full w-full px-2 md:px-4 h-10 text-xs md:text-sm font-orbitron uppercase tracking-[0.14em] md:tracking-[0.18em] transition ${
+                    className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
                       account &&
                       !isSettling &&
                       isAuctionExpired(
@@ -2012,7 +2130,7 @@ export default function Bids({
                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                     }`}
                   >
-                    {isSettling ? "Settling..." : "Settle Auction"}
+                    {isSettling ? "..." : "Settle"}
                   </button>
                 </div>
 
@@ -2028,6 +2146,21 @@ export default function Bids({
                       className="text-sm font-orbitron text-[rgb(50,255,52)] hover:underline break-all w-full"
                     >
                       {txnHash}
+                    </a>
+                  </div>
+                )}
+                {offerTxnHash && (
+                  <div className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 w-full">
+                    <p className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 mb-2">
+                      Offer Transaction Submitted
+                    </p>
+                    <a
+                      href={explorer.transaction(offerTxnHash)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sm font-orbitron text-blue-500 hover:underline break-all w-full"
+                    >
+                      {offerTxnHash}
                     </a>
                   </div>
                 )}

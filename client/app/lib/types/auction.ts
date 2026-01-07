@@ -31,12 +31,25 @@ export interface Bid {
   amount: string;
 }
 
+export interface Offer {
+  auction_id: string;
+  buyer: string;
+  amount: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface AuctionNode {
   node: Auction;
 }
 
 export interface BidNode {
   node: Bid;
+}
+
+export interface OfferNode {
+  node: Offer;
 }
 
 export interface AuctionsResponse {
@@ -49,11 +62,17 @@ export interface AuctionsResponse {
   bm013BidModels: {
     edges: BidNode[];
   };
+  bm013OfferModels?: {
+    edges: OfferNode[];
+  };
 }
 
 export interface MyListingsResponse {
   bm013AuctionModels: {
     edges: AuctionNode[];
+  };
+  bm013OfferModels?: {
+    edges: OfferNode[];
   };
 }
 

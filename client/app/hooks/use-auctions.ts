@@ -6,6 +6,7 @@ import type {
   Auction,
   AuctionItem,
   Bid,
+  Offer,
   MyNFTsResponse,
   FormattedNFT,
   ERC721Token,
@@ -24,6 +25,7 @@ import {
 export interface AuctionWithNFTs extends Auction {
   nfts: FormattedNFT[];
   bids?: Bid[];
+  offers?: Offer[];
   executedAt?: string;
 }
 
@@ -91,6 +93,20 @@ export function useAuctions() {
     );
   }, [data]);
 
+  const allOffers: Offer[] = useMemo(() => {
+    return (
+      data?.bm013OfferModels?.edges?.map((edge) => {
+        const offer = edge.node;
+        return {
+          ...offer,
+          buyer: offer.buyer
+            ? normalizeContractAddress(offer.buyer)
+            : offer.buyer,
+        };
+      }) || []
+    );
+  }, [data]);
+
   const itemsByAuction = useMemo(() => {
     const map = new Map<string, AuctionItem[]>();
     for (const item of allAuctionItems) {
@@ -110,6 +126,31 @@ export function useAuctions() {
     }
     return map;
   }, [allBids]);
+
+  const offersByAuction = useMemo(() => {
+    const map = new Map<string, Offer[]>();
+    for (const offer of allOffers) {
+      // Parse status - handle various formats (decimal string, hex string, or number)
+      let statusNum: number;
+      if (typeof offer.status === "number") {
+        statusNum = offer.status;
+      } else if (typeof offer.status === "string") {
+        statusNum = offer.status.startsWith("0x") || offer.status.startsWith("0X")
+          ? parseInt(offer.status, 16)
+          : parseInt(offer.status, 10);
+      } else {
+        statusNum = -1;
+      }
+
+      // Only include pending offers (status === 1)
+      if (statusNum === 1) {
+        const existing = map.get(offer.auction_id) || [];
+        existing.push(offer);
+        map.set(offer.auction_id, existing);
+      }
+    }
+    return map;
+  }, [allOffers]);
 
   const paginatedAuctions = useMemo(() => {
     const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
@@ -194,6 +235,7 @@ export function useAuctions() {
               ),
             );
             const bids = bidsByAuction.get(auction.auction_id) || [];
+            const offers = offersByAuction.get(auction.auction_id) || [];
             const executedAt =
               items.length > 0 && items[0].entity?.executedAt
                 ? items[0].entity.executedAt
@@ -203,6 +245,7 @@ export function useAuctions() {
               ...auction,
               nfts: matchedNFTs,
               bids,
+              offers,
               executedAt,
             });
           }
@@ -210,6 +253,7 @@ export function useAuctions() {
           for (const auction of sellerAuctions) {
             const items = itemsByAuction.get(auction.auction_id) || [];
             const bids = bidsByAuction.get(auction.auction_id) || [];
+            const offers = offersByAuction.get(auction.auction_id) || [];
             const executedAt =
               items.length > 0 && items[0].entity?.executedAt
                 ? items[0].entity.executedAt
@@ -218,6 +262,7 @@ export function useAuctions() {
               ...auction,
               nfts: [],
               bids,
+              offers,
               executedAt,
             });
           }
@@ -227,10 +272,12 @@ export function useAuctions() {
       for (const auction of allAuctions) {
         if (!itemsByAuction.has(auction.auction_id)) {
           const bids = bidsByAuction.get(auction.auction_id) || [];
+          const offers = offersByAuction.get(auction.auction_id) || [];
           auctionsWithNFTsData.push({
             ...auction,
             nfts: [],
             bids,
+            offers,
             executedAt: undefined,
           });
         }
@@ -242,7 +289,7 @@ export function useAuctions() {
     };
 
     fetchAllAuctionNFTs();
-  }, [allAuctions, itemsByAuction, bidsByAuction, apolloClient]);
+  }, [allAuctions, itemsByAuction, bidsByAuction, offersByAuction, apolloClient]);
 
   // Only show loading on initial load, not when updating existing data
   const isLoading = !hasInitialData.current && (loading || isProcessingNFTs);

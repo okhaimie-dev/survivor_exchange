@@ -43,6 +43,18 @@ export const AUCTIONS_QUERY = gql`
         }
       }
     }
+    bm013OfferModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          buyer
+          amount
+          status
+          created_at
+          expires_at
+        }
+      }
+    }
   }
 `;
 
@@ -68,6 +80,18 @@ export const MY_LISTINGS_QUERY = gql`
           name
           starting_price
           status
+        }
+      }
+    }
+    bm013OfferModels(limit: ${GRAPHQL_QUERY_LIMIT}, order: {direction: DESC, field: AUCTION_ID}) {
+      edges {
+        node {
+          auction_id
+          buyer
+          amount
+          status
+          created_at
+          expires_at
         }
       }
     }

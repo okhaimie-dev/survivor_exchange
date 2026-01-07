@@ -613,6 +613,10 @@ pub mod AuctionableComponent {
             }
             assert(can_transfer, Errors::UNAUTHORIZED);
 
+            // Set auction status to Ended before vault operations (required by vault system)
+            auction.status = AuctionStatus::Ended.into();
+            store.set_auction(@auction);
+
             let amount: u256 = offer.amount.into();
 
             // Calculate royalty using sample item from the auction

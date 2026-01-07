@@ -1,10 +1,18 @@
 import { useQuery } from "@apollo/client/react";
 import { useMemo } from "react";
 import { MY_LISTINGS_QUERY } from "../lib/queries";
-import type { MyListingsResponse, Auction } from "../lib/types";
+import type { MyListingsResponse, Auction, Offer } from "../lib/types";
 import { byteArrayToString } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { DEFAULT_POLL_INTERVAL } from "../lib/constants";
+
+export interface FormattedOffer {
+  buyer: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+}
 
 export interface FormattedListing {
   id: string;
@@ -18,6 +26,7 @@ export interface FormattedListing {
   seller: string;
   auctionId: string;
   feeToken: string;
+  offers: FormattedOffer[];
 }
 
 interface UseMyListingsOptions {
@@ -41,6 +50,51 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
       notifyOnNetworkStatusChange: false,
     },
   );
+
+  // Process offers into a map by auction_id
+  const offersByAuction = useMemo(() => {
+    const map = new Map<string, FormattedOffer[]>();
+    if (!data?.bm013OfferModels?.edges) return map;
+
+    for (const edge of data.bm013OfferModels.edges) {
+      const offer = edge.node;
+
+      // Parse status - handle various formats (decimal string, hex string, or number)
+      let statusNum: number;
+      if (typeof offer.status === "number") {
+        statusNum = offer.status;
+      } else if (typeof offer.status === "string") {
+        statusNum = offer.status.startsWith("0x") || offer.status.startsWith("0X")
+          ? parseInt(offer.status, 16)
+          : parseInt(offer.status, 10);
+      } else {
+        statusNum = -1;
+      }
+
+      // Only include pending offers (status === 1)
+      if (statusNum === 1) {
+        const auctionId = offer.auction_id;
+        const existing = map.get(auctionId) || [];
+        
+        // Parse amount
+        const amountStr = offer.amount || "0";
+        const amount = amountStr.startsWith("0x") || amountStr.startsWith("0X")
+          ? parseInt(amountStr, 16) / 1e6
+          : parseFloat(amountStr) / 1e6;
+
+        existing.push({
+          buyer: offer.buyer ? normalizeContractAddress(offer.buyer) : "",
+          amount,
+          status: offer.status,
+          createdAt: offer.created_at,
+          expiresAt: offer.expires_at,
+        });
+        map.set(auctionId, existing);
+      }
+    }
+    
+    return map;
+  }, [data]);
 
   const listings: FormattedListing[] = useMemo(() => {
     if (!data?.bm013AuctionModels?.edges) return [];
@@ -83,6 +137,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         ? normalizeContractAddress(auction.fee_token)
         : "";
 
+      // Get offers for this auction
+      const offers = offersByAuction.get(auction.auction_id) || [];
+
       return {
         id: `#${auction.auction_id}`,
         name: decodedName || `Auction ${auction.auction_id}`,
@@ -95,9 +152,10 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         seller: normalizedSeller,
         auctionId: auction.auction_id,
         feeToken: normalizedFeeToken,
+        offers,
       };
     });
-  }, [data]);
+  }, [data, offersByAuction]);
 
   return {
     listings,

@@ -47,7 +47,7 @@
     },
     {
       "address": "0x745a02a1e2e2941f83be3c1c5823fba89d6dff36949e53abbd17ae4c2a29886",
-      "class_hash": "0x301b21daee75e8b529e43e613b3a50845e8192b83585de212f3562094a3f824",
+      "class_hash": "0x2183e508cb6fdd42abd1466126bb6f5b70628f6b71b8f05b6d368fccaa19e10",
       "init_calldata": [],
       "tag": "bm_0_1_3-auction_systems",
       "selector": "0x33a628f9008020a52d10bfbb39cde2845d5c54d142b80cd36c890f0e17485cf",
