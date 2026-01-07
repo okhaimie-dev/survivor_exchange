@@ -1,5 +1,6 @@
 use starknet::ContractAddress;
 use survivor_exchange::models::auction::Auction;
+use survivor_exchange::models::index::Offer;
 
 #[starknet::interface]
 pub trait IAuctionMarketplace<TContractState> {
@@ -52,6 +53,26 @@ pub trait IAuctionMarketplace<TContractState> {
     fn get_auction(self: @TContractState, auction_id: u32) -> Auction;
 
     fn can_settle(self: @TContractState, auction_id: u32) -> bool;
+
+    /// Buyer sends an offer on an active auction.
+    fn make_offer(
+        ref self: TContractState,
+        auction_id: u32,
+        offer_amount: u64,
+        expires_in: Option<u64>,
+    );
+
+    /// Seller accepts a specific buyer's offer, settling the auction immediately.
+    fn accept_offer(ref self: TContractState, auction_id: u32, buyer: ContractAddress);
+
+    /// Seller rejects an offer, refunding the buyer.
+    fn reject_offer(ref self: TContractState, auction_id: u32, buyer: ContractAddress);
+
+    /// Buyer withdraws their own pending offer.
+    fn withdraw_offer(ref self: TContractState, auction_id: u32);
+
+    /// Get an offer by auction_id and buyer address.
+    fn get_offer(self: @TContractState, auction_id: u32, buyer: ContractAddress) -> Offer;
 }
 
 // dojo decorator
@@ -61,7 +82,7 @@ pub mod auction_systems {
     use survivor_exchange::components::auctionable::AuctionableComponent;
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::store::StoreTrait;
-    use super::{Auction, IAuctionMarketplace};
+    use super::{Auction, IAuctionMarketplace, Offer};
 
     component!(path: AuctionableComponent, storage: auctionable, event: AuctionableEvent);
     impl AuctionableImpl = AuctionableComponent::InternalImpl<ContractState>;
@@ -141,6 +162,32 @@ pub mod auction_systems {
 
         fn can_settle(self: @ContractState, auction_id: u32) -> bool {
             self.auctionable.can_settle(self.world_default(), auction_id)
+        }
+
+        fn make_offer(
+            ref self: ContractState,
+            auction_id: u32,
+            offer_amount: u64,
+            expires_in: Option<u64>,
+        ) {
+            self.auctionable.make_offer(self.world_default(), auction_id, offer_amount, expires_in);
+        }
+
+        fn accept_offer(ref self: ContractState, auction_id: u32, buyer: ContractAddress) {
+            self.auctionable.accept_offer(self.world_default(), auction_id, buyer);
+        }
+
+        fn reject_offer(ref self: ContractState, auction_id: u32, buyer: ContractAddress) {
+            self.auctionable.reject_offer(self.world_default(), auction_id, buyer);
+        }
+
+        fn withdraw_offer(ref self: ContractState, auction_id: u32) {
+            self.auctionable.withdraw_offer(self.world_default(), auction_id);
+        }
+
+        fn get_offer(self: @ContractState, auction_id: u32, buyer: ContractAddress) -> Offer {
+            let store = StoreTrait::new(self.world_default());
+            store.offer(auction_id, buyer.into())
         }
     }
 

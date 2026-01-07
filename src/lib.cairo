@@ -10,6 +10,7 @@ pub mod models {
     pub mod auction;
     pub mod bid;
     pub mod index;
+    pub mod offer;
     pub mod rental;
     pub mod vault;
 }
@@ -31,6 +32,7 @@ pub mod events {
     pub mod auction;
     pub mod bid;
     pub mod index;
+    pub mod offer;
 }
 
 pub mod constants;

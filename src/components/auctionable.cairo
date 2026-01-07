@@ -9,11 +9,12 @@ pub mod AuctionableComponent {
         Auction, AuctionAssert, AuctionItemTrait, AuctionTrait,
     };
     use survivor_exchange::models::bid::{AssertTrait, BidAssert, BidTrait};
-    use survivor_exchange::models::index::{AuctionItem, ListedToken};
+    use survivor_exchange::models::index::{AuctionItem, AuctionOfferIndex, ListedToken};
+    use survivor_exchange::models::offer::{OfferAssert, OfferTrait};
     use survivor_exchange::models::vault::{Vault, VaultTrait};
     use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::vault::{IVaultDispatcher, IVaultDispatcherTrait};
-    use survivor_exchange::types::status::AuctionStatus;
+    use survivor_exchange::types::status::{AuctionStatus, OfferStatus};
     use survivor_exchange::utils::USDC_ADDRESS_MAINNET;
 
     #[storage]
@@ -402,6 +403,25 @@ pub mod AuctionableComponent {
             // If no winner, items stay with seller; no fund transfer (vault should be empty or
             // withdrawable)
 
+            // Refund all pending offers
+            let offer_count = store.auction_offer_count(auction_id);
+            let mut i: u32 = 0;
+            while i < offer_count.count {
+                let offer_idx = store.auction_offer_index(auction_id, i);
+                let mut offer = store.offer(auction_id, offer_idx.buyer);
+                if offer.status == OfferStatus::Pending.into() {
+                    let offer_buyer: ContractAddress = offer_idx.buyer.try_into().unwrap();
+                    let offer_shares = vault_dispatcher.share_balance(auction_id, offer_buyer);
+                    if offer_shares > 0_u256 {
+                        vault_dispatcher.withdraw(auction_id, offer_buyer, offer_buyer, offer_shares);
+                    }
+                    offer.status = OfferStatus::Rejected.into();
+                    store.set_offer(@offer);
+                    store.offer_event(@offer, current_time);
+                }
+                i += 1;
+            }
+
             // Delist all items
             let mut i: u32 = 0;
             while i < auction.item_count {
@@ -476,6 +496,263 @@ pub mod AuctionableComponent {
                 i += 1;
             }
             true
+        }
+
+        fn make_offer(
+            self: @ComponentState<TContractState>,
+            world: WorldStorage,
+            auction_id: u32,
+            offer_amount: u64,
+            expires_in: Option<u64>,
+        ) {
+            let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
+            let auction = store.auction(auction_id);
+
+            auction.assert_does_exist();
+            let buyer = get_caller_address();
+            let buyer_felt: felt252 = buyer.into();
+
+            auction.assert_bidder_not_seller(buyer_felt);
+            assert(auction.is_active(), Errors::AUCTION_NOT_ACTIVE);
+            auction.assert_not_expired(current_time);
+            assert(offer_amount > 0, Errors::OFFER_INVALID_AMOUNT);
+
+            let existing_offer = store.offer(auction_id, buyer_felt);
+            let is_update = existing_offer.status == OfferStatus::Pending.into();
+
+            let expires_at = match expires_in {
+                Option::Some(duration) => current_time + duration,
+                Option::None => if is_update { existing_offer.expires_at } else { 0_u64 },
+            };
+
+            let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_token_address };
+
+            if is_update {
+                // Update existing offer - handle deposit difference
+                let old_amount: u64 = existing_offer.amount;
+                if offer_amount > old_amount {
+                    // Deposit the difference
+                    let diff: u256 = (offer_amount - old_amount).into();
+                    vault_dispatcher.deposit(auction_id, diff, buyer);
+                } else if offer_amount < old_amount {
+                    // Refund the excess
+                    let diff: u256 = (old_amount - offer_amount).into();
+                    vault_dispatcher.withdraw(auction_id, buyer, buyer, diff);
+                }
+                // If equal, no vault action needed
+            } else {
+                // New offer - deposit full amount
+                vault_dispatcher.deposit(auction_id, offer_amount.into(), buyer);
+
+                // Register buyer in offer index for tracking (only for new offers)
+                let mut offer_count = store.auction_offer_count(auction_id);
+                let current_index = offer_count.count;
+                let offer_index = AuctionOfferIndex {
+                    auction_id,
+                    offer_index: current_index,
+                    buyer: buyer_felt,
+                };
+                store.set_auction_offer_index(@offer_index);
+                offer_count.count = current_index + 1;
+                store.set_auction_offer_count(@offer_count);
+            }
+
+            let offer = OfferTrait::new(auction_id, buyer_felt, offer_amount, current_time, expires_at);
+            store.set_offer(@offer);
+            store.offer_event(@offer, current_time);
+        }
+
+        fn accept_offer(
+            self: @ComponentState<TContractState>,
+            world: WorldStorage,
+            auction_id: u32,
+            buyer: ContractAddress,
+        ) {
+            let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
+            let mut auction = store.auction(auction_id);
+
+            auction.assert_does_exist();
+            let caller = get_caller_address();
+            auction.assert_is_seller(caller.into());
+            assert(auction.is_active(), Errors::AUCTION_NOT_ACTIVE);
+
+            let buyer_felt: felt252 = buyer.into();
+            let mut offer = store.offer(auction_id, buyer_felt);
+            offer.assert_exists();
+            offer.assert_is_pending();
+            offer.assert_not_expired(current_time);
+
+            let seller: ContractAddress = auction.seller.try_into().unwrap();
+            let auction_contract: ContractAddress = starknet::get_contract_address();
+            let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
+
+            // Pre-flight: check all items transferable
+            let mut can_transfer: bool = true;
+            let mut i: u32 = 0;
+            while i < auction.item_count {
+                let item = store.auction_item(auction_id, i);
+                let nft_dispatcher = IERC721Dispatcher {
+                    contract_address: item.contract_address.try_into().unwrap(),
+                };
+                let owner = nft_dispatcher.owner_of(item.token_id.into());
+                if owner != seller {
+                    can_transfer = false;
+                    break;
+                }
+                let approved = nft_dispatcher.get_approved(item.token_id.into());
+                let approved_for_all = nft_dispatcher.is_approved_for_all(seller, auction_contract);
+                if !(approved == auction_contract || approved_for_all) {
+                    can_transfer = false;
+                    break;
+                }
+                i += 1;
+            }
+            assert(can_transfer, Errors::UNAUTHORIZED);
+
+            let amount: u256 = offer.amount.into();
+
+            // Calculate royalty using sample item from the auction
+            let sample_item = store.auction_item(auction_id, 0);
+            let royalty_dispatcher = IERC2981Dispatcher {
+                contract_address: sample_item.contract_address.try_into().unwrap(),
+            };
+            let (royalty_receiver, royalty_amount) = royalty_dispatcher
+                .royalty_info(sample_item.token_id.into(), amount);
+            let net_amount = if royalty_amount != 0 {
+                vault_dispatcher.pay_royalty(auction_id, royalty_receiver, royalty_amount);
+                amount - royalty_amount
+            } else {
+                amount
+            };
+
+            // Transfer items to buyer
+            let mut i: u32 = 0;
+            while i < auction.item_count {
+                let item = store.auction_item(auction_id, i);
+                let item_dispatcher = IERC721Dispatcher {
+                    contract_address: item.contract_address.try_into().unwrap(),
+                };
+                item_dispatcher.transfer_from(seller, buyer, item.token_id.into());
+                i += 1;
+            }
+
+            vault_dispatcher.disburse_to_seller(auction_id, seller, net_amount);
+
+            // Refund highest bidder if exists and different from offer buyer
+            if auction.highest_bidder != 0 && auction.highest_bidder != buyer_felt {
+                let highest_bidder: ContractAddress = auction.highest_bidder.try_into().unwrap();
+                let shares = vault_dispatcher.share_balance(auction_id, highest_bidder);
+                if shares > 0_u256 {
+                    vault_dispatcher.withdraw(auction_id, highest_bidder, highest_bidder, shares);
+                }
+                let mut cleared_bid = BidTrait::new(auction_id, auction.highest_bidder, 0_u64);
+                store.set_bid(@cleared_bid);
+            }
+
+            // Refund all other pending offers
+            let offer_count = store.auction_offer_count(auction_id);
+            let mut i: u32 = 0;
+            while i < offer_count.count {
+                let offer_idx = store.auction_offer_index(auction_id, i);
+                if offer_idx.buyer != buyer_felt {
+                    let mut other_offer = store.offer(auction_id, offer_idx.buyer);
+                    if other_offer.status == OfferStatus::Pending.into() {
+                        let other_buyer: ContractAddress = offer_idx.buyer.try_into().unwrap();
+                        let other_shares = vault_dispatcher.share_balance(auction_id, other_buyer);
+                        if other_shares > 0_u256 {
+                            vault_dispatcher.withdraw(auction_id, other_buyer, other_buyer, other_shares);
+                        }
+                        other_offer.status = OfferStatus::Rejected.into();
+                        store.set_offer(@other_offer);
+                        store.offer_event(@other_offer, current_time);
+                    }
+                }
+                i += 1;
+            }
+
+            // Delist all items
+            let mut i: u32 = 0;
+            while i < auction.item_count {
+                let item = store.auction_item(auction_id, i);
+                let mut listed_token = store.listed_token(item.contract_address, item.token_id);
+                listed_token.auction_id = 0_u32;
+                store.set_listed_token(@listed_token);
+                i += 1;
+            }
+
+            offer.status = OfferStatus::Accepted.into();
+            store.set_offer(@offer);
+            store.offer_event(@offer, current_time);
+
+            auction.status = AuctionStatus::Settled.into();
+            store.set_auction(@auction);
+        }
+
+        fn reject_offer(
+            self: @ComponentState<TContractState>,
+            world: WorldStorage,
+            auction_id: u32,
+            buyer: ContractAddress,
+        ) {
+            let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
+            let auction = store.auction(auction_id);
+
+            auction.assert_does_exist();
+            let caller = get_caller_address();
+            auction.assert_is_seller(caller.into());
+
+            let buyer_felt: felt252 = buyer.into();
+            let mut offer = store.offer(auction_id, buyer_felt);
+            offer.assert_exists();
+            offer.assert_is_pending();
+
+            let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
+
+            let shares = vault_dispatcher.share_balance(auction_id, buyer);
+            if shares > 0_u256 {
+                vault_dispatcher.withdraw(auction_id, buyer, buyer, shares);
+            }
+
+            offer.status = OfferStatus::Rejected.into();
+            store.set_offer(@offer);
+            store.offer_event(@offer, current_time);
+        }
+
+        fn withdraw_offer(
+            self: @ComponentState<TContractState>,
+            world: WorldStorage,
+            auction_id: u32,
+        ) {
+            let mut store = StoreTrait::new(world);
+            let current_time = get_block_timestamp();
+            let auction = store.auction(auction_id);
+
+            auction.assert_does_exist();
+
+            let buyer = get_caller_address();
+            let buyer_felt: felt252 = buyer.into();
+            let mut offer = store.offer(auction_id, buyer_felt);
+            offer.assert_exists();
+            offer.assert_is_pending();
+            offer.assert_is_buyer(buyer_felt);
+
+            let (vault_system_address, _) = world.dns(@"vault_systems").unwrap();
+            let vault_dispatcher = IVaultDispatcher { contract_address: vault_system_address };
+
+            let shares = vault_dispatcher.share_balance(auction_id, buyer);
+            if shares > 0_u256 {
+                vault_dispatcher.withdraw(auction_id, buyer, buyer, shares);
+            }
+
+            offer.status = OfferStatus::Withdrawn.into();
+            store.set_offer(@offer);
+            store.offer_event(@offer, current_time);
         }
     }
 }

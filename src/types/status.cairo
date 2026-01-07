@@ -78,3 +78,39 @@ pub impl IntoU8RentalStatus of core::traits::Into<u8, RentalStatus> {
         }
     }
 }
+
+#[derive(Copy, Drop, PartialEq)]
+pub enum OfferStatus {
+    None,
+    Pending,
+    Accepted,
+    Rejected,
+    Withdrawn,
+}
+
+pub impl IntoOfferStatusU8 of core::traits::Into<OfferStatus, u8> {
+    #[inline]
+    fn into(self: OfferStatus) -> u8 {
+        match self {
+            OfferStatus::None => 0,
+            OfferStatus::Pending => 1,
+            OfferStatus::Accepted => 2,
+            OfferStatus::Rejected => 3,
+            OfferStatus::Withdrawn => 4,
+        }
+    }
+}
+
+pub impl IntoU8OfferStatus of core::traits::Into<u8, OfferStatus> {
+    #[inline]
+    fn into(self: u8) -> OfferStatus {
+        match self {
+            0 => OfferStatus::None,
+            1 => OfferStatus::Pending,
+            2 => OfferStatus::Accepted,
+            3 => OfferStatus::Rejected,
+            4 => OfferStatus::Withdrawn,
+            _ => OfferStatus::None,
+        }
+    }
+}

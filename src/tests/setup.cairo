@@ -52,7 +52,10 @@ pub mod tests {
                 TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
                 TestResource::Model("ExchangeSettings"), TestResource::Model("Vault"),
                 TestResource::Model("VaultShare"), TestResource::Model("SupportedNFTCollection"),
+                TestResource::Model("Offer"), TestResource::Model("ListedToken"),
+                TestResource::Model("AuctionOfferIndex"), TestResource::Model("AuctionOfferCount"),
                 TestResource::Event("AuctionEvent"), TestResource::Event("BidPlaced"),
+                TestResource::Event("OfferEvent"),
                 TestResource::Contract("auction_systems"), TestResource::Contract("vault_systems"),
             ]
                 .span(),

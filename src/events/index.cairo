@@ -18,3 +18,14 @@ pub struct BidPlaced {
     pub amount: u64,
     pub timestamp: u64,
 }
+
+#[derive(Introspect, Copy, Drop, Serde)]
+#[dojo::event]
+pub struct OfferEvent {
+    #[key]
+    pub auction_id: u32,
+    pub buyer: felt252,
+    pub amount: u64,
+    pub status: u8,
+    pub timestamp: u64,
+}

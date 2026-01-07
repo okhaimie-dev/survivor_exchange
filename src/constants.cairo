@@ -37,4 +37,9 @@ pub mod Errors {
     pub const AUCTION_ALREADY_SETTLED: felt252 = 'Auction: already settled';
     pub const AUCTION_ALREADY_CANCELED: felt252 = 'Auction: already canceled';
     pub const TOKEN_ALREADY_LISTED: felt252 = 'Token already listed';
+    pub const OFFER_NOT_FOUND: felt252 = 'Offer: not found';
+    pub const OFFER_NOT_PENDING: felt252 = 'Offer: not pending';
+    pub const OFFER_INVALID_AMOUNT: felt252 = 'Offer: invalid amount';
+    pub const OFFER_ALREADY_EXISTS: felt252 = 'Offer: already exists';
+    pub const OFFER_EXPIRED: felt252 = 'Offer: expired';
 }

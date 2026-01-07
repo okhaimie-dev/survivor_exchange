@@ -3,9 +3,10 @@ use dojo::model::ModelStorage;
 use dojo::world::WorldStorage;
 use survivor_exchange::events::auction::AuctionEventTrait;
 use survivor_exchange::events::bid::BidPlacedTrait;
+use survivor_exchange::events::offer::OfferEventTrait;
 use survivor_exchange::models::index::{
-    Auction, AuctionItem, Bid, ExchangeSettings, ListedToken, Rental, SupportedNFTCollection, Vault,
-    VaultShare,
+    Auction, AuctionItem, AuctionOfferCount, AuctionOfferIndex, Bid, ExchangeSettings, ListedToken,
+    Offer, Rental, SupportedNFTCollection, Vault, VaultShare,
 };
 
 
@@ -123,5 +124,41 @@ pub impl StoreImpl of StoreTrait {
     fn bid_placed(ref self: Store, auction: @Auction, bid: @Bid, timestamp: u64) {
         let event = BidPlacedTrait::new(auction, bid, timestamp);
         self.world.emit_event(@event)
+    }
+
+    #[inline]
+    fn offer(self: Store, auction_id: u32, buyer: felt252) -> Offer {
+        self.world.read_model((auction_id, buyer))
+    }
+
+    #[inline]
+    fn set_offer(ref self: Store, offer: @Offer) {
+        self.world.write_model(offer)
+    }
+
+    #[inline]
+    fn offer_event(ref self: Store, offer: @Offer, timestamp: u64) {
+        let event = OfferEventTrait::new(offer, timestamp);
+        self.world.emit_event(@event)
+    }
+
+    #[inline]
+    fn auction_offer_count(self: Store, auction_id: u32) -> AuctionOfferCount {
+        self.world.read_model(auction_id)
+    }
+
+    #[inline]
+    fn set_auction_offer_count(ref self: Store, offer_count: @AuctionOfferCount) {
+        self.world.write_model(offer_count)
+    }
+
+    #[inline]
+    fn auction_offer_index(self: Store, auction_id: u32, offer_index: u32) -> AuctionOfferIndex {
+        self.world.read_model((auction_id, offer_index))
+    }
+
+    #[inline]
+    fn set_auction_offer_index(ref self: Store, offer_index: @AuctionOfferIndex) {
+        self.world.write_model(offer_index)
     }
 }

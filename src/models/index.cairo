@@ -104,3 +104,34 @@ pub struct VaultShare {
     pub claimed: bool,
     pub updated_at: u64,
 }
+
+#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[dojo::model]
+pub struct Offer {
+    #[key]
+    pub auction_id: u32,
+    #[key]
+    pub buyer: felt252,
+    pub amount: u64,
+    pub status: u8,
+    pub created_at: u64,
+    pub expires_at: u64,
+}
+
+#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[dojo::model]
+pub struct AuctionOfferIndex {
+    #[key]
+    pub auction_id: u32,
+    #[key]
+    pub offer_index: u32,
+    pub buyer: felt252,
+}
+
+#[derive(Copy, Drop, IntrospectPacked, Serde)]
+#[dojo::model]
+pub struct AuctionOfferCount {
+    #[key]
+    pub auction_id: u32,
+    pub count: u32,
+}
