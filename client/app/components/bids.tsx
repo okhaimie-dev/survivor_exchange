@@ -923,6 +923,14 @@ export default function Bids({
       return;
     }
 
+    // If paying with non-USDC token, we need token price
+    if (
+      paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() &&
+      (tokenPrice === null || !isValidPrice(tokenPrice))
+    ) {
+      return;
+    }
+
     setInsufficientFundsError(null);
 
     try {
@@ -936,60 +944,238 @@ export default function Bids({
 
       const finalUSDAmount = Math.floor(usdcAmount * 1e6);
 
-      // Check USDC balance
-      const usdcBalanceResult = await provider.provider.callContract({
-        contractAddress: USDC_ADDRESS,
-        entrypoint: "balanceOf",
-        calldata: [address],
-      });
-
-      if (!usdcBalanceResult || usdcBalanceResult.length < 2) {
-        throw new Error("Invalid balance response");
-      }
-
-      const usdcLow = usdcBalanceResult[0];
-      const usdcHigh = usdcBalanceResult[1];
-      const usdcBalance = BigInt(usdcLow) + (BigInt(usdcHigh) << BigInt(128));
-
-      if (usdcBalance < BigInt(finalUSDAmount)) {
-        setInsufficientFundsError(`Insufficient funds to make offer.`);
-        setIsSubmittingOffer(false);
-        return;
-      }
-
       const calls: Array<{
         contractAddress: string;
         entrypoint: string;
         calldata: string[];
       }> = [];
 
-      // Approve USDC for vault
-      const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
-      const approvalAmount = uint256.bnToUint256(approvalAmountValue);
-      calls.push({
-        contractAddress: USDC_ADDRESS,
-        entrypoint: "approve",
-        calldata: [
-          VAULT_CONTRACT_ADDRESS,
-          approvalAmount.low.toString(),
-          approvalAmount.high.toString(),
-        ],
-      });
+      // If paying with a token other than USDC, we need to swap
+      if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+        const paymentTokenInfo = SUPPORTED_TOKENS.find(
+          (t) => t.address.toLowerCase() === paymentToken.toLowerCase(),
+        );
+        if (!paymentTokenInfo) {
+          throw new Error("Invalid payment token");
+        }
 
-      // Make offer - following same Option pattern as create_auction
-      // Pass a very large duration to effectively mean "no expiration"
-      // Using 10 years in seconds as the expiration duration
-      const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60; // ~315,360,000 seconds
-      calls.push({
-        contractAddress: AUCTION_CONTRACT_ADDRESS,
-        entrypoint: "make_offer",
-        calldata: [
-          auctionId.toString(),           // auction_id: u32
-          finalUSDAmount.toString(),       // offer_amount: u64
-          "0",                             // Option::Some variant (same pattern as create_auction)
-          TEN_YEARS_IN_SECONDS.toString(), // expires_in: large value for no practical expiration
-        ],
-      });
+        // Get fresh price if needed
+        let currentTokenPrice = tokenPrice;
+        if (shouldRefetchPrice(paymentToken)) {
+          currentTokenPrice = await getTokenPriceInUSDC(paymentToken);
+          setTokenPrice(currentTokenPrice);
+        }
+
+        if (currentTokenPrice === null || !isValidPrice(currentTokenPrice)) {
+          throw new Error("Unable to get token price");
+        }
+
+        // Calculate how much of the payment token we need
+        const tokenAmountNeeded = usdcAmount / currentTokenPrice;
+        const tokenAmountWei = BigInt(
+          Math.floor(
+            tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals),
+          ),
+        );
+
+        // Check balance of payment token
+        const balanceResult = await provider.provider.callContract({
+          contractAddress: paymentToken,
+          entrypoint: "balanceOf",
+          calldata: [address],
+        });
+
+        if (!balanceResult || balanceResult.length < 2) {
+          throw new Error("Invalid balance response");
+        }
+
+        const low = balanceResult[0];
+        const high = balanceResult[1];
+        const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+
+        // Check balance with a 2% buffer to account for swap needs
+        const balanceWithBuffer = (tokenAmountWei * 102n) / 100n;
+        if (balance < balanceWithBuffer) {
+          setInsufficientFundsError(`Insufficient funds to make offer.`);
+          setIsSubmittingOffer(false);
+          return;
+        }
+
+        // Calculate token amount needed for swap
+        const tokenAmountNeededForSwap = usdcAmount / currentTokenPrice;
+        const tokenAmountWeiForSwap = BigInt(
+          Math.floor(
+            tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals),
+          ),
+        );
+
+        // Get Avnu swap quotes
+        const quotes = await getQuotes({
+          sellTokenAddress: paymentToken,
+          buyTokenAddress: USDC_ADDRESS,
+          sellAmount: tokenAmountWeiForSwap,
+          takerAddress: address,
+        });
+
+        if (!quotes || quotes.length === 0) {
+          throw new Error("No swap quotes available");
+        }
+
+        const bestQuote = quotes[0];
+
+        // Build the execute transaction calls from the quote
+        const slippage = 0.01; // 1% slippage
+        const swapCallsResult = await quoteToCalls({
+          quoteId: bestQuote.quoteId,
+          slippage: slippage,
+        });
+
+        // Avnu SDK returns an object with a 'calls' array
+        const allSwapCalls =
+          swapCallsResult.calls ||
+          (Array.isArray(swapCallsResult)
+            ? swapCallsResult
+            : [swapCallsResult]);
+
+        // Filter out approve calls (we'll add our own)
+        const swapCalls = allSwapCalls.filter((call) => {
+          return call.entrypoint !== "approve";
+        });
+
+        if (swapCalls.length === 0) {
+          console.error(
+            "No swap calls found after filtering. All calls:",
+            allSwapCalls,
+          );
+          throw new Error("No swap calls available from quote");
+        }
+
+        // Use the actual sellAmount from the quote, and add 2% buffer for safety
+        const actualSellAmount = bestQuote.sellAmount;
+        const paymentTokenApprovalAmount = (actualSellAmount * 102n) / 100n;
+        const paymentTokenApproval = uint256.bnToUint256(
+          paymentTokenApprovalAmount,
+        );
+
+        // Get the router address from the first swap call
+        const routerAddress = swapCalls[0]?.contractAddress;
+        if (!routerAddress) {
+          console.error("Swap calls structure:", swapCalls);
+          throw new Error(
+            `Unable to determine router address from swap calls. First call: ${JSON.stringify(swapCalls[0])}`,
+          );
+        }
+
+        calls.push({
+          contractAddress: paymentToken,
+          entrypoint: "approve",
+          calldata: [
+            routerAddress,
+            paymentTokenApproval.low.toString(),
+            paymentTokenApproval.high.toString(),
+          ],
+        });
+
+        // Add the swap transaction calls
+        swapCalls.forEach((call) => {
+          const calldataArray = Array.isArray(call.calldata)
+            ? call.calldata.map((arg) =>
+                typeof arg === "string" ? arg : String(arg),
+              )
+            : [];
+
+          calls.push({
+            contractAddress: call.contractAddress,
+            entrypoint: call.entrypoint,
+            calldata: calldataArray,
+          });
+        });
+
+        // Calculate the minimum USDC amount we'll receive after swap
+        let buyAmount: bigint;
+        if (typeof bestQuote.buyAmount === "bigint") {
+          buyAmount = bestQuote.buyAmount;
+        } else if (typeof bestQuote.buyAmount === "string") {
+          buyAmount = BigInt(bestQuote.buyAmount);
+        } else {
+          buyAmount = BigInt(Math.floor(Number(bestQuote.buyAmount)));
+        }
+        const minBuyAmount =
+          (buyAmount * BigInt(Math.floor((1 - slippage) * 10000))) / 10000n;
+
+        // Approve USDC to vault with minimum amount from swap
+        const usdcApprovalAmount = minBuyAmount;
+        const usdcApproval = uint256.bnToUint256(usdcApprovalAmount);
+        calls.push({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "approve",
+          calldata: [
+            VAULT_CONTRACT_ADDRESS,
+            usdcApproval.low.toString(),
+            usdcApproval.high.toString(),
+          ],
+        });
+
+        // Make offer with minimum amount from swap
+        const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60;
+        calls.push({
+          contractAddress: AUCTION_CONTRACT_ADDRESS,
+          entrypoint: "make_offer",
+          calldata: [
+            auctionId.toString(),
+            minBuyAmount.toString(),
+            "0",
+            TEN_YEARS_IN_SECONDS.toString(),
+          ],
+        });
+      } else {
+        // Paying with USDC directly - check USDC balance
+        const usdcBalanceResult = await provider.provider.callContract({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "balanceOf",
+          calldata: [address],
+        });
+
+        if (!usdcBalanceResult || usdcBalanceResult.length < 2) {
+          throw new Error("Invalid balance response");
+        }
+
+        const usdcLow = usdcBalanceResult[0];
+        const usdcHigh = usdcBalanceResult[1];
+        const usdcBalance = BigInt(usdcLow) + (BigInt(usdcHigh) << BigInt(128));
+
+        if (usdcBalance < BigInt(finalUSDAmount)) {
+          setInsufficientFundsError(`Insufficient funds to make offer.`);
+          setIsSubmittingOffer(false);
+          return;
+        }
+
+        // Approve USDC for vault
+        const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
+        const approvalAmount = uint256.bnToUint256(approvalAmountValue);
+        calls.push({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "approve",
+          calldata: [
+            VAULT_CONTRACT_ADDRESS,
+            approvalAmount.low.toString(),
+            approvalAmount.high.toString(),
+          ],
+        });
+
+        // Make offer
+        const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60;
+        calls.push({
+          contractAddress: AUCTION_CONTRACT_ADDRESS,
+          entrypoint: "make_offer",
+          calldata: [
+            auctionId.toString(),
+            finalUSDAmount.toString(),
+            "0",
+            TEN_YEARS_IN_SECONDS.toString(),
+          ],
+        });
+      }
 
       const response = await account.execute(calls);
       setOfferTxnHash(response.transaction_hash);
@@ -1009,6 +1195,9 @@ export default function Bids({
     bidAmountToken,
     isBidValid,
     provider,
+    paymentToken,
+    tokenPrice,
+    isValidPrice,
   ]);
 
   const isAuctionExpired = useCallback(
