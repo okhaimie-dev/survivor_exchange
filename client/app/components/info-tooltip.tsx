@@ -12,14 +12,15 @@ export default function InfoTooltip({ content, className = "" }: InfoTooltipProp
 
   return (
     <div className={`relative inline-flex items-center ${className}`}>
-      <button
-        type="button"
-        className="inline-flex items-center justify-center w-3.5 h-3.5 md:w-4 md:h-4 opacity-70 hover:opacity-100 transition-opacity"
+      <span
+        className="inline-flex items-center justify-center w-3.5 h-3.5 md:w-4 md:h-4 opacity-70 hover:opacity-100 transition-opacity cursor-help"
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
         onFocus={() => setIsVisible(true)}
         onBlur={() => setIsVisible(false)}
         onClick={(e) => e.stopPropagation()}
+        role="button"
+        tabIndex={0}
         aria-label="More information"
       >
         <svg
@@ -36,7 +37,7 @@ export default function InfoTooltip({ content, className = "" }: InfoTooltipProp
           <path d="M12 16v-4" />
           <path d="M12 8h.01" />
         </svg>
-      </button>
+      </span>
 
       {isVisible && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-72 md:w-80 px-4 py-3 text-[11px] md:text-xs text-[rgb(186,255,188)] bg-[rgb(0,20,0)] backdrop-blur-sm border border-[rgb(186,255,188)]/30 rounded-md shadow-xl z-50 pointer-events-none">

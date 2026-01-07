@@ -431,13 +431,16 @@ export default function Bids({
 
   // Fetch user's pending offer for the selected auction
   useEffect(() => {
-    if (!selectedCollectionId || !address) {
+    // Check explicitly for empty string, null, or undefined (not just falsy, since "0" is valid)
+    if (selectedCollectionId === "" || selectedCollectionId === null || selectedCollectionId === undefined || !address) {
       setUserOffer(null);
       return;
     }
 
+    // Convert to string for comparison in case it's a number
+    const collectionIdStr = String(selectedCollectionId);
     const auction = paginatedFilteredAuctions.find(
-      (a) => a.auction_id === selectedCollectionId,
+      (a) => String(a.auction_id) === collectionIdStr,
     );
 
     if (!auction || !auction.offers) {
@@ -445,12 +448,14 @@ export default function Bids({
       return;
     }
 
-    // Find user's pending offer (status === "1" or 1)
+    // Find user's pending offer
+    // Note: offersByAuction already filters to status === 1, so we only need to check address
+    const normalizedUserAddress = address ? normalizeContractAddress(address).toLowerCase() : "";
     const usersPendingOffer = auction.offers.find((offer) => {
-      const statusMatch =
-        offer.status === "1" || offer.status === 1 || String(offer.status) === "1";
-      const addressMatch = offer.buyer.toLowerCase() === address.toLowerCase();
-      return addressMatch && statusMatch;
+      // Normalize both addresses for comparison
+      const normalizedOfferBuyer = normalizeContractAddress(offer.buyer).toLowerCase();
+      const addressMatch = normalizedOfferBuyer === normalizedUserAddress;
+      return addressMatch;
     });
 
     if (usersPendingOffer) {
@@ -1277,18 +1282,12 @@ export default function Bids({
 
       const response = await account.execute(calls);
       setWithdrawOfferTxnHash(response.transaction_hash);
-
-      // Wait for transaction confirmation
-      await provider.waitForTransaction(response.transaction_hash);
-
-      // Clear user offer state after successful withdrawal
-      setUserOffer(null);
     } catch (error) {
       console.error("Error withdrawing offer:", error);
     } finally {
       setIsWithdrawingOffer(false);
     }
-  }, [account, selectedCollectionId, userOffer, provider]);
+  }, [account, selectedCollectionId, userOffer]);
 
   const isAuctionExpired = useCallback(
     (endTime: string, status: string): boolean => {

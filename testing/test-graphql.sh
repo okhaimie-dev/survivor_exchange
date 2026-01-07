@@ -3,7 +3,7 @@
 echo "=== Testing Auction Query with limit: 100 ==="
 time curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"query":"query { bm015AuctionModels(limit: 100) { edges { node { auction_id name status } } } }"}' \
+  -d '{"query":"query { bm016AuctionModels(limit: 100) { edges { node { auction_id name status } } } }"}' \
   "https://api.cartridge.gg/x/lax/torii" -o /tmp/auction-100.json
 
 echo "Size: $(wc -c < /tmp/auction-100.json) bytes"
@@ -12,7 +12,7 @@ echo ""
 echo "=== Testing Auction Query with limit: 1000000 ==="
 time curl -s -X POST \
   -H "Content-Type: application/json" \
-  -d '{"query":"query { bm015AuctionModels(limit: 1000000) { edges { node { auction_id name status } } } }"}' \
+  -d '{"query":"query { bm016AuctionModels(limit: 1000000) { edges { node { auction_id name status } } } }"}' \
   "https://api.cartridge.gg/x/lax/torii" -o /tmp/auction-1m.json
 
 echo "Size: $(wc -c < /tmp/auction-1m.json) bytes"

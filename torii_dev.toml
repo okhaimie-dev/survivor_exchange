@@ -1,11 +1,11 @@
-world_address = "0x042d6a4d013c2d371fd03e1358bdcfc0c4689206527b3a2296019fa957bac7c1"
+world_address = "0x0292a4613b0690d29828d9283fad910f4a9f6bcd831e9e32d1402bbf83178171"
 rpc = "https://api.cartridge.gg/x/starknet/mainnet"
 
 [events]
 raw = true
 
 [indexing]
-namespaces = ["bm_0_1_5"]
+namespaces = ["bm_0_1_6"]
 pending = true
 world_block = 2210150
 contracts = [
