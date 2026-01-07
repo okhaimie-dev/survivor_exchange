@@ -53,25 +53,25 @@ export interface OfferNode {
 }
 
 export interface AuctionsResponse {
-  bm013AuctionModels: {
+  bm015AuctionModels: {
     edges: AuctionNode[];
   };
-  bm013AuctionItemModels: {
+  bm015AuctionItemModels: {
     edges: AuctionItemNode[];
   };
-  bm013BidModels: {
+  bm015BidModels: {
     edges: BidNode[];
   };
-  bm013OfferModels?: {
+  bm015OfferModels?: {
     edges: OfferNode[];
   };
 }
 
 export interface MyListingsResponse {
-  bm013AuctionModels: {
+  bm015AuctionModels: {
     edges: AuctionNode[];
   };
-  bm013OfferModels?: {
+  bm015OfferModels?: {
     edges: OfferNode[];
   };
 }

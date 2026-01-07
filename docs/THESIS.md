@@ -13,7 +13,7 @@
 
 Loot Survivor 2 early success has demonstrated genuine player-collector interest in Beast NFTs. However, three operational constraints currently inhibit secondary market growth and revenue realization:
 
-**Bulk Sales Friction.** Collectors who accumulate themed Beast collections (e.g., 75 unique Beasts by species, rarity tier, or battle achievement) currently cannot efficiently sell these sets as curated lots. Each Beast requires individual listing and negotiation, creating operational overhead that discourages both sellers and serious buyers. This friction directly suppresses collection-level trading and liquidity.
+**Bulk Sales Friction.** Collectors who accumulate themed Beast collections (e.g., 163 unique Beasts by species, rarity tier, or battle achievement) currently cannot efficiently sell these sets as curated lots. Each Beast requires individual listing and negotiation, creating operational overhead that discourages both sellers and serious buyers. This friction directly suppresses collection-level trading and liquidity.
 
 **Limited Price Discovery Mechanisms.** While the Empire NFT Marketplace supports Beast sales, it suffers from inefficiencies, slow performance, and limited transparency. Secondary trading still relies heavily on ad-hoc OTC deals and Discord negotiations, creating information asymmetries that disadvantage new sellers and suppress optimal pricing. Without transparent, real-time price signals, the market undersells relative to true collector demand.
 
@@ -43,7 +43,7 @@ The **BEAST Marketplace** is a specialized trading platform built natively on St
 
 ### 1.4 Launch Target & Key Metrics
 
-**MVP Launch:** 75 Unique Shiny BEASTs (Mythic-equivalent rarity)  
+**MVP Launch:** 220 Unique Shiny BEASTs (Mythic-equivalent rarity)  
 **Reserve Price:** 50,000 SURVIVOR per lot  
 **Platform Fee:** 1% + royalty (community-defined)  
 **DAO Revenue Share:** [Specify % allocation]
@@ -365,7 +365,7 @@ BEAST Marketplace Contracts
 - [ ] Initialize Torii indexer
 - [ ] Launch frontend at `[domain]`
 - [ ] Announce to Loot Survivor + Starknet communities
-- [ ] Begin 75 Shiny Beast auction
+- [ ] Begin 220 Shiny Beast auction
 
 **Phase 3: Post-Launch (Week 2+)**
 - [ ] Monitor gas costs, throughput
@@ -482,7 +482,7 @@ BEAST Marketplace Contracts
 **Technical Challenges:**
 - Starknet mainnet stability and RPC performance (mitigation: redundant RPC providers)
 - User AA adoption (mitigation: provide session key setup guide; consider gas sponsorship)
-- Cold start problem (mitigation: feature 75 Shiny Beasts prominently; DAO incentivizes early listings)
+- Cold start problem (mitigation: feature 220 Shiny Beasts prominently; DAO incentivizes early listings)
 
 ### 5.4 Broader Implications
 

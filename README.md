@@ -12,10 +12,10 @@
 
 # Survivor Exchange
 
-**Survivor Exchange** is a fully on-chain auction and rental marketplace for BEAST NFTs from [Loot Survivor](https://docs.provable.games/lootsurvivor/beasts), built on Starknet with [Dojo 1.8.0](https://dojoengine.org). Supports bulk auctions (bundles up to 75 BEASTs), English-style timed bidding with reserves/increments, rentals (WIP), secure vaults for bid custody, and admin controls (whitelisting, fees). Payments via USDC/SURVIVOR/LORDS (configurable). 100% provable, reduces OTC friction, boosts liquidity, captures DAO fees (1-2%).
+**Survivor Exchange** is a fully on-chain auction and rental marketplace for BEAST NFTs from [Loot Survivor](https://docs.provable.games/lootsurvivor/beasts), built on Starknet with [Dojo 1.8.0](https://dojoengine.org). Supports bulk auctions (bundles up to 163 BEASTs), English-style timed bidding with reserves/increments, rentals (WIP), secure vaults for bid custody, and admin controls (whitelisting, fees). Payments via USDC/SURVIVOR/LORDS (configurable). 100% provable, reduces OTC friction, boosts liquidity, captures DAO fees (1-2%).
 
 **Key Features**:
-- Bulk auctions: e.g., 75 Shiny BEASTs @50k SURVIVOR reserve.
+- Bulk auctions: e.g., 220 Shiny BEASTs @50k SURVIVOR reserve.
 - Bidding: Auto-refund losers; withdraw non-winning bids.
 - Rentals: Short-term leases w/ collateral (WIP).
 - Vaults: Escrow bids/NFTs.
@@ -38,7 +38,7 @@ sozo build  # Compiles contracts (Dojo 1.8.0)
 
 ### 2. All-in-One (Docker)
 ```bash
-docker compose up  # Katana + Torii + World migration (ns: bm_0_1_3)
+docker compose up  # Katana + Torii + World migration (ns: bm_0_1_5)
 ```
 - World: `http://127.0.0.1:4040/graphql` (Torii)
 - RPC: `http://127.0.0.1:5050`
@@ -57,7 +57,7 @@ sozo torii start --world <WORLD_ADDRESS>
 
 ```mermaid
 graph TD
-    World[Dojo World<br/>ns: bm_0_1_3] --> Systems[Systems:<br/>admin, auction, rental, vault]
+    World[Dojo World<br/>ns: bm_0_1_5] --> Systems[Systems:<br/>admin, auction, rental, vault]
     World --> Models[Models:<br/>Auction, Bid, Rental, Vault<br/>AuctionItem, VaultShare<br/>ExchangeSettings]
     Systems --> Components[AuctionableComponent<br/>(bundles, bid logic)<br/>RentableComponent (WIP)]
     Models --> Store[Store.cairo<br/>(read/write + events)]

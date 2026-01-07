@@ -1,6 +1,6 @@
 # DAO Proposal: Funding and Support for BEAST NFT Auction and Rental Marketplace
 
-## Establish On-Chain Auction and Rental Marketplace for BEAST NFTs with Initial Auction of 75 Unique Shiny BEASTs
+## Establish On-Chain Auction and Rental Marketplace for BEAST NFTs with Initial Auction of 163 Unique Shiny BEASTs
 
 ## Submitter
 Okhai Omotuebe - Survivor Exchange Developer  
@@ -9,7 +9,7 @@ Date: December 5, 2025
   
 
 ## Executive Summary
-Loot Survivor has demonstrated exceptional product-market fit since launch in September 2025. Within just two months per LS Data Analytics dune dashboard, the ecosystem has achieved **77,902 total games played, 5.6M+ transactions on Starknet, $368,235 in ticket purchases, and $55,651 in network fees**—signaling strong organic adoption and genuine economic activity. Beast NFT secondary sales have exceeded 1,526,539.8 **LORDS** ~$40,000, validating collector demand. However, the current secondary market infrastructure lacks efficient mechanisms for **bulk sales and collection management**—specifically, the ability for collectors to liquidate curated Beast collections (e.g., 75-unit shiny or tier-specific sets, 30-units of 10 T1s, 19 T2s, and Rank 1 Dragon) at optimal prices without OTC friction. We propose the development of a purpose-built **NFT Auction and Rental Marketplace** that enables efficient bulk trading, reduces transaction friction, and enhances the existing sustainable token economics of Survivor DAO by increasing SURVIVOR utility through marketplace fees and bidding incentives. This marketplace will be architected with modern, scalable infrastructure and delivered in three milestone-based phases, requiring a total funding allocation of **100,000 SURVIVOR tokens** for development, engineering, and community marketing initiatives.
+Loot Survivor has demonstrated exceptional product-market fit since launch in September 2025. Within just two months per LS Data Analytics dune dashboard, the ecosystem has achieved **77,902 total games played, 5.6M+ transactions on Starknet, $368,235 in ticket purchases, and $55,651 in network fees**—signaling strong organic adoption and genuine economic activity. Beast NFT secondary sales have exceeded 1,526,539.8 **LORDS** ~$40,000, validating collector demand. However, the current secondary market infrastructure lacks efficient mechanisms for **bulk sales and collection management**—specifically, the ability for collectors to liquidate curated Beast collections (e.g., 220-unit shiny or tier-specific sets, 30-units of 10 T1s, 19 T2s, and Rank 1 Dragon) at optimal prices without OTC friction. We propose the development of a purpose-built **NFT Auction and Rental Marketplace** that enables efficient bulk trading, reduces transaction friction, and enhances the existing sustainable token economics of Survivor DAO by increasing SURVIVOR utility through marketplace fees and bidding incentives. This marketplace will be architected with modern, scalable infrastructure and delivered in three milestone-based phases, requiring a total funding allocation of **100,000 SURVIVOR tokens** for development, engineering, and community marketing initiatives.
 
 ## Problem Statement
 Loot Survivor's early success demonstrates genuine player-collector interest in Beast NFTs. However, three operational constraints currently inhibit secondary market growth:
@@ -25,7 +25,7 @@ Build and deploy the BEAST Marketplace as outlined in PRD.md:
 - **Rentals**: Short-term leases with collateral ( $WBTC ).
 - **Features**: Whitelisting, admin controls.
 - **Tech Stack**: Cairo/Dojo on Starknet; open-source codebase for community contributions.
-- **Initial Auction**: Post-launch, auction 75 unique Shiny BEASTs (rarity: Mythic-equivalent, enhanced stats) at 50k SURVIVOR reserve. 20% of proceeds to DAO treasury; winners gain exclusive marketplace perks (e.g., OG badges).
+- **Initial Auction**: Post-launch, auction 220 unique Shiny BEASTs (rarity: Mythic-equivalent, enhanced stats) at 50k SURVIVOR reserve. 20% of proceeds to DAO treasury; winners gain exclusive marketplace perks (e.g., OG badges).
 
 ## Benefits to DAO and Community
 - **Economic Impact**: Increases SURVIVOR demand through bids/fees; potential 5-10% volume uplift for BEAST trading.

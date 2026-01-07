@@ -38,7 +38,7 @@ pub mod AuctionableComponent {
             duration: Option<u64>,
             fee_token: ContractAddress,
         ) -> u32 {
-            assert(items.len() >= 1 && items.len() <= 75, Errors::INVALID_ITEMS_COUNT);
+            assert(items.len() >= 1 && items.len() <= 163, Errors::INVALID_ITEMS_COUNT);
 
             let mut store = StoreTrait::new(world);
             let seller = get_caller_address();
@@ -413,7 +413,8 @@ pub mod AuctionableComponent {
                     let offer_buyer: ContractAddress = offer_idx.buyer.try_into().unwrap();
                     let offer_shares = vault_dispatcher.share_balance(auction_id, offer_buyer);
                     if offer_shares > 0_u256 {
-                        vault_dispatcher.withdraw(auction_id, offer_buyer, offer_buyer, offer_shares);
+                        vault_dispatcher
+                            .withdraw(auction_id, offer_buyer, offer_buyer, offer_shares);
                     }
                     offer.status = OfferStatus::Rejected.into();
                     store.set_offer(@offer);
@@ -523,7 +524,11 @@ pub mod AuctionableComponent {
 
             let expires_at = match expires_in {
                 Option::Some(duration) => current_time + duration,
-                Option::None => if is_update { existing_offer.expires_at } else { 0_u64 },
+                Option::None => if is_update {
+                    existing_offer.expires_at
+                } else {
+                    0_u64
+                },
             };
 
             let (vault_token_address, _) = world.dns(@"vault_systems").unwrap();
@@ -550,16 +555,16 @@ pub mod AuctionableComponent {
                 let mut offer_count = store.auction_offer_count(auction_id);
                 let current_index = offer_count.count;
                 let offer_index = AuctionOfferIndex {
-                    auction_id,
-                    offer_index: current_index,
-                    buyer: buyer_felt,
+                    auction_id, offer_index: current_index, buyer: buyer_felt,
                 };
                 store.set_auction_offer_index(@offer_index);
                 offer_count.count = current_index + 1;
                 store.set_auction_offer_count(@offer_count);
             }
 
-            let offer = OfferTrait::new(auction_id, buyer_felt, offer_amount, current_time, expires_at);
+            let offer = OfferTrait::new(
+                auction_id, buyer_felt, offer_amount, current_time, expires_at,
+            );
             store.set_offer(@offer);
             store.offer_event(@offer, current_time);
         }
@@ -668,7 +673,8 @@ pub mod AuctionableComponent {
                         let other_buyer: ContractAddress = offer_idx.buyer.try_into().unwrap();
                         let other_shares = vault_dispatcher.share_balance(auction_id, other_buyer);
                         if other_shares > 0_u256 {
-                            vault_dispatcher.withdraw(auction_id, other_buyer, other_buyer, other_shares);
+                            vault_dispatcher
+                                .withdraw(auction_id, other_buyer, other_buyer, other_shares);
                         }
                         other_offer.status = OfferStatus::Rejected.into();
                         store.set_offer(@other_offer);
@@ -729,9 +735,7 @@ pub mod AuctionableComponent {
         }
 
         fn withdraw_offer(
-            self: @ComponentState<TContractState>,
-            world: WorldStorage,
-            auction_id: u32,
+            self: @ComponentState<TContractState>, world: WorldStorage, auction_id: u32,
         ) {
             let mut store = StoreTrait::new(world);
             let current_time = get_block_timestamp();

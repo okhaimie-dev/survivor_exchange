@@ -47,7 +47,7 @@ export function useAuctions() {
 
   const allAuctions: Auction[] = useMemo(() => {
     const auctions =
-      data?.bm013AuctionModels?.edges?.map((edge) => {
+      data?.bm015AuctionModels?.edges?.map((edge) => {
         const auction = edge.node;
         // Normalize addresses from GraphQL response
         return {
@@ -76,12 +76,12 @@ export function useAuctions() {
   }, [data]);
 
   const allAuctionItems: AuctionItem[] = useMemo(() => {
-    return data?.bm013AuctionItemModels?.edges?.map((edge) => edge.node) || [];
+    return data?.bm015AuctionItemModels?.edges?.map((edge) => edge.node) || [];
   }, [data]);
 
   const allBids: Bid[] = useMemo(() => {
     return (
-      data?.bm013BidModels?.edges?.map((edge) => {
+      data?.bm015BidModels?.edges?.map((edge) => {
         const bid = edge.node;
         return {
           ...bid,
@@ -95,7 +95,7 @@ export function useAuctions() {
 
   const allOffers: Offer[] = useMemo(() => {
     return (
-      data?.bm013OfferModels?.edges?.map((edge) => {
+      data?.bm015OfferModels?.edges?.map((edge) => {
         const offer = edge.node;
         return {
           ...offer,
@@ -135,9 +135,10 @@ export function useAuctions() {
       if (typeof offer.status === "number") {
         statusNum = offer.status;
       } else if (typeof offer.status === "string") {
-        statusNum = offer.status.startsWith("0x") || offer.status.startsWith("0X")
-          ? parseInt(offer.status, 16)
-          : parseInt(offer.status, 10);
+        statusNum =
+          offer.status.startsWith("0x") || offer.status.startsWith("0X")
+            ? parseInt(offer.status, 16)
+            : parseInt(offer.status, 10);
       } else {
         statusNum = -1;
       }
@@ -289,7 +290,13 @@ export function useAuctions() {
     };
 
     fetchAllAuctionNFTs();
-  }, [allAuctions, itemsByAuction, bidsByAuction, offersByAuction, apolloClient]);
+  }, [
+    allAuctions,
+    itemsByAuction,
+    bidsByAuction,
+    offersByAuction,
+    apolloClient,
+  ]);
 
   // Only show loading on initial load, not when updating existing data
   const isLoading = !hasInitialData.current && (loading || isProcessingNFTs);

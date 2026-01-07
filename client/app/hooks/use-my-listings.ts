@@ -54,9 +54,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   // Process offers into a map by auction_id
   const offersByAuction = useMemo(() => {
     const map = new Map<string, FormattedOffer[]>();
-    if (!data?.bm013OfferModels?.edges) return map;
+    if (!data?.bm015OfferModels?.edges) return map;
 
-    for (const edge of data.bm013OfferModels.edges) {
+    for (const edge of data.bm015OfferModels.edges) {
       const offer = edge.node;
 
       // Parse status - handle various formats (decimal string, hex string, or number)
@@ -64,9 +64,10 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
       if (typeof offer.status === "number") {
         statusNum = offer.status;
       } else if (typeof offer.status === "string") {
-        statusNum = offer.status.startsWith("0x") || offer.status.startsWith("0X")
-          ? parseInt(offer.status, 16)
-          : parseInt(offer.status, 10);
+        statusNum =
+          offer.status.startsWith("0x") || offer.status.startsWith("0X")
+            ? parseInt(offer.status, 16)
+            : parseInt(offer.status, 10);
       } else {
         statusNum = -1;
       }
@@ -75,12 +76,13 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
       if (statusNum === 1) {
         const auctionId = offer.auction_id;
         const existing = map.get(auctionId) || [];
-        
+
         // Parse amount
         const amountStr = offer.amount || "0";
-        const amount = amountStr.startsWith("0x") || amountStr.startsWith("0X")
-          ? parseInt(amountStr, 16) / 1e6
-          : parseFloat(amountStr) / 1e6;
+        const amount =
+          amountStr.startsWith("0x") || amountStr.startsWith("0X")
+            ? parseInt(amountStr, 16) / 1e6
+            : parseFloat(amountStr) / 1e6;
 
         existing.push({
           buyer: offer.buyer ? normalizeContractAddress(offer.buyer) : "",
@@ -92,14 +94,14 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         map.set(auctionId, existing);
       }
     }
-    
+
     return map;
   }, [data]);
 
   const listings: FormattedListing[] = useMemo(() => {
-    if (!data?.bm013AuctionModels?.edges) return [];
+    if (!data?.bm015AuctionModels?.edges) return [];
 
-    const auctions: Auction[] = data.bm013AuctionModels.edges.map(
+    const auctions: Auction[] = data.bm015AuctionModels.edges.map(
       (edge: { node: Auction }) => edge.node,
     );
 

@@ -9,9 +9,9 @@ export const MAINNET_RPC_URL = "https://api.cartridge.gg/x/starknet/mainnet";
 export const SEPOLIA_RPC_URL = "https://api.cartridge.gg/x/starknet/sepolia";
 
 export const AUCTION_CONTRACT_ADDRESS =
-  "0x0745a02a1e2e2941f83be3c1c5823fba89d6dff36949e53abbd17ae4c2a29886";
+  "0x06825e27d21d968ac1509854d0c2b78c256fd950393abac47cca98e345e8cd43";
 export const VAULT_CONTRACT_ADDRESS =
-  "0x02b44ac855387063f8933187cb6b49c5182ad51b1a0dfe53ee7d3dfad066cfad";
+  "0x06e153d26a5a14fa0a7a6e8fc2c78e9fb9d988bc13a80d9bd0d5291ce17aad8c";
 export const BEASTS_NFT_CONTRACT_ADDRESS =
   "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4";
 
@@ -19,7 +19,7 @@ export const DEFAULT_PAGE_SIZE = 12;
 
 // Maximum NFTs that can be selected for auction (contract limit)
 // TODO: Increase to 200 when contract is upgraded
-export const MAX_AUCTION_NFT_SELECTION = 75;
+export const MAX_AUCTION_NFT_SELECTION = 163;
 
 // Reduced from 1000000 - fetching 1M records caused 30+ MB responses taking 80+ seconds
 export const GRAPHQL_QUERY_LIMIT = 500;
