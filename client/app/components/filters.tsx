@@ -63,38 +63,37 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
 
     return (
         <div className="w-full">
-            <div className="mb-4">
+            <div className="mb-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
                 <input
                     type="text"
                     value={filters.search}
                     onChange={(e) => updateFilter("search", e.target.value)}
                     placeholder="Search by name, token ID, or attributes..."
-                    className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
+                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
                 />
-            </div>
-
-            <div className="mb-4 flex items-center justify-between">
-                <button
-                    type="button"
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20"
-                >
-                    {isExpanded ? "Hide Filters" : "Show Filters"}
-                    {hasActiveFilters && (
-                        <span className="ml-2 rounded-full bg-[rgb(50,255,52)] px-2 py-0.5 text-xs text-black">
-                            Active
-                        </span>
-                    )}
-                </button>
-                {hasActiveFilters && (
+                <div className="flex items-center gap-3">
                     <button
                         type="button"
-                        onClick={clearFilters}
-                        className="text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70 hover:text-[rgb(50,255,52)] transition"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 whitespace-nowrap"
                     >
-                        Clear All
+                        {isExpanded ? "Hide Filters" : "Show Filters"}
+                        {hasActiveFilters && (
+                            <span className="ml-2 rounded-full bg-[rgb(50,255,52)] px-2 py-0.5 text-xs text-black">
+                                Active
+                            </span>
+                        )}
                     </button>
-                )}
+                    {hasActiveFilters && (
+                        <button
+                            type="button"
+                            onClick={clearFilters}
+                            className="text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70 hover:text-[rgb(50,255,52)] transition whitespace-nowrap"
+                        >
+                            Clear All
+                        </button>
+                    )}
+                </div>
             </div>
 
             {isExpanded && (
