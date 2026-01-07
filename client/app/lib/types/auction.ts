@@ -40,19 +40,19 @@ export interface BidNode {
 }
 
 export interface AuctionsResponse {
-  bm011AuctionModels: {
+  bm013AuctionModels: {
     edges: AuctionNode[];
   };
-  bm011AuctionItemModels: {
+  bm013AuctionItemModels: {
     edges: AuctionItemNode[];
   };
-  bm011BidModels: {
+  bm013BidModels: {
     edges: BidNode[];
   };
 }
 
 export interface MyListingsResponse {
-  bm011AuctionModels: {
+  bm013AuctionModels: {
     edges: AuctionNode[];
   };
 }
@@ -60,7 +60,7 @@ export interface MyListingsResponse {
 export interface ConsolidatedDataResponse {
   myNFTs?: {
     tokenBalances: {
-      edges: import('./nft').TokenBalanceEdge[];
+      edges: import("./nft").TokenBalanceEdge[];
     };
   };
   auctionItems?: {
@@ -73,4 +73,3 @@ export interface ConsolidatedDataResponse {
     edges: AuctionNode[];
   };
 }
-

@@ -1,9 +1,20 @@
 "use client";
 
-import React from 'react';
-import { ApolloClient, InMemoryCache, createHttpLink, split } from '@apollo/client';
-import { ApolloProvider } from '@apollo/client/react';
-import { MARKETPLACE_GRAPHQL_ENDPOINT, BEASTS_GRAPHQL_ENDPOINT, APOLLO_DEFAULT_FETCH_POLICY, APOLLO_QUERY_FETCH_POLICY, APOLLO_ERROR_POLICY } from '../lib/constants';
+import React from "react";
+import {
+  ApolloClient,
+  InMemoryCache,
+  createHttpLink,
+  split,
+} from "@apollo/client";
+import { ApolloProvider } from "@apollo/client/react";
+import {
+  MARKETPLACE_GRAPHQL_ENDPOINT,
+  BEASTS_GRAPHQL_ENDPOINT,
+  APOLLO_DEFAULT_FETCH_POLICY,
+  APOLLO_QUERY_FETCH_POLICY,
+  APOLLO_ERROR_POLICY,
+} from "../lib/constants";
 
 const marketplaceLink = createHttpLink({
   uri: MARKETPLACE_GRAPHQL_ENDPOINT,
@@ -15,18 +26,18 @@ const beastsLink = createHttpLink({
 
 const splitLink = split(
   ({ operationName, query }) => {
-    const queryString = query?.loc?.source?.body || '';
-    const isNFTQuery = 
-      queryString.includes('tokenBalances') ||
-      queryString.includes('tokenMetadata') ||
-      queryString.includes('ERC721') ||
-      operationName === 'MyNFTS' ||
-      operationName === 'ConsolidatedQuery' && queryString.includes('myNFTs');
-    
+    const queryString = query?.loc?.source?.body || "";
+    const isNFTQuery =
+      queryString.includes("tokenBalances") ||
+      queryString.includes("tokenMetadata") ||
+      queryString.includes("ERC721") ||
+      operationName === "MyNFTS" ||
+      (operationName === "ConsolidatedQuery" && queryString.includes("myNFTs"));
+
     return isNFTQuery;
   },
   beastsLink,
-  marketplaceLink
+  marketplaceLink,
 );
 
 const client = new ApolloClient({
@@ -40,17 +51,17 @@ const client = new ApolloClient({
               return incoming;
             },
           },
-          bm011AuctionModels: {
+          bm013AuctionModels: {
             merge(existing, incoming) {
               return incoming;
             },
           },
-          bm011AuctionItemModels: {
+          bm013AuctionItemModels: {
             merge(existing, incoming) {
               return incoming;
             },
           },
-          bm011BidModels: {
+          bm013BidModels: {
             merge(existing, incoming) {
               return incoming;
             },
@@ -72,7 +83,10 @@ const client = new ApolloClient({
   },
 });
 
-export function ApolloGraphQLProvider({ children }: { children: React.ReactNode }) {
+export function ApolloGraphQLProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }
-
