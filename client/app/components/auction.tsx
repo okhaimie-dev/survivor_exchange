@@ -8,7 +8,7 @@ import AuctionSkeleton from "./auction-skeleton";
 import CustomDropdown from "./custom-dropdown";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
-import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS } from "../lib/constants";
+import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, MAX_AUCTION_NFT_SELECTION } from "../lib/constants";
 import { fetchTokens } from "@avnu/avnu-sdk";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 
@@ -70,6 +70,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                 return previouslySelected.filter((existingId) => existingId !== nftId);
             }
 
+            if (previouslySelected.length >= MAX_AUCTION_NFT_SELECTION) {
+                return previouslySelected;
+            }
+
             return [...previouslySelected, nftId];
         });
     }, []);
@@ -77,6 +81,21 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const filteredNFTs = useMemo(() => {
         return applyFiltersToNFTs(nfts, filters);
     }, [nfts, filters]);
+
+    const selectAll = useCallback(() => {
+        const ids = filteredNFTs.slice(0, MAX_AUCTION_NFT_SELECTION).map(nft => nft.tokenId);
+        setSelectedNFTIds(ids);
+    }, [filteredNFTs]);
+
+    const selectHalf = useCallback(() => {
+        const count = Math.min(Math.ceil(filteredNFTs.length / 2), MAX_AUCTION_NFT_SELECTION);
+        setSelectedNFTIds(filteredNFTs.slice(0, count).map(nft => nft.tokenId));
+    }, [filteredNFTs]);
+
+    const selectQuarter = useCallback(() => {
+        const count = Math.min(Math.ceil(filteredNFTs.length / 4), MAX_AUCTION_NFT_SELECTION);
+        setSelectedNFTIds(filteredNFTs.slice(0, count).map(nft => nft.tokenId));
+    }, [filteredNFTs]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -262,6 +281,49 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             </div>
         );
         }
+
+    const renderBulkSelectButtons = () => (
+        <div className="flex flex-wrap gap-2 mb-4">
+            <button
+                type="button"
+                onClick={selectAll}
+                className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+                Select All ({Math.min(filteredNFTs.length, MAX_AUCTION_NFT_SELECTION)} max)
+            </button>
+            <button
+                type="button"
+                onClick={selectHalf}
+                className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+                Select 50% ({Math.min(Math.ceil(filteredNFTs.length / 2), MAX_AUCTION_NFT_SELECTION)})
+            </button>
+            <button
+                type="button"
+                onClick={selectQuarter}
+                className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+                Select 25% ({Math.min(Math.ceil(filteredNFTs.length / 4), MAX_AUCTION_NFT_SELECTION)})
+            </button>
+            <button
+                type="button"
+                onClick={handleClearSelection}
+                disabled={!hasSelection}
+                className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
+                    hasSelection
+                        ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
+                        : "border-white/20 text-white/30"
+                }`}
+            >
+                Clear
+            </button>
+            {selectedNFTIds.length > 0 && (
+                <span className="flex items-center text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70 ml-2">
+                    {selectedNFTIds.length} selected
+                </span>
+            )}
+        </div>
+    );
 
     const renderGrid = () => (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
@@ -497,6 +559,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
                 {filteredNFTs.length > 0 && (
                     <>
+                        {renderBulkSelectButtons()}
                         {renderGrid()}
 
                         {hasSelection && renderSelectedSummary()}

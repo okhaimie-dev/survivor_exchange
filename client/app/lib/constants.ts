@@ -12,6 +12,10 @@ export const BEASTS_NFT_CONTRACT_ADDRESS = '0x046da8955829adf2bda310099a00634519
 
 export const DEFAULT_PAGE_SIZE = 9;
 
+// Maximum NFTs that can be selected for auction (contract limit)
+// TODO: Increase to 200 when contract is upgraded
+export const MAX_AUCTION_NFT_SELECTION = 75;
+
 // Reduced from 1000000 - fetching 1M records caused 30+ MB responses taking 80+ seconds
 export const GRAPHQL_QUERY_LIMIT = 500;
 
