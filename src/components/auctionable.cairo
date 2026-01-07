@@ -294,8 +294,47 @@ pub mod AuctionableComponent {
                 auction.status = AuctionStatus::Canceled.into();
                 store.set_auction(@auction);
             } else {
+                // Expired auction - refund highest bidder
+                if has_winner {
+                    let winner: ContractAddress = auction.highest_bidder.try_into().unwrap();
+                    let shares = vault_dispatcher.share_balance(auction.auction_id, winner);
+                    if shares > 0_u256 {
+                        vault_dispatcher.withdraw(auction.auction_id, winner, winner, shares);
+                    }
+                    let mut cleared_bid = BidTrait::new(auction.auction_id, winner.into(), 0_u64);
+                    store.set_bid(@cleared_bid);
+                }
+
                 auction.status = AuctionStatus::Ended.into();
                 store.set_auction(@auction);
+            }
+
+            // Refund all pending offers
+            let offer_count = store.auction_offer_count(auction_id);
+            let mut i: u32 = 0;
+            while i < offer_count.count {
+                let offer_idx = store.auction_offer_index(auction_id, i);
+                let mut offer = store.offer(auction_id, offer_idx.buyer);
+                if offer.status == OfferStatus::Pending.into() {
+                    let buyer: ContractAddress = offer_idx.buyer.try_into().unwrap();
+                    let shares = vault_dispatcher.share_balance(auction_id, buyer);
+                    if shares > 0_u256 {
+                        vault_dispatcher.withdraw(auction_id, buyer, buyer, shares);
+                    }
+                    offer.status = OfferStatus::Withdrawn.into();
+                    store.set_offer(@offer);
+                }
+                i += 1;
+            }
+
+            // Delist all items
+            let mut i: u32 = 0;
+            while i < auction.item_count {
+                let item = store.auction_item(auction.auction_id, i);
+                let mut listed_token = store.listed_token(item.contract_address, item.token_id);
+                listed_token.auction_id = 0_u32;
+                store.set_listed_token(@listed_token);
+                i += 1;
             }
         }
 
