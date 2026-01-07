@@ -530,6 +530,9 @@ export default function Bids({
                     if (price && isValidPrice(price)) {
                       const usdAmount = balanceDecimal * price;
                       usdValue = formatUSD(usdAmount);
+                    } else {
+                      // Price fetch succeeded but price is invalid - show $0.00 as fallback
+                      usdValue = formatUSD(0);
                     }
                   } else {
                     // Even for 0 balance, show $0.00
@@ -541,10 +544,9 @@ export default function Bids({
                   `Error fetching USD value for ${token.symbol}:`,
                   error,
                 );
-                // If error but balance is 0, still show $0.00
-                if (balanceDecimal === 0) {
-                  usdValue = formatUSD(0);
-                }
+                // Always show $0.00 on error, regardless of balance
+                // This ensures the token still appears in the dropdown even if price fetch fails
+                usdValue = formatUSD(0);
               }
 
               balances[token.address] = {
