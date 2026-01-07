@@ -10,7 +10,7 @@ export const AUCTION_CONTRACT_ADDRESS = '0x04604ef40c66d0a7e0ba00f323f21e4c485c4
 export const VAULT_CONTRACT_ADDRESS = '0x063ce099c649eba7ae064ab5228494389760ef4513b3c803cad425d0e5ad0fee';
 export const BEASTS_NFT_CONTRACT_ADDRESS = '0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4';
 
-export const DEFAULT_PAGE_SIZE = 9;
+export const DEFAULT_PAGE_SIZE = 12;
 
 // Maximum NFTs that can be selected for auction (contract limit)
 // TODO: Increase to 200 when contract is upgraded
