@@ -54,9 +54,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   // Process offers into a map by auction_id
   const offersByAuction = useMemo(() => {
     const map = new Map<string, FormattedOffer[]>();
-    if (!data?.bm016OfferModels?.edges) return map;
+    if (!data?.bm011OfferModels?.edges) return map;
 
-    for (const edge of data.bm016OfferModels.edges) {
+    for (const edge of data.bm011OfferModels.edges) {
       const offer = edge.node;
 
       // Parse status - handle various formats (decimal string, hex string, or number)
@@ -99,9 +99,9 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
   }, [data]);
 
   const listings: FormattedListing[] = useMemo(() => {
-    if (!data?.bm016AuctionModels?.edges) return [];
+    if (!data?.bm011AuctionModels?.edges) return [];
 
-    const auctions: Auction[] = data.bm016AuctionModels.edges.map(
+    const auctions: Auction[] = data.bm011AuctionModels.edges.map(
       (edge: { node: Auction }) => edge.node,
     );
 

@@ -1,5 +1,5 @@
 export const MARKETPLACE_GRAPHQL_ENDPOINT =
-  "https://api.cartridge.gg/x/lax/torii/graphql";
+  "https://api.cartridge.gg/x/bm/torii/graphql";
 export const BEASTS_GRAPHQL_ENDPOINT =
   "https://api.cartridge.gg/x/pg-beasts/torii/graphql";
 
@@ -9,9 +9,9 @@ export const MAINNET_RPC_URL = "https://api.cartridge.gg/x/starknet/mainnet";
 export const SEPOLIA_RPC_URL = "https://api.cartridge.gg/x/starknet/sepolia";
 
 export const AUCTION_CONTRACT_ADDRESS =
-  "0x07d9fd9b596e30ccac461b9e0c132407fe130e0bd29c50b670a608b43fd34ab4";
+  "0x04604ef40c66d0a7e0ba00f323f21e4c485c48eef1daf2bee0d1be0e602eac13";
 export const VAULT_CONTRACT_ADDRESS =
-  "0x02499e7261b9a8a92d7a23be44d2c8408be38d455e2a8f7db7d9e82dba0f599c";
+  "0x063ce099c649eba7ae064ab5228494389760ef4513b3c803cad425d0e5ad0fee";
 export const BEASTS_NFT_CONTRACT_ADDRESS =
   "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4";
 
