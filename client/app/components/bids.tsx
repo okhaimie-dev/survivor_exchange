@@ -1874,6 +1874,7 @@ export default function Bids({
                       const minBid = basePrice * 1.02;
                       const midBid = basePrice * 1.5;
                       const highBid = basePrice * 2;
+                      const maxBid = basePrice * 3;
                       
                       return (
                         <div className="flex gap-1.5 flex-wrap">
@@ -1897,6 +1898,13 @@ export default function Bids({
                             className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
                           >
                             2x
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBidAmountToken(maxBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            3x
                           </button>
                         </div>
                       );
