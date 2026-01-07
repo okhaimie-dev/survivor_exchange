@@ -1,5 +1,6 @@
 "use client";
-import { Orbitron, Inter } from "next/font/google";
+import { Orbitron } from "next/font/google";
+import { GeistMono } from "geist/font/mono";
 import { Suspense } from "react";
 import "./globals.css";
 import Header from "./components/header";
@@ -29,7 +30,7 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" />
       </head>
       <body
-        className={`${orbitron.variable} antialiased bg-black`}
+        className={`${orbitron.variable} ${GeistMono.variable} antialiased bg-black`}
       >
         <ApolloGraphQLProvider>
           <StarknetProvider>
