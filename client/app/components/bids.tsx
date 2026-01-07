@@ -357,7 +357,7 @@ export default function Bids({
 
       if (!isRetry && !shouldRefetchPrice(paymentToken)) {
         try {
-          const cachedPrice = await getTokenPriceInUSDC(paymentToken);
+          const cachedPrice = await getTokenPriceInUSDC(paymentToken, address);
           if (isValidPrice(cachedPrice)) {
             setTokenPrice(cachedPrice);
             setIsConvertingPrices(false);
@@ -375,7 +375,7 @@ export default function Bids({
       }
 
       try {
-        const price = await getTokenPriceInUSDC(paymentToken);
+        const price = await getTokenPriceInUSDC(paymentToken, address);
         if (isValidPrice(price)) {
           setTokenPrice(price);
           setIsConvertingPrices(false);
@@ -526,7 +526,7 @@ export default function Bids({
                   usdValue = formatUSD(balanceDecimal);
                 } else {
                   if (balanceDecimal > 0) {
-                    const price = await getTokenPriceInUSDC(token.address);
+                    const price = await getTokenPriceInUSDC(token.address, address);
                     if (price && isValidPrice(price)) {
                       const usdAmount = balanceDecimal * price;
                       usdValue = formatUSD(usdAmount);
@@ -745,7 +745,7 @@ export default function Bids({
         // Get fresh price if needed
         let currentTokenPrice = tokenPrice;
         if (shouldRefetchPrice(paymentToken)) {
-          currentTokenPrice = await getTokenPriceInUSDC(paymentToken);
+          currentTokenPrice = await getTokenPriceInUSDC(paymentToken, address);
           setTokenPrice(currentTokenPrice);
         }
 
@@ -1025,7 +1025,7 @@ export default function Bids({
         // Get fresh price if needed
         let currentTokenPrice = tokenPrice;
         if (shouldRefetchPrice(paymentToken)) {
-          currentTokenPrice = await getTokenPriceInUSDC(paymentToken);
+          currentTokenPrice = await getTokenPriceInUSDC(paymentToken, address);
           setTokenPrice(currentTokenPrice);
         }
 
@@ -2240,7 +2240,7 @@ export default function Bids({
                             USDC_ADDRESS.toLowerCase() &&
                           shouldRefetchPrice(paymentToken)
                         ) {
-                          getTokenPriceInUSDC(paymentToken)
+                          getTokenPriceInUSDC(paymentToken, address)
                             .then((price) => {
                               setTokenPrice(price);
                             })
