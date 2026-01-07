@@ -1679,18 +1679,59 @@ export default function Bids({
                   </div>
                 </div>
 
-                <div className="w-full rounded-xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-3 md:px-4 py-3 md:py-4 overflow-x-auto">
-                  <p className="text-[rgb(186,255,188)]/70 text-[10px] md:text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
-                    Live Price Chart
-                  </p>
-                  <div className="min-w-[300px]">
-                    <BidPriceChart
-                      width={400}
-                      height={120}
-                      startingPrice={selectedCollection.startingPrice / 1e6}
-                      currentBid={selectedCollection.highestBid}
-                      bids={auction?.bids}
-                    />
+                <div className="w-full rounded-xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-3 md:px-4 py-3 md:py-4">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 overflow-x-auto">
+                      <p className="text-[rgb(186,255,188)]/70 text-[10px] md:text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
+                        Live Price Chart
+                      </p>
+                      <div className="min-w-[300px]">
+                        <BidPriceChart
+                          width={400}
+                          height={120}
+                          startingPrice={selectedCollection.startingPrice / 1e6}
+                          currentBid={selectedCollection.highestBid}
+                          bids={auction?.bids}
+                        />
+                      </div>
+                    </div>
+                    <div className="md:w-48 lg:w-56 flex-shrink-0">
+                      <p className="text-[rgb(186,255,188)]/70 text-[10px] md:text-[11px] font-orbitron uppercase tracking-[0.16em] mb-3">
+                        Latest Bids
+                      </p>
+                      {auction?.bids && auction.bids.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {auction.bids
+                            .slice()
+                            .sort((a, b) => {
+                              const amountA = a.amount.startsWith('0x') ? parseInt(a.amount, 16) : parseFloat(a.amount);
+                              const amountB = b.amount.startsWith('0x') ? parseInt(b.amount, 16) : parseFloat(b.amount);
+                              return amountB - amountA;
+                            })
+                            .slice(0, 5)
+                            .map((bid, index) => {
+                              const bidAmount = bid.amount.startsWith('0x') || bid.amount.startsWith('0X')
+                                ? parseInt(bid.amount, 16) / 1e6
+                                : parseFloat(bid.amount) / 1e6;
+                              return (
+                                <div
+                                  key={`${bid.bidder}-${bid.amount}-${index}`}
+                                  className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-black/30"
+                                >
+                                  <span className="text-[10px] text-[rgb(186,255,188)]/60 truncate max-w-[80px]">
+                                    {truncateAddress(bid.bidder)}
+                                  </span>
+                                  <span className="text-[11px] font-medium text-white">
+                                    {formatUSDSmart(bidAmount)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-[rgb(186,255,188)]/50">No bids yet</p>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1826,6 +1867,40 @@ export default function Bids({
                       }}
                       className="w-full md:w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
+                    {(() => {
+                      const basePrice = selectedCollection.highestBid !== undefined && selectedCollection.highestBid > 0
+                        ? selectedCollection.highestBid
+                        : selectedCollection.startingPrice / 1e6;
+                      const minBid = basePrice * 1.02;
+                      const midBid = basePrice * 1.5;
+                      const highBid = basePrice * 2;
+                      
+                      return (
+                        <div className="flex gap-1.5 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => setBidAmountToken(minBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            +2%
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBidAmountToken(midBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            1.5x
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setBidAmountToken(highBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            2x
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                   {(() => {
                     const auction = paginatedFilteredAuctions.find(
