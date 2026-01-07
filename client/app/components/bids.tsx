@@ -7,6 +7,7 @@ import Filters, { FilterState } from "./filters";
 import BidPriceChart from "./bid-price-chart";
 import BidsSkeleton from "./bids-skeleton";
 import CustomDropdown from "./custom-dropdown";
+import InfoTooltip from "./info-tooltip";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { uint256 } from "starknet";
@@ -2289,13 +2290,16 @@ export default function Bids({
                     disabled={
                       !isBidValid || !account || isSubmittingOffer || isUserSeller
                     }
-                    className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                    className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
                       isBidValid && account && !isSubmittingOffer && !isUserSeller
                         ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
                         : "border border-white/12 text-[rgb(186,255,188)]/45"
                     }`}
                   >
-                    {isSubmittingOffer ? "..." : "Make Offer"}
+                    <span>{isSubmittingOffer ? "..." : "Make Offer"}</span>
+                    {!isSubmittingOffer && (
+                      <InfoTooltip content="Your offer will be transferred from your account and held in escrow until the auction ends or the seller accepts your offer." />
+                    )}
                   </button>
                   <button
                     type="button"
