@@ -53,6 +53,11 @@ export const WBTC_ADDRESS =
 export const STARKNET_MAINNET_CHAIN_ID = "0x534e5f4d41494e";
 export const STARKNET_MAINNET_CHAIN_ID_DECIMAL = "23448594291968334";
 
+// Summit game Torii endpoint for fetching SKULL token data
+export const SUMMIT_TORII_URL = "https://api.cartridge.gg/x/pg-mainnet-10/torii";
+export const SUMMIT_NAMESPACE = "summit_relayer_6";
+export const LOOT_SURVIVOR_NAMESPACE = "ls_0_0_9";
+
 export interface TokenInfo {
   address: string;
   symbol: string;

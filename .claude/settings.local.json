@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(agent-browser snapshot:*)",
+      "Bash(agent-browser screenshot:*)",
+      "Bash(agent-browser scroll:*)",
+      "Bash(agent-browser click:*)",
+      "Bash(agent-browser open:*)",
+      "Bash(agent-browser exec \"JSON.stringify\\(console._logs || []\\)\")",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Skill(agent-browser)"
+    ]
+  }
+}

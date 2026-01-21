@@ -19,4 +19,14 @@
 - **Comments**: Doc comments (`///`) for public traits/functions; minimal inline comments; no TODOs in production code.
 - **General**: Follow Dojo 1.8.0 conventions; mimic existing patterns in src/systems/; ensure gas efficiency with bounded loops; no external libs beyond dependencies (Dojo, OpenZeppelin, Starknet).
 
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes
+
 *Last updated: Analyze codebase for Cairo/Dojo standards.*

@@ -8,8 +8,10 @@ import BidPriceChart from "./bid-price-chart";
 import BidsSkeleton from "./bids-skeleton";
 import CustomDropdown from "./custom-dropdown";
 import InfoTooltip from "./info-tooltip";
+import BeastDetailModal from "./beast-detail-modal";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
+import { useBeastSkullRewards } from "../hooks/use-beast-skull-rewards";
 import { uint256 } from "starknet";
 import {
   truncateAddress,
@@ -246,6 +248,8 @@ export default function Bids({
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isBeastModalOpen, setIsBeastModalOpen] = useState(false);
+  const [selectedBeastIndex, setSelectedBeastIndex] = useState(0);
   const [tokenBalances, setTokenBalances] = useState<
     Record<string, { amount: string; usdValue: string | null }>
   >({});
@@ -328,6 +332,49 @@ export default function Bids({
       collections.find((collection) => collection.id === selectedCollectionId),
     [selectedCollectionId, collections],
   );
+
+  // Get NFTs for the selected auction (for modal)
+  const selectedAuctionNfts = useMemo(() => {
+    if (!selectedCollectionId) return [];
+    const auction = paginatedFilteredAuctions.find(
+      (a) => a.auction_id === selectedCollectionId,
+    );
+    return auction?.nfts || [];
+  }, [selectedCollectionId, paginatedFilteredAuctions]);
+
+  // Prepare beast metadata for skull rewards hook
+  const selectedAuctionBeastData = useMemo(() => {
+    if (!selectedCollectionId) return [];
+
+    const auction = paginatedFilteredAuctions.find(
+      (a) => a.auction_id === selectedCollectionId,
+    );
+    if (!auction?.nfts) return [];
+
+    return auction.nfts.map((nft) => {
+      // Extract "Adventurers Killed" from NFT attributes
+      const adventurersKilledAttr = nft.attributes.find(
+        (a) => a.trait_type === "Adventurers Killed"
+      );
+
+      // Parse tokenId - handle hex format
+      const tokenIdStr = nft.tokenId;
+      const tokenId = tokenIdStr.startsWith("0x") || tokenIdStr.startsWith("0X")
+        ? parseInt(tokenIdStr, 16)
+        : parseInt(tokenIdStr, 10);
+
+      return {
+        tokenId,
+        adventurersKilled: adventurersKilledAttr ? Number(adventurersKilledAttr.value) : 0,
+      };
+    });
+  }, [selectedCollectionId, paginatedFilteredAuctions]);
+
+  // Fetch unclaimed skull rewards for selected auction's NFTs
+  const {
+    loading: skullsLoading,
+    totalUnclaimedSkulls,
+  } = useBeastSkullRewards(selectedAuctionBeastData);
 
   const isValidPrice = useCallback((price: number | null): boolean => {
     if (price === null) return false;
@@ -1747,7 +1794,7 @@ export default function Bids({
                         onScroll={checkScrollButtons}
                         className="flex gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                       >
-                        {nfts.map((nft) => {
+                        {nfts.map((nft, index) => {
                           const imageSrc = nft.metadata?.image
                             ? nft.metadata.image
                             : nft.imagePath
@@ -1758,7 +1805,11 @@ export default function Bids({
                           return (
                             <div
                               key={`${nft.contractAddress}-${nft.tokenId}`}
-                              className={`shrink-0 h-28 w-fit overflow-hidden ${
+                              onClick={() => {
+                                setSelectedBeastIndex(index);
+                                setIsBeastModalOpen(true);
+                              }}
+                              className={`shrink-0 h-28 w-fit overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60 ${
                                 !isBase64
                                   ? "border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10"
                                   : ""
@@ -1858,6 +1909,29 @@ export default function Bids({
                     );
                   })()}
                 </p>
+                {/* Unclaimed SKULL tokens display */}
+                {selectedAuctionBeastData.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs leading-relaxed text-[rgb(186,255,188)]/70">
+                    <span>Unclaimed:</span>
+                    <Image
+                      src="/skull-token.png"
+                      alt="SKULL token"
+                      width={18}
+                      height={18}
+                      className="inline-block"
+                    />
+                    {skullsLoading ? (
+                      <span className="text-[rgb(50,255,52)]/50 animate-pulse">...</span>
+                    ) : totalUnclaimedSkulls > 0 ? (
+                      <span className="text-[rgb(50,255,52)] font-semibold">
+                        {totalUnclaimedSkulls}
+                      </span>
+                    ) : (
+                      <span>0</span>
+                    )}
+                    <InfoTooltip content="SKULL tokens can be claimed from beasts that have killed adventurers in Loot Survivor. These unclaimed tokens transfer with the NFTs." />
+                  </div>
+                )}
                 {(() => {
                   const statusNum = parseInt(selectedCollection.status);
                   const formatTime = (timestamp: string) => {
@@ -2602,6 +2676,14 @@ export default function Bids({
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
       <Filters token={token} filters={filters} onFiltersChange={setFilters} />
       {renderContent()}
+
+      <BeastDetailModal
+        isOpen={isBeastModalOpen}
+        onClose={() => setIsBeastModalOpen(false)}
+        nfts={selectedAuctionNfts}
+        currentIndex={selectedBeastIndex}
+        onNavigate={setSelectedBeastIndex}
+      />
     </div>
   );
 }
