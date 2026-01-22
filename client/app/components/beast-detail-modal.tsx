@@ -11,7 +11,23 @@ interface BeastDetailModalProps {
   nfts: FormattedNFT[];
   currentIndex: number;
   onNavigate: (index: number) => void;
+  onSelect?: (tokenId: string) => void;
+  isSelected?: boolean;
 }
+
+// Helper to format Unix timestamps to readable dates
+const formatTimestamp = (value: string | number): string => {
+  const timestamp = typeof value === "string" ? parseInt(value, 10) : value;
+  if (isNaN(timestamp) || timestamp === 0) return "Never";
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
 
 export default function BeastDetailModal({
   isOpen,
@@ -19,6 +35,8 @@ export default function BeastDetailModal({
   nfts,
   currentIndex,
   onNavigate,
+  onSelect,
+  isSelected,
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -100,42 +118,44 @@ export default function BeastDetailModal({
             {currentNft.metadataName || `Beast #${currentNft.tokenId}`}
           </h2>
           <div className="flex items-center gap-4">
-            {/* Navigation */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-[rgb(186,255,188)]/70 font-orbitron">
-                {currentIndex + 1} OF {nfts.length}
-              </span>
-              <button
-                onClick={handlePrev}
-                disabled={currentIndex === 0}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M12.5 15L7.5 10L12.5 5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={currentIndex === nfts.length - 1}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-              >
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-                  <path
-                    d="M7.5 15L12.5 10L7.5 5"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            </div>
+            {/* Navigation - only show when more than 1 item */}
+            {nfts.length > 1 && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-[rgb(186,255,188)]/70 font-orbitron">
+                  {currentIndex + 1} OF {nfts.length}
+                </span>
+                <button
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                    <path
+                      d="M12.5 15L7.5 10L12.5 5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={currentIndex === nfts.length - 1}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                >
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                    <path
+                      d="M7.5 15L12.5 10L7.5 5"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+              </div>
+            )}
             {/* Close button */}
             <button
               onClick={onClose}
@@ -238,6 +258,37 @@ export default function BeastDetailModal({
               </div>
             </div>
 
+            {/* Special Badges - Shiny, Animated, Genesis */}
+            {currentNft.attributes && currentNft.attributes.length > 0 && (() => {
+              const specialAttrs = ["Shiny", "Animated", "Genesis"];
+              const activeBadges = currentNft.attributes.filter(
+                (attr) =>
+                  specialAttrs.includes(attr.trait_type) &&
+                  (attr.value === "true" || attr.value === 1 || Number(attr.value) > 0)
+              );
+
+              if (activeBadges.length === 0) return null;
+
+              return (
+                <div className="flex flex-wrap gap-2">
+                  {activeBadges.map((attr) => (
+                    <span
+                      key={attr.trait_type}
+                      className={`px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider ${
+                        attr.trait_type === "Shiny"
+                          ? "bg-[rgb(255,215,0)]/20 text-[rgb(255,215,0)] border border-[rgb(255,215,0)]/40"
+                          : attr.trait_type === "Animated"
+                          ? "bg-[rgb(138,43,226)]/20 text-[rgb(186,85,255)] border border-[rgb(138,43,226)]/40"
+                          : "bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40"
+                      }`}
+                    >
+                      {attr.trait_type}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
+
             {/* Additional Attributes */}
             {currentNft.attributes && currentNft.attributes.length > 0 && (
               <div className="mt-2">
@@ -246,23 +297,72 @@ export default function BeastDetailModal({
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {currentNft.attributes
-                    .filter(
-                      (attr) =>
-                        !["Tier", "Level", "Type", "Power", "Health", "Rank", "Beast", "Token ID", "Beast ID", "Prefix", "Suffix"].includes(
-                          attr.trait_type
-                        )
-                    )
+                    .filter((attr) => {
+                      // Exclude stats already shown, special badges, and false boolean values
+                      const excludedTypes = [
+                        "Tier", "Level", "Type", "Power", "Health", "Rank",
+                        "Beast", "Token ID", "Beast ID", "Prefix", "Suffix",
+                        "Shiny", "Animated", "Genesis"
+                      ];
+                      if (excludedTypes.includes(attr.trait_type)) return false;
+                      // Hide boolean false values
+                      if (attr.value === "false" || attr.value === 0 || attr.value === "0") {
+                        return false;
+                      }
+                      return true;
+                    })
                     .slice(0, 6)
-                    .map((attr) => (
-                      <div
-                        key={attr.trait_type}
-                        className="px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 text-xs"
-                      >
-                        <span className="text-[rgb(186,255,188)]/50">{attr.trait_type}:</span>{" "}
-                        <span className="text-white">{attr.value}</span>
-                      </div>
-                    ))}
+                    .map((attr) => {
+                      // Format timestamp attributes
+                      const isTimestamp = attr.trait_type.toLowerCase().includes("timestamp") ||
+                                         attr.trait_type.toLowerCase().includes("date") ||
+                                         attr.trait_type.toLowerCase().includes("time");
+                      const displayValue = isTimestamp ? formatTimestamp(attr.value) : attr.value;
+
+                      return (
+                        <div
+                          key={attr.trait_type}
+                          className="px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 text-xs"
+                        >
+                          <span className="text-[rgb(186,255,188)]/50">{attr.trait_type}:</span>{" "}
+                          <span className="text-white">{displayValue}</span>
+                        </div>
+                      );
+                    })}
                 </div>
+              </div>
+            )}
+
+            {/* Select for Auction Button */}
+            {onSelect && (
+              <div className="mt-4 pt-4 border-t border-[rgb(50,255,52)]/20">
+                <button
+                  type="button"
+                  onClick={() => onSelect(currentNft.tokenId)}
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-orbitron uppercase tracking-[0.14em] transition ${
+                    isSelected
+                      ? "border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
+                      : "border border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20"
+                  }`}
+                >
+                  {isSelected ? (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+                        <path d="m9 12 2 2 4-4" />
+                      </svg>
+                      Selected for Auction
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="4" />
+                        <path d="M12 8v8M8 12h8" />
+                      </svg>
+                      Select for Auction
+                    </>
+                  )}
+                </button>
               </div>
             )}
           </div>

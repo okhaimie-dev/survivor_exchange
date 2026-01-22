@@ -6,12 +6,14 @@ type MonsterCardProps = {
   nft: FormattedNFT;
   selected: boolean;
   onToggle: () => void;
+  onInfoClick?: () => void;
 };
 
 export default function MonsterCard({
   nft,
   selected,
   onToggle,
+  onInfoClick,
 }: MonsterCardProps) {
   const getAttribute = (traitType: string) => {
     const attr = nft.attributes.find((a) => a.trait_type === traitType);
@@ -62,6 +64,7 @@ export default function MonsterCard({
           : "border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 hover:bg-black/80"
       }`}
     >
+      {/* Selected state: always visible checkmark */}
       {selected && (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -77,6 +80,21 @@ export default function MonsterCard({
           <path d="m9 12 2 2 4-4" />
         </svg>
       )}
+      {/* Unselected state: faded empty checkbox on hover */}
+      {!selected && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 text-white/30 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="4" />
+        </svg>
+      )}
 
       <header className="flex items-center justify-between text-[9px] md:text-[10px] uppercase tracking-wider text-[rgb(186,255,188)]/60">
         <span>{tokenIdDisplay}</span>
@@ -88,7 +106,7 @@ export default function MonsterCard({
       </header>
 
       <div className="flex flex-row md:flex-col items-center gap-3 text-white">
-        <div className="flex h-20 w-20 md:h-28 md:w-28 flex-shrink-0 items-center justify-center">
+        <div className="relative flex h-20 w-20 md:h-28 md:w-28 flex-shrink-0 items-center justify-center">
           <Image
             src={imageSrc}
             alt={nft.metadataName}
@@ -98,6 +116,32 @@ export default function MonsterCard({
             className="h-full w-full object-contain"
             unoptimized
           />
+          {onInfoClick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onInfoClick();
+              }}
+              className="absolute bottom-0 right-0 z-20 w-5 h-5 md:w-6 md:h-6 rounded-full bg-black/70 border border-white/30 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/90 hover:border-white/50 transition-all"
+              title="View details"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3 h-3 md:w-3.5 md:h-3.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </button>
+          )}
         </div>
         <div className="flex flex-col gap-0.5 md:gap-1 text-left md:text-center flex-1 min-w-0">
           <h3 className="text-sm md:text-base font-orbitron uppercase tracking-wide leading-tight">

@@ -169,8 +169,10 @@ export default function Bids({
       const tokenId = nft.tokenId.startsWith("0x")
         ? parseInt(nft.tokenId, 16)
         : parseInt(nft.tokenId);
-      const prefix = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
-      const suffix = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+      const prefixAttr = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
+      const suffixAttr = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+      const prefix = prefixAttr !== undefined ? String(prefixAttr) : undefined;
+      const suffix = suffixAttr !== undefined ? String(suffixAttr) : undefined;
       const beastName = nft.beastName;
 
       return findMatchingSummitBeast(prefix, suffix, beastName, tokenId, summitTopBeasts) !== null;
@@ -429,9 +431,12 @@ export default function Bids({
         : parseInt(nft.tokenId);
 
       // Get NFT attributes
-      const prefix = nft.attributes.find(a => a.trait_type === "Prefix")?.value;
-      const suffix = nft.attributes.find(a => a.trait_type === "Suffix")?.value;
-      const beastName = nft.attributes.find(a => a.trait_type === "Beast")?.value;
+      const prefixAttr = nft.attributes.find(a => a.trait_type === "Prefix")?.value;
+      const suffixAttr = nft.attributes.find(a => a.trait_type === "Suffix")?.value;
+      const beastNameAttr = nft.attributes.find(a => a.trait_type === "Beast")?.value;
+      const prefix = prefixAttr !== undefined ? String(prefixAttr) : undefined;
+      const suffix = suffixAttr !== undefined ? String(suffixAttr) : undefined;
+      const beastName = beastNameAttr !== undefined ? String(beastNameAttr) : undefined;
 
       const match = findMatchingSummitBeast(prefix, suffix, beastName, tokenId, summitTopBeasts);
       if (match) {

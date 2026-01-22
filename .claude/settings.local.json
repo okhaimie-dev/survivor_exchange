@@ -16,7 +16,8 @@
       "Bash(agent-browser console)",
       "Bash(agent-browser eval:*)",
       "Bash(agent-browser reload:*)",
-      "Bash(agent-browser:*)"
+      "Bash(agent-browser:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

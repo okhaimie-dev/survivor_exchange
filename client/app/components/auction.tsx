@@ -6,6 +6,7 @@ import Pagination from "./pagination";
 import Filters, { FilterState } from "./filters";
 import AuctionSkeleton from "./auction-skeleton";
 import CustomDropdown from "./custom-dropdown";
+import BeastDetailModal from "./beast-detail-modal";
 import type { FormattedNFT } from "../lib/types";
 import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, MAX_AUCTION_NFT_SELECTION } from "../lib/constants";
@@ -28,6 +29,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     const [startingPriceUSD, setStartingPriceUSD] = useState<string>("");
     const [sellerToken, setSellerToken] = useState<string>(USDC_ADDRESS);
     const [tokenLogos, setTokenLogos] = useState<Record<string, string>>({});
+
+    // Beast detail modal state
+    const [isBeastModalOpen, setIsBeastModalOpen] = useState(false);
+    const [selectedBeastForModal, setSelectedBeastForModal] = useState<FormattedNFT | null>(null);
 
     const dateToLocalDateTimeString = (date: Date): string => {
         const year = date.getFullYear();
@@ -74,8 +79,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         if (!summitTopBeasts.length) return false;
 
         // Get NFT attributes for name matching
-        const nftPrefix = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
-        const nftSuffix = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+        const prefixAttr = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
+        const suffixAttr = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+        const nftPrefix = prefixAttr !== undefined ? String(prefixAttr) : undefined;
+        const nftSuffix = suffixAttr !== undefined ? String(suffixAttr) : undefined;
         const nftBeastName = nft.beastName;
         const nftTokenId = nft.tokenId.startsWith("0x") || nft.tokenId.startsWith("0X")
             ? parseInt(nft.tokenId, 16)
@@ -370,6 +377,10 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                     nft={nft}
                     selected={selectedNFTIds.includes(nft.tokenId)}
                     onToggle={() => toggleCardSelection(nft.tokenId)}
+                    onInfoClick={() => {
+                        setSelectedBeastForModal(nft);
+                        setIsBeastModalOpen(true);
+                    }}
                 />
             ))}
         </div>
@@ -616,6 +627,18 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
             <Filters filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
             {renderContent()}
+
+            <BeastDetailModal
+                isOpen={isBeastModalOpen}
+                onClose={() => setIsBeastModalOpen(false)}
+                nfts={selectedBeastForModal ? [selectedBeastForModal] : []}
+                currentIndex={0}
+                onNavigate={() => {}}
+                onSelect={(tokenId) => {
+                    toggleCardSelection(tokenId);
+                }}
+                isSelected={selectedBeastForModal ? selectedNFTIds.includes(selectedBeastForModal.tokenId) : false}
+            />
         </div>
     );
 }
