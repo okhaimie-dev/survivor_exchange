@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useEffect, useRef } from "react";
+import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
@@ -1739,26 +1739,51 @@ export default function Bids({
       );
     }
 
-    const renderGrid = () => (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
-        {collections.map((collection) => {
-          const auction = paginatedFilteredAuctions.find(
-            (a) => a.auction_id === collection.id,
-          );
-          const nfts = auction?.nfts || [];
+    const renderGrid = () => {
+      // Find the index of the selected card to determine which row it's in
+      const selectedIndex = collections.findIndex(c => c.id === selectedCollectionId);
 
-          return (
-            <MonsterCollectionCard
-              key={collection.id}
-              collection={collection}
-              isSelected={collection.id === selectedCollectionId}
-              onSelect={() => handleSelectCollection(collection)}
-              nfts={nfts}
-            />
-          );
-        })}
-      </div>
-    );
+      // Calculate which row the selected card is in (3 columns on desktop)
+      // We use 3 columns as the base since that's the desktop layout
+      const columnsPerRow = 3;
+      const selectedRow = selectedIndex >= 0 ? Math.floor(selectedIndex / columnsPerRow) : -1;
+
+      // Find the index of the last card in the selected row
+      const lastIndexInSelectedRow = selectedRow >= 0
+        ? Math.min((selectedRow + 1) * columnsPerRow - 1, collections.length - 1)
+        : -1;
+
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
+          {collections.map((collection, index) => {
+            const auction = paginatedFilteredAuctions.find(
+              (a) => a.auction_id === collection.id,
+            );
+            const nfts = auction?.nfts || [];
+            const isSelected = collection.id === selectedCollectionId;
+
+            // Show detail panel after the last card in the selected row
+            const showDetailAfterThis = index === lastIndexInSelectedRow && selectedCollection;
+
+            return (
+              <React.Fragment key={collection.id}>
+                <MonsterCollectionCard
+                  collection={collection}
+                  isSelected={isSelected}
+                  onSelect={() => handleSelectCollection(collection)}
+                  nfts={nfts}
+                />
+                {showDetailAfterThis && (
+                  <div className="col-span-1 md:col-span-2 lg:col-span-3">
+                    {renderSelectedDetails()}
+                  </div>
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+      );
+    };
 
     const renderSelectedDetails = () => {
       if (!selectedCollection) return null;
@@ -2742,8 +2767,6 @@ export default function Bids({
     return (
       <>
         {renderGrid()}
-
-        {selectedCollection && renderSelectedDetails()}
 
         <div className="flex justify-center mt-6">
           <Pagination
