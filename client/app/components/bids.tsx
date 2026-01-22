@@ -157,7 +157,7 @@ export default function Bids({
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
 
   // Fetch top 15 summit beasts by blocks held (must be before filteredAuctions)
-  const { topBeasts: summitTopBeasts } = useSummitLeaderboard(15);
+  const { topBeasts: summitTopBeasts, error: summitError } = useSummitLeaderboard(15);
 
   // Helper to check if auction contains any summit beasts (by token ID or prefix+suffix)
   const auctionHasSummitBeast = useCallback((auction: AuctionWithNFTs) => {
@@ -180,9 +180,11 @@ export default function Bids({
   }, [summitTopBeasts]);
 
   // Count auctions containing summit beasts (for the button badge)
+  // Returns 0 if summit API failed to hide the feature gracefully
   const summitListedCount = useMemo(() => {
+    if (summitError) return 0;
     return auctions.filter(auction => auctionHasSummitBeast(auction)).length;
-  }, [auctions, auctionHasSummitBeast]);
+  }, [auctions, auctionHasSummitBeast, summitError]);
 
   const filteredAuctions = useMemo(() => {
     let result = applyFiltersToAuctions(auctions, filters);
@@ -416,6 +418,7 @@ export default function Bids({
   // Fetch unclaimed skull rewards for selected auction's NFTs
   const {
     loading: skullsLoading,
+    error: skullsError,
     totalUnclaimedSkulls,
   } = useBeastSkullRewards(selectedAuctionBeastData);
 
@@ -2026,8 +2029,8 @@ export default function Bids({
                     );
                   })()}
                 </p>
-                {/* Unclaimed SKULL tokens display */}
-                {selectedAuctionBeastData.length > 0 && (
+                {/* Unclaimed SKULL tokens display - hidden if API fails */}
+                {selectedAuctionBeastData.length > 0 && !skullsError && (
                   <div className="flex items-center gap-2 text-xs leading-relaxed text-[rgb(186,255,188)]/70">
                     <span>Unclaimed:</span>
                     <Image
@@ -2049,8 +2052,8 @@ export default function Bids({
                     <InfoTooltip content="SKULL tokens can be claimed from beasts that have killed adventurers in Loot Survivor. These unclaimed tokens transfer with the NFTs." />
                   </div>
                 )}
-                {/* Summit Leaderboard Beast Indicator */}
-                {auctionSummitBeasts.length > 0 && (
+                {/* Summit Leaderboard Beast Indicator - hidden if API fails */}
+                {auctionSummitBeasts.length > 0 && !summitError && (
                   <div className="flex items-center gap-2 text-xs leading-relaxed">
                     <span className="px-2 py-1 rounded-full bg-[rgb(255,215,0)]/20 border border-[rgb(255,215,0)]/40 text-[rgb(255,215,0)] font-orbitron uppercase tracking-wider flex items-center gap-1.5">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">

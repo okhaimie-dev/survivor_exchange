@@ -72,7 +72,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     });
 
     // Fetch top 15 summit beasts
-    const { topBeasts: summitTopBeasts } = useSummitLeaderboard(15);
+    const { topBeasts: summitTopBeasts, error: summitError } = useSummitLeaderboard(15);
 
     // Helper to check if an NFT matches any summit top 15 beast (by prefix+suffix or token ID)
     const nftMatchesSummitBeast = useCallback((nft: FormattedNFT) => {
@@ -162,10 +162,11 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     }, []);
 
     // Count how many of user's NFTs are top 15 summit beasts (by name or token ID)
+    // Returns 0 if summit API failed to hide the feature gracefully
     const summitListedCount = useMemo(() => {
-        if (summitTopBeasts.length === 0) return 0;
+        if (summitError || summitTopBeasts.length === 0) return 0;
         return nfts.filter(nft => nftMatchesSummitBeast(nft)).length;
-    }, [nfts, summitTopBeasts, nftMatchesSummitBeast]);
+    }, [nfts, summitTopBeasts, nftMatchesSummitBeast, summitError]);
 
     const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / DEFAULT_PAGE_SIZE)), [filteredNFTs.length]);
 
