@@ -12,6 +12,7 @@ import BeastDetailModal from "./beast-detail-modal";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { useBeastSkullRewards } from "../hooks/use-beast-skull-rewards";
+import { useSummitLeaderboard, findMatchingSummitBeast, SummitBeast } from "../hooks/use-summit-leaderboard";
 import { uint256 } from "starknet";
 import {
   truncateAddress,
@@ -150,13 +151,52 @@ export default function Bids({
     animated: "",
     priceSort: "",
     tokenIdSort: "",
+    summitTop15: "",
   });
 
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
 
+  // Fetch top 15 summit beasts by blocks held (must be before filteredAuctions)
+  const { topBeasts: summitTopBeasts } = useSummitLeaderboard(15);
+
+  // Helper to check if auction contains any summit beasts (by token ID or prefix+suffix)
+  const auctionHasSummitBeast = useCallback((auction: AuctionWithNFTs) => {
+    if (!summitTopBeasts.length || !auction.nfts?.length) {
+      return false;
+    }
+
+    return auction.nfts.some(nft => {
+      const tokenId = nft.tokenId.startsWith("0x")
+        ? parseInt(nft.tokenId, 16)
+        : parseInt(nft.tokenId);
+      const prefix = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
+      const suffix = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+      const beastName = nft.beastName;
+
+      return findMatchingSummitBeast(prefix, suffix, beastName, tokenId, summitTopBeasts) !== null;
+    });
+  }, [summitTopBeasts]);
+
+  // Count auctions containing summit beasts (for the button badge)
+  const summitListedCount = useMemo(() => {
+    return auctions.filter(auction => auctionHasSummitBeast(auction)).length;
+  }, [auctions, auctionHasSummitBeast]);
+
   const filteredAuctions = useMemo(() => {
-    return applyFiltersToAuctions(auctions, filters);
-  }, [auctions, filters]);
+    let result = applyFiltersToAuctions(auctions, filters);
+
+    // Apply summit filter if active - show ONLY auctions with top 15 beasts
+    if (filters.summitTop15) {
+      // If summit data not loaded yet, show nothing
+      if (summitTopBeasts.length === 0) {
+        return [];
+      }
+      // Filter to only auctions containing summit beasts (by token ID or prefix+suffix)
+      result = result.filter(auction => auctionHasSummitBeast(auction));
+    }
+
+    return result;
+  }, [auctions, filters, summitTopBeasts, auctionHasSummitBeast]);
 
   const totalFilteredPages = useMemo(() => {
     return Math.max(1, Math.ceil(filteredAuctions.length / DEFAULT_PAGE_SIZE));
@@ -375,6 +415,32 @@ export default function Bids({
     loading: skullsLoading,
     totalUnclaimedSkulls,
   } = useBeastSkullRewards(selectedAuctionBeastData);
+
+  // Check if selected auction contains any top summit beasts
+  const auctionSummitBeasts = useMemo(() => {
+    if (!selectedAuctionNfts.length || !summitTopBeasts.length) return [];
+
+    const matches: Array<{ nftTokenId: number; summitBeast: SummitBeast }> = [];
+
+    for (const nft of selectedAuctionNfts) {
+      // Parse token ID
+      const tokenId = nft.tokenId.startsWith("0x")
+        ? parseInt(nft.tokenId, 16)
+        : parseInt(nft.tokenId);
+
+      // Get NFT attributes
+      const prefix = nft.attributes.find(a => a.trait_type === "Prefix")?.value;
+      const suffix = nft.attributes.find(a => a.trait_type === "Suffix")?.value;
+      const beastName = nft.attributes.find(a => a.trait_type === "Beast")?.value;
+
+      const match = findMatchingSummitBeast(prefix, suffix, beastName, tokenId, summitTopBeasts);
+      if (match) {
+        matches.push({ nftTokenId: tokenId, summitBeast: match });
+      }
+    }
+
+    return matches;
+  }, [selectedAuctionNfts, summitTopBeasts]);
 
   const isValidPrice = useCallback((price: number | null): boolean => {
     if (price === null) return false;
@@ -1932,6 +1998,24 @@ export default function Bids({
                     <InfoTooltip content="SKULL tokens can be claimed from beasts that have killed adventurers in Loot Survivor. These unclaimed tokens transfer with the NFTs." />
                   </div>
                 )}
+                {/* Summit Leaderboard Beast Indicator */}
+                {auctionSummitBeasts.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs leading-relaxed">
+                    <span className="px-2 py-1 rounded-full bg-[rgb(255,215,0)]/20 border border-[rgb(255,215,0)]/40 text-[rgb(255,215,0)] font-orbitron uppercase tracking-wider flex items-center gap-1.5">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                      </svg>
+                      Summit Top {Math.min(...auctionSummitBeasts.map(m => m.summitBeast.rank))}
+                    </span>
+                    <InfoTooltip
+                      content={
+                        auctionSummitBeasts.length === 1
+                          ? `Contains ${auctionSummitBeasts[0].summitBeast.fullName} - Rank #${auctionSummitBeasts[0].summitBeast.rank} on Summit with ${auctionSummitBeasts[0].summitBeast.blocksHeld.toLocaleString()} blocks held`
+                          : `Contains ${auctionSummitBeasts.length} Summit leaderboard beasts: ${auctionSummitBeasts.map(m => `${m.summitBeast.fullName} (#${m.summitBeast.rank})`).join(", ")}`
+                      }
+                    />
+                  </div>
+                )}
                 {(() => {
                   const statusNum = parseInt(selectedCollection.status);
                   const formatTime = (timestamp: string) => {
@@ -2674,7 +2758,7 @@ export default function Bids({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-      <Filters token={token} filters={filters} onFiltersChange={setFilters} />
+      <Filters token={token} filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
       {renderContent()}
 
       <BeastDetailModal

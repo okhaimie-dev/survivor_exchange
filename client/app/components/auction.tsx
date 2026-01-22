@@ -11,6 +11,7 @@ import { applyFiltersToNFTs } from "../lib/filter-utils";
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, MAX_AUCTION_NFT_SELECTION } from "../lib/constants";
 import { fetchTokens } from "@avnu/avnu-sdk";
 import { normalizeContractAddress } from "../lib/utils/normalization";
+import { useSummitLeaderboard, findMatchingSummitBeast } from "../hooks/use-summit-leaderboard";
 
 interface AuctionProps {
     nfts: FormattedNFT[];
@@ -62,7 +63,27 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         animated: "",
         priceSort: "",
         tokenIdSort: "",
+        summitTop15: "",
     });
+
+    // Fetch top 15 summit beasts
+    const { topBeasts: summitTopBeasts } = useSummitLeaderboard(15);
+
+    // Helper to check if an NFT matches any summit top 15 beast (by prefix+suffix or token ID)
+    const nftMatchesSummitBeast = useCallback((nft: FormattedNFT) => {
+        if (!summitTopBeasts.length) return false;
+
+        // Get NFT attributes for name matching
+        const nftPrefix = nft.attributes?.find(a => a.trait_type === "Prefix")?.value;
+        const nftSuffix = nft.attributes?.find(a => a.trait_type === "Suffix")?.value;
+        const nftBeastName = nft.beastName;
+        const nftTokenId = nft.tokenId.startsWith("0x") || nft.tokenId.startsWith("0X")
+            ? parseInt(nft.tokenId, 16)
+            : parseInt(nft.tokenId);
+
+        // Use the findMatchingSummitBeast function which checks token ID and prefix+suffix
+        return findMatchingSummitBeast(nftPrefix, nftSuffix, nftBeastName, nftTokenId, summitTopBeasts) !== null;
+    }, [summitTopBeasts]);
 
     const toggleCardSelection = useCallback((nftId: string) => {
         setSelectedNFTIds((previouslySelected) => {
@@ -79,8 +100,18 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
     }, []);
 
     const filteredNFTs = useMemo(() => {
-        return applyFiltersToNFTs(nfts, filters);
-    }, [nfts, filters]);
+        let result = applyFiltersToNFTs(nfts, filters);
+
+        // Apply summit top 15 filter - matches by name (prefix + suffix + beast) or token ID
+        if (filters.summitTop15) {
+            if (summitTopBeasts.length === 0) {
+                return [];
+            }
+            result = result.filter(nft => nftMatchesSummitBeast(nft));
+        }
+
+        return result;
+    }, [nfts, filters, summitTopBeasts, nftMatchesSummitBeast]);
 
     const selectAll = useCallback(() => {
         const ids = filteredNFTs.slice(0, MAX_AUCTION_NFT_SELECTION).map(nft => nft.tokenId);
@@ -122,6 +153,12 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         };
         loadLogos();
     }, []);
+
+    // Count how many of user's NFTs are top 15 summit beasts (by name or token ID)
+    const summitListedCount = useMemo(() => {
+        if (summitTopBeasts.length === 0) return 0;
+        return nfts.filter(nft => nftMatchesSummitBeast(nft)).length;
+    }, [nfts, summitTopBeasts, nftMatchesSummitBeast]);
 
     const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredNFTs.length / DEFAULT_PAGE_SIZE)), [filteredNFTs.length]);
 
@@ -577,7 +614,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     return (
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
-            <Filters filters={filters} onFiltersChange={setFilters} />
+            <Filters filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
             {renderContent()}
         </div>
     );

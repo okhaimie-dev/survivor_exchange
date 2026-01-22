@@ -18,15 +18,17 @@ export interface FilterState {
     animated: string;
     priceSort: string;
     tokenIdSort: string;
+    summitTop15: string;
 }
 
 interface FiltersProps {
     token?: string | null;
     filters: FilterState;
     onFiltersChange: (filters: FilterState) => void;
+    summitListedCount?: number;
 }
 
-export default function Filters({ token, filters, onFiltersChange }: FiltersProps) {
+export default function Filters({ token, filters, onFiltersChange, summitListedCount = 0 }: FiltersProps) {
     const [isExpanded, setIsExpanded] = useState(false);
 
     const updateFilter = useCallback((key: keyof FilterState, value: string) => {
@@ -50,6 +52,7 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
             animated: "",
             priceSort: "",
             tokenIdSort: "",
+            summitTop15: "",
         });
     }, [onFiltersChange]);
 
@@ -72,6 +75,36 @@ export default function Filters({ token, filters, onFiltersChange }: FiltersProp
                     className="flex-1 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
                 />
                 <div className="flex items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (filters.summitTop15) {
+                                onFiltersChange({ ...filters, summitTop15: "" });
+                            } else {
+                                onFiltersChange({ ...filters, summitTop15: "true" });
+                            }
+                        }}
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-orbitron uppercase tracking-[0.12em] transition whitespace-nowrap ${
+                            filters.summitTop15
+                                ? "border border-[rgb(255,215,0)] bg-[rgb(255,215,0)]/20 text-[rgb(255,215,0)]"
+                                : "border border-[rgb(255,215,0)]/40 bg-[rgb(255,215,0)]/10 text-[rgb(255,215,0)]/80 hover:bg-[rgb(255,215,0)]/20 hover:text-[rgb(255,215,0)]"
+                        }`}
+                        title="Show auctions containing Summit Top 15 beasts"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M5 16L3 5L8.5 10L12 4L15.5 10L21 5L19 16H5M19 19C19 19.6 18.6 20 18 20H6C5.4 20 5 19.6 5 19V18H19V19Z" />
+                        </svg>
+                        <span>Summit</span>
+                        {summitListedCount > 0 && (
+                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${
+                                filters.summitTop15
+                                    ? "bg-[rgb(255,215,0)] text-black"
+                                    : "bg-[rgb(255,215,0)]/30 text-[rgb(255,215,0)]"
+                            }`}>
+                                {summitListedCount}
+                            </span>
+                        )}
+                    </button>
                     <button
                         type="button"
                         onClick={() => setIsExpanded(!isExpanded)}

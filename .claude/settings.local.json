@@ -9,7 +9,14 @@
       "Bash(agent-browser exec \"JSON.stringify\\(console._logs || []\\)\")",
       "Bash(curl:*)",
       "Bash(python3:*)",
-      "Skill(agent-browser)"
+      "Skill(agent-browser)",
+      "Bash(agent-browser eval \"document.body.innerText.includes\\(''Unclaimed''\\)\")",
+      "Bash(agent-browser wait:*)",
+      "Bash(agent-browser eval \"document.querySelector\\(''button''\\)?.click\\(\\)\")",
+      "Bash(agent-browser console)",
+      "Bash(agent-browser eval:*)",
+      "Bash(agent-browser reload:*)",
+      "Bash(agent-browser:*)"
     ]
   }
 }
