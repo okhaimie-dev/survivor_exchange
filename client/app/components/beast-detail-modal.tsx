@@ -28,11 +28,14 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
   const tierNum = typeof tier === 'string' ? parseInt(tier) || 5 : tier;
   const rankNum = typeof rank === 'string' ? parseInt(rank) || 0 : rank;
 
-  // Calculate combat rating from stats (power + health + level bonus)
-  const combatRating = Math.round(powerNum + healthNum + (levelNum * 5));
+  // Calculate combat power using tier multiplier from Loot Survivor mechanics
+  // Formula: (Level × (6 - Tier)) + Power + Health
+  const tierMultiplier = 6 - tierNum;
+  const levelPower = levelNum * tierMultiplier;
+  const combatRating = Math.round(levelPower + powerNum + healthNum);
 
-  // Max rating for the gauge (adjust based on game mechanics)
-  const maxRating = 800;
+  // Max rating for the gauge (T1 Level 50 beast with max stats ~250+200+300 = 750)
+  const maxRating = 750;
 
   // Color and label based on ACTUAL TIER (from Loot Survivor game)
   // T1 = Legendary (Orange), T2 = Epic (Purple), T3 = Rare (Blue), T4 = Uncommon (Green), T5 = Common (White)
@@ -187,14 +190,17 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
         {/* Hover tooltip */}
         {isHovered && (
           <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full bg-black/95 border border-[rgb(50,255,52)]/40 rounded-lg px-3 py-2 text-xs whitespace-nowrap z-50">
-            <div className="text-[rgb(186,255,188)]/70 mb-1">Combat Power:</div>
+            <div className="text-[rgb(186,255,188)]/70 mb-1">Combat Power Formula:</div>
             <div className="text-white">
-              Power ({powerNum}) + Health ({healthNum}) + Level×5 ({levelNum * 5})
+              Level×(6-Tier) + Power + Health
             </div>
-            <div className="mt-1" style={{ color: color.main }}>= {combatRating} CP</div>
-            <div className="text-[rgb(186,255,188)]/50 mt-1 text-[10px]">
-              Tier {tierNum} = {label}
+            <div className="text-[rgb(186,255,188)]/50 mt-1">
+              {levelNum}×{tierMultiplier} + {powerNum} + {healthNum}
             </div>
+            <div className="text-white">
+              = {levelPower} + {powerNum} + {healthNum}
+            </div>
+            <div className="mt-1 font-bold" style={{ color: color.main }}>= {combatRating} CP</div>
             {/* Arrow */}
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
               <div className="border-8 border-transparent border-t-[rgb(50,255,52)]/40" />
