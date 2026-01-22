@@ -2010,8 +2010,8 @@ export default function Bids({
                     <InfoTooltip
                       content={
                         auctionSummitBeasts.length === 1
-                          ? `Contains ${auctionSummitBeasts[0].summitBeast.fullName} - Rank #${auctionSummitBeasts[0].summitBeast.rank} on Summit with ${auctionSummitBeasts[0].summitBeast.blocksHeld.toLocaleString()} blocks held`
-                          : `Contains ${auctionSummitBeasts.length} Summit leaderboard beasts: ${auctionSummitBeasts.map(m => `${m.summitBeast.fullName} (#${m.summitBeast.rank})`).join(", ")}`
+                          ? `"${auctionSummitBeasts[0].summitBeast.prefix} ${auctionSummitBeasts[0].summitBeast.suffix}" - #${auctionSummitBeasts[0].summitBeast.rank}`
+                          : `Contains ${auctionSummitBeasts.length} Top 15 Summit names: ${auctionSummitBeasts.map(m => `"${m.summitBeast.prefix} ${m.summitBeast.suffix}" (#${m.summitBeast.rank})`).join(", ")}`
                       }
                     />
                   </div>
