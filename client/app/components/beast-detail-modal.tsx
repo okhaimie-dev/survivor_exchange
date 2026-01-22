@@ -5,6 +5,250 @@ import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
 
+// Combat Rating Gauge Component
+interface CombatRatingGaugeProps {
+  power: number | string;
+  health: number | string;
+  level: number | string;
+  tier: number | string;
+  type: string;
+  rank: number | string;
+  isVisible: boolean;
+}
+
+function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }: CombatRatingGaugeProps) {
+  const [animatedRating, setAnimatedRating] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const [hoveredStat, setHoveredStat] = useState<string | null>(null);
+
+  // Parse values
+  const powerNum = typeof power === 'string' ? parseInt(power) || 0 : power;
+  const healthNum = typeof health === 'string' ? parseInt(health) || 0 : health;
+  const levelNum = typeof level === 'string' ? parseInt(level) || 0 : level;
+  const tierNum = typeof tier === 'string' ? parseInt(tier) || 5 : tier;
+  const rankNum = typeof rank === 'string' ? parseInt(rank) || 0 : rank;
+
+  // Calculate combat rating from stats (power + health + level bonus)
+  const combatRating = Math.round(powerNum + healthNum + (levelNum * 5));
+
+  // Max rating for the gauge (adjust based on game mechanics)
+  const maxRating = 800;
+
+  // Color and label based on ACTUAL TIER (from Loot Survivor game)
+  // T1 = Legendary (Orange), T2 = Epic (Purple), T3 = Rare (Blue), T4 = Uncommon (Green), T5 = Common (White)
+  const getTierInfo = (tier: number) => {
+    switch (tier) {
+      case 1:
+        return {
+          label: 'LEGENDARY',
+          color: { main: 'rgb(255, 165, 0)', glow: 'rgba(255, 165, 0, 0.5)' }, // Orange
+        };
+      case 2:
+        return {
+          label: 'EPIC',
+          color: { main: 'rgb(186, 85, 255)', glow: 'rgba(186, 85, 255, 0.5)' }, // Purple
+        };
+      case 3:
+        return {
+          label: 'RARE',
+          color: { main: 'rgb(100, 180, 255)', glow: 'rgba(100, 180, 255, 0.5)' }, // Blue
+        };
+      case 4:
+        return {
+          label: 'UNCOMMON',
+          color: { main: 'rgb(50, 255, 52)', glow: 'rgba(50, 255, 52, 0.5)' }, // Green
+        };
+      case 5:
+      default:
+        return {
+          label: 'COMMON',
+          color: { main: 'rgb(200, 200, 200)', glow: 'rgba(200, 200, 200, 0.5)' }, // White/Gray
+        };
+    }
+  };
+
+  const tierInfo = getTierInfo(tierNum);
+  const color = tierInfo.color;
+  const label = tierInfo.label;
+
+  // Animate rating on mount
+  useEffect(() => {
+    if (!isVisible) {
+      setAnimatedRating(0);
+      return;
+    }
+
+    const duration = 1500;
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setAnimatedRating(Math.round(combatRating * eased));
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [isVisible, combatRating]);
+
+  // SVG arc calculations
+  const size = 180;
+  const strokeWidth = 12;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * Math.PI; // Half circle
+  const animatedPercent = (animatedRating / maxRating) * 100;
+  const strokeDashoffset = circumference - (circumference * Math.min(animatedPercent, 100)) / 100;
+
+  const stats = [
+    { key: 'power', label: 'PWR', value: powerNum, icon: '⚡', color: 'rgb(50, 255, 52)' },
+    { key: 'health', label: 'HP', value: healthNum, icon: '❤️', color: 'rgb(255, 100, 100)' },
+    { key: 'level', label: 'LVL', value: levelNum, icon: '📊', color: 'rgb(100, 200, 255)' },
+  ];
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {/* Main Gauge */}
+      <div
+        className="relative cursor-pointer"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <svg width={size} height={size / 2 + 30} viewBox={`0 0 ${size} ${size / 2 + 30}`}>
+          {/* Background arc */}
+          <path
+            d={`M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`}
+            fill="none"
+            stroke="rgba(50, 255, 52, 0.1)"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+
+          {/* Animated arc */}
+          <path
+            d={`M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`}
+            fill="none"
+            stroke={color.main}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeDashoffset}
+            style={{
+              transition: 'stroke-dashoffset 0.1s ease-out',
+              filter: `drop-shadow(0 0 8px ${color.glow})`,
+            }}
+          />
+
+          {/* Tick marks */}
+          {[0, 25, 50, 75, 100].map((tick, i) => {
+            const angle = Math.PI - (tick / 100) * Math.PI;
+            const x1 = size / 2 + (radius - 20) * Math.cos(angle);
+            const y1 = size / 2 - (radius - 20) * Math.sin(angle);
+            const x2 = size / 2 + (radius - 12) * Math.cos(angle);
+            const y2 = size / 2 - (radius - 12) * Math.sin(angle);
+            return (
+              <line
+                key={i}
+                x1={x1} y1={y1} x2={x2} y2={y2}
+                stroke="rgba(186, 255, 188, 0.3)"
+                strokeWidth={2}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Center content */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingTop: '10px' }}>
+          <span
+            className="text-4xl font-bold font-orbitron"
+            style={{ color: color.main, textShadow: `0 0 20px ${color.glow}` }}
+          >
+            {animatedRating}
+          </span>
+          <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
+            Combat Power
+          </span>
+          <span
+            className="text-xs font-orbitron uppercase tracking-wider mt-1 px-2 py-0.5 rounded"
+            style={{
+              color: color.main,
+              backgroundColor: `${color.main}20`,
+              border: `1px solid ${color.main}40`
+            }}
+          >
+            {label}
+          </span>
+        </div>
+
+        {/* Hover tooltip */}
+        {isHovered && (
+          <div className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full bg-black/95 border border-[rgb(50,255,52)]/40 rounded-lg px-3 py-2 text-xs whitespace-nowrap z-50">
+            <div className="text-[rgb(186,255,188)]/70 mb-1">Combat Power:</div>
+            <div className="text-white">
+              Power ({powerNum}) + Health ({healthNum}) + Level×5 ({levelNum * 5})
+            </div>
+            <div className="mt-1" style={{ color: color.main }}>= {combatRating} CP</div>
+            <div className="text-[rgb(186,255,188)]/50 mt-1 text-[10px]">
+              Tier {tierNum} = {label}
+            </div>
+            {/* Arrow */}
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
+              <div className="border-8 border-transparent border-t-[rgb(50,255,52)]/40" />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Stat breakdown */}
+      <div className="flex gap-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.key}
+            className="flex flex-col items-center cursor-pointer transition-transform hover:scale-110"
+            onMouseEnter={() => setHoveredStat(stat.key)}
+            onMouseLeave={() => setHoveredStat(null)}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center text-lg border-2 transition-all"
+              style={{
+                borderColor: hoveredStat === stat.key ? stat.color : 'rgba(50, 255, 52, 0.3)',
+                backgroundColor: hoveredStat === stat.key ? `${stat.color}20` : 'rgba(50, 255, 52, 0.05)',
+                boxShadow: hoveredStat === stat.key ? `0 0 15px ${stat.color}50` : 'none',
+              }}
+            >
+              <span className="text-base">{stat.icon}</span>
+            </div>
+            <span
+              className="text-sm font-bold mt-1"
+              style={{ color: stat.color }}
+            >
+              {stat.value}
+            </span>
+            <span className="text-[9px] text-[rgb(186,255,188)]/50 uppercase">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Tier & Type badges */}
+      <div className="flex gap-2 mt-1">
+        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(255,215,0)]/10 text-[rgb(255,215,0)] border border-[rgb(255,215,0)]/30">
+          Tier {tierNum}
+        </span>
+        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/30">
+          {type}
+        </span>
+        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(186,85,255)]/10 text-[rgb(186,85,255)] border border-[rgb(186,85,255)]/30">
+          #{rankNum}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Idle animation styles - injected once
 const idleAnimationStyles = `
 @keyframes beastIdle {
@@ -33,6 +277,44 @@ const idleAnimationStyles = `
 
 .beast-card-glow {
   animation: glowPulse 3s ease-in-out infinite;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.flip-card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.flip-card-front {
+  position: relative;
+  width: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-card-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
 }
 `;
 
@@ -304,6 +586,14 @@ export default function BeastDetailModal({
   // Click particles effect - must be called before any early returns
   const { createParticles, ParticleLayer } = useClickParticles(isOpen);
 
+  // Flip card state - must be called before any early returns
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  // Reset flip state when navigating or closing
+  useEffect(() => {
+    setIsFlipped(false);
+  }, [currentIndex, isOpen]);
+
   if (!isOpen || !currentNft) return null;
 
   const imageSrc = currentNft.metadata?.image
@@ -394,51 +684,112 @@ export default function BeastDetailModal({
 
         {/* Content */}
         <div className="flex flex-col md:flex-row gap-6 p-6">
-          {/* Beast Image with 3D Tilt Effect */}
-          <div className="flex-shrink-0 flex items-center justify-center">
+          {/* Beast Image with 3D Tilt Effect and Flip */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-start gap-2">
             <div
               ref={tiltRef}
-              className="relative rounded-xl overflow-hidden cursor-pointer border-2 border-[rgb(50,255,52)]/40 beast-card-glow"
+              className="relative rounded-xl cursor-pointer border-2 border-[rgb(50,255,52)]/40 beast-card-glow"
               style={{
                 ...tiltStyle,
                 transformStyle: "preserve-3d",
+                width: "280px",
               }}
               onClick={createParticles}
+              onDoubleClick={() => setIsFlipped(!isFlipped)}
             >
-              {/* Click particles layer */}
-              <ParticleLayer />
-              {/* Holographic glare overlay */}
-              <div
-                className="absolute inset-0 z-10 pointer-events-none rounded-xl transition-opacity duration-200"
-                style={{
-                  ...glareStyle,
-                  mixBlendMode: "overlay",
-                }}
-              />
-              {/* Shine effect on edges */}
-              <div
-                className="absolute inset-0 z-10 pointer-events-none rounded-xl"
-                style={{
-                  background: "linear-gradient(135deg, rgba(50,255,52,0.1) 0%, transparent 50%, rgba(50,255,52,0.05) 100%)",
-                }}
-              />
-              {isBase64 ? (
-                <img
-                  src={imageSrc}
-                  alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                  className="max-w-[280px] md:max-w-[320px] h-auto block beast-idle-animation"
-                />
-              ) : (
-                <Image
-                  src={imageSrc}
-                  alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                  width={320}
-                  height={400}
-                  className="max-w-[280px] md:max-w-[320px] h-auto block beast-idle-animation"
-                  unoptimized
-                />
-              )}
+              {/* Flip card inner container */}
+              <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
+                {/* Front face - Beast Image */}
+                <div className="flip-card-front rounded-xl overflow-hidden">
+                  {/* Click particles layer */}
+                  <ParticleLayer />
+                  {/* Holographic glare overlay */}
+                  <div
+                    className="absolute inset-0 z-10 pointer-events-none rounded-xl transition-opacity duration-200"
+                    style={{
+                      ...glareStyle,
+                      mixBlendMode: "overlay",
+                    }}
+                  />
+                  {/* Shine effect on edges */}
+                  <div
+                    className="absolute inset-0 z-10 pointer-events-none rounded-xl"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(50,255,52,0.1) 0%, transparent 50%, rgba(50,255,52,0.05) 100%)",
+                    }}
+                  />
+                  {isBase64 ? (
+                    <img
+                      src={imageSrc}
+                      alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
+                      className="w-full h-auto beast-idle-animation"
+                    />
+                  ) : (
+                    <Image
+                      src={imageSrc}
+                      alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
+                      width={280}
+                      height={400}
+                      className="w-full h-auto beast-idle-animation"
+                      unoptimized
+                    />
+                  )}
+                </div>
+
+                {/* Back face - Lore (Coming Soon) */}
+                <div className="flip-card-back rounded-xl overflow-hidden bg-gradient-to-br from-black via-[rgb(10,30,10)] to-black border-2 border-[rgb(50,255,52)]/40 flex flex-col items-center justify-center p-6">
+                  {/* Decorative corner elements */}
+                  <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-[rgb(50,255,52)]/50" />
+                  <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-[rgb(50,255,52)]/50" />
+                  <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-[rgb(50,255,52)]/50" />
+                  <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-[rgb(50,255,52)]/50" />
+
+                  {/* Beast silhouette icon */}
+                  <div className="mb-4 opacity-30">
+                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgb(50, 255, 52)" strokeWidth="1">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                      <circle cx="9" cy="10" r="1.5" fill="rgb(50, 255, 52)" />
+                      <circle cx="15" cy="10" r="1.5" fill="rgb(50, 255, 52)" />
+                    </svg>
+                  </div>
+
+                  <h3 className="text-xl font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] mb-2">
+                    Beast Lore
+                  </h3>
+                  <p className="text-[rgb(186,255,188)]/60 text-sm text-center font-mono">
+                    Coming Soon
+                  </p>
+                  <p className="text-[rgb(186,255,188)]/40 text-xs text-center mt-4 max-w-[200px]">
+                    Discover the ancient origins and legendary tales of this beast
+                  </p>
+
+                  {/* Animated scan line */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: "linear-gradient(transparent 0%, rgba(50,255,52,0.03) 50%, transparent 100%)",
+                      animation: "scanline 3s linear infinite",
+                    }}
+                  />
+                </div>
+              </div>
             </div>
+
+            {/* Flip button */}
+            <button
+              onClick={() => setIsFlipped(!isFlipped)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all text-xs font-orbitron uppercase tracking-wider"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M3 21v-5h5" />
+              </svg>
+              {isFlipped ? "View Beast" : "View Lore"}
+            </button>
+            <span className="text-[10px] text-[rgb(186,255,188)]/40">or double-click card</span>
           </div>
 
           {/* Stats */}
@@ -459,48 +810,16 @@ export default function BeastDetailModal({
               </p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Tier
-                </span>
-                <span className="text-xl font-bold text-white">{tier}</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Level
-                </span>
-                <span className="text-xl font-bold text-white">{level}</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Type
-                </span>
-                <span className="text-base font-bold text-white truncate max-w-full">{beastType}</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Power
-                </span>
-                <span className="text-xl font-bold text-[rgb(50,255,52)]">{power}</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Health
-                </span>
-                <span className="text-xl font-bold text-[rgb(255,100,100)]">{health}</span>
-              </div>
-              <div className="flex flex-col items-center p-2 rounded-xl border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 min-w-0">
-                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                  Rank
-                </span>
-                <span className="text-xl font-bold text-[rgb(255,215,0)]">{rank}</span>
-              </div>
-            </div>
+            {/* Combat Rating Gauge */}
+            <CombatRatingGauge
+              power={power}
+              health={health}
+              level={level}
+              tier={tier}
+              type={beastType}
+              rank={rank}
+              isVisible={isOpen}
+            />
 
             {/* Special Badges - Shiny, Animated, Genesis */}
             {currentNft.attributes && currentNft.attributes.length > 0 && (() => {
