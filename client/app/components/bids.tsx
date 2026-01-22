@@ -293,6 +293,7 @@ export default function Bids({
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [, setCopiedTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [imageStatus, setImageStatus] = useState<'idle' | 'loading' | 'copied' | 'downloaded'>('idle');
   const [isBeastModalOpen, setIsBeastModalOpen] = useState(false);
   const [selectedBeastIndex, setSelectedBeastIndex] = useState(0);
   const [tokenBalances, setTokenBalances] = useState<
@@ -1955,7 +1956,7 @@ export default function Bids({
                       </div>
                       {/* Hint text for discoverability */}
                       <p className="text-[10px] text-center text-[rgb(186,255,188)]/50 mt-2 font-orbitron uppercase tracking-wider">
-                        {nfts.length === 1 ? "Click to view details" : "Click any beast to view details"}
+                        {nfts.length === 1 ? "Click beast to view details" : "Click any beast to view details"}
                       </p>
                     </div>
                   );
@@ -2236,21 +2237,69 @@ export default function Bids({
                   );
                 })()}
 
-                <p
-                  className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]"
-                  onClick={() => {
-                    const collectionLink = `${window.location.origin}/?token=${selectedCollection.id}`;
-                    navigator.clipboard.writeText(collectionLink);
-                    setCopied(true);
-                    setCopiedTimeout(
-                      setTimeout(() => {
-                        setCopied(false);
-                      }, 2000),
-                    );
-                  }}
-                >
-                  {copied ? "Copied!" : "🔗 Copy Collection Link"}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p
+                    className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]"
+                    onClick={() => {
+                      const collectionLink = `${window.location.origin}/auction/${selectedCollection.id}`;
+                      navigator.clipboard.writeText(collectionLink);
+                      setCopied(true);
+                      setCopiedTimeout(
+                        setTimeout(() => {
+                          setCopied(false);
+                        }, 2000),
+                      );
+                    }}
+                  >
+                    {copied ? "Copied!" : "🔗 Copy Link"}
+                  </p>
+                  <span className="text-[rgb(186,255,188)]/30">|</span>
+                  <p
+                    className="text-xs leading-relaxed text-[rgb(186,255,188)]/70 hover:cursor-pointer hover:text-[rgb(50,255,52)]"
+                    onClick={async () => {
+                      setImageStatus('loading');
+                      try {
+                        const imageUrl = `${window.location.origin}/api/og/auction/${selectedCollection.id}`;
+                        const response = await fetch(imageUrl);
+                        const blob = await response.blob();
+
+                        // Try to copy to clipboard first (modern browsers)
+                        if (navigator.clipboard && 'write' in navigator.clipboard) {
+                          try {
+                            await navigator.clipboard.write([
+                              new ClipboardItem({ 'image/png': blob })
+                            ]);
+                            setImageStatus('copied');
+                            setTimeout(() => setImageStatus('idle'), 2000);
+                            return;
+                          } catch {
+                            // Fall through to download
+                          }
+                        }
+
+                        // Fallback: download the image
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `auction-${selectedCollection.id}.png`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                        setImageStatus('downloaded');
+                        setTimeout(() => setImageStatus('idle'), 2000);
+                      } catch (error) {
+                        console.error('Failed to share image:', error);
+                        setImageStatus('idle');
+                      }
+                    }}
+                  >
+                    {imageStatus === 'loading' ? '⏳ Loading...' :
+                     imageStatus === 'copied' ? '✓ Copied!' :
+                     imageStatus === 'downloaded' ? '✓ Downloaded!' :
+                     '📷 Share Image'}
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-col gap-4 md:gap-6">

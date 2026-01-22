@@ -21,13 +21,26 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Loot Auction</title>
+        <title>Survivor Exchange - Beast Auctions</title>
         <meta
           name="description"
-          content="Loot Auction is a platform for auctioning and bidding on monsters from the game 'Loot survivor'"
+          content="Survivor Exchange is a marketplace for auctioning and bidding on Beasts from Loot Survivor"
         />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/logo.png" />
+
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Survivor Exchange" />
+        <meta property="og:title" content="Survivor Exchange - Beast Auctions" />
+        <meta property="og:description" content="Marketplace for auctioning and bidding on Beasts from Loot Survivor" />
+        <meta property="og:image" content="/og-default.png" />
+
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Survivor Exchange - Beast Auctions" />
+        <meta name="twitter:description" content="Marketplace for auctioning and bidding on Beasts from Loot Survivor" />
+        <meta name="twitter:image" content="/og-default.png" />
       </head>
       <body
         className={`${orbitron.variable} ${GeistMono.variable} antialiased bg-black`}
