@@ -282,6 +282,7 @@ export default function Bids({
     collections[0]?.id ?? "",
   );
   const [bidAmountToken, setBidAmountToken] = useState<string>("");
+  const [bidInputHighlight, setBidInputHighlight] = useState(false);
   const [paymentToken, setPaymentToken] = useState(USDC_ADDRESS);
   const [tokenLogos, setTokenLogos] = useState<Record<string, string>>({});
   const [, setConvertedStartingPrice] = useState<number>(0);
@@ -2327,8 +2328,10 @@ export default function Bids({
                             const reservePrice = selectedCollection.startingPrice / 1e6;
                             const minBid = (reservePrice * 1.02).toFixed(2);
                             setBidAmountToken(minBid);
+                            setBidInputHighlight(true);
+                            setTimeout(() => setBidInputHighlight(false), 1000);
                           }}
-                          className="flex flex-col items-center justify-center py-4 px-2 rounded-lg bg-black/30 border border-dashed border-[rgb(50,255,52)]/30 hover:bg-[rgb(50,255,52)]/10 hover:border-[rgb(50,255,52)]/50 transition-all cursor-pointer w-full"
+                          className="flex flex-col items-center justify-center py-4 px-2 rounded-lg bg-black/30 border border-dashed border-[rgb(50,255,52)]/40 hover:bg-[rgb(50,255,52)]/10 hover:border-[rgb(50,255,52)]/60 transition-all cursor-pointer w-full animate-pulse-glow"
                         >
                           <svg
                             width="24"
@@ -2522,7 +2525,7 @@ export default function Bids({
                             });
                         }
                       }}
-                      className="w-full md:w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      className={`w-full md:w-40 rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${bidInputHighlight ? "animate-attention-flash" : ""}`}
                     />
                     {(() => {
                       const hasHighestBid = selectedCollection.highestBid !== undefined && selectedCollection.highestBid > 0;
