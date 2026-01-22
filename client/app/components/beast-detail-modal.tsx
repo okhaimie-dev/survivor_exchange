@@ -1,9 +1,77 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
+
+// Custom hook for 3D tilt effect
+function useTilt(intensity: number = 15, enabled: boolean = true) {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  const [style, setStyle] = useState({
+    transform: "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
+    transition: "transform 0.1s ease-out",
+  });
+  const [glareStyle, setGlareStyle] = useState({
+    background: "transparent",
+    opacity: 0,
+  });
+
+  // Use callback ref to track when element is attached
+  const ref = useCallback((node: HTMLDivElement | null) => {
+    setElement(node);
+  }, []);
+
+  useEffect(() => {
+    if (!element || !enabled) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = element.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+
+      const rotateX = ((y - centerY) / centerY) * -intensity;
+      const rotateY = ((x - centerX) / centerX) * intensity;
+
+      // Calculate glare position
+      const glareX = (x / rect.width) * 100;
+      const glareY = (y / rect.height) * 100;
+
+      setStyle({
+        transform: `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`,
+        transition: "transform 0.1s ease-out",
+      });
+
+      setGlareStyle({
+        background: `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 30%, transparent 60%)`,
+        opacity: 1,
+      });
+    };
+
+    const handleMouseLeave = () => {
+      setStyle({
+        transform: "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)",
+        transition: "transform 0.3s ease-out",
+      });
+      setGlareStyle({
+        background: "transparent",
+        opacity: 0,
+      });
+    };
+
+    element.addEventListener("mousemove", handleMouseMove);
+    element.addEventListener("mouseleave", handleMouseLeave);
+
+    return () => {
+      element.removeEventListener("mousemove", handleMouseMove);
+      element.removeEventListener("mouseleave", handleMouseLeave);
+    };
+  }, [element, enabled, intensity]);
+
+  return { ref, style, glareStyle };
+}
 
 interface BeastDetailModalProps {
   isOpen: boolean;
@@ -85,6 +153,9 @@ export default function BeastDetailModal({
       onNavigate(currentIndex + 1);
     }
   }, [currentIndex, nfts.length, onNavigate]);
+
+  // 3D Tilt effect for the beast card - must be called before any early returns
+  const { ref: tiltRef, style: tiltStyle, glareStyle } = useTilt(20, isOpen);
 
   if (!isOpen || !currentNft) return null;
 
@@ -176,21 +247,44 @@ export default function BeastDetailModal({
 
         {/* Content */}
         <div className="flex flex-col md:flex-row gap-6 p-6">
-          {/* Beast Image */}
+          {/* Beast Image with 3D Tilt Effect */}
           <div className="flex-shrink-0 flex items-center justify-center">
-            <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-xl overflow-hidden">
+            <div
+              ref={tiltRef}
+              className="relative rounded-xl overflow-hidden cursor-pointer border-2 border-[rgb(50,255,52)]/40 shadow-[0_0_30px_rgba(50,255,52,0.3)]"
+              style={{
+                ...tiltStyle,
+                transformStyle: "preserve-3d",
+              }}
+            >
+              {/* Holographic glare overlay */}
+              <div
+                className="absolute inset-0 z-10 pointer-events-none rounded-xl transition-opacity duration-200"
+                style={{
+                  ...glareStyle,
+                  mixBlendMode: "overlay",
+                }}
+              />
+              {/* Shine effect on edges */}
+              <div
+                className="absolute inset-0 z-10 pointer-events-none rounded-xl"
+                style={{
+                  background: "linear-gradient(135deg, rgba(50,255,52,0.1) 0%, transparent 50%, rgba(50,255,52,0.05) 100%)",
+                }}
+              />
               {isBase64 ? (
                 <img
                   src={imageSrc}
                   alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                  className="w-full h-full object-contain"
+                  className="max-w-[280px] md:max-w-[320px] h-auto block"
                 />
               ) : (
                 <Image
                   src={imageSrc}
                   alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                  fill
-                  className="object-contain"
+                  width={320}
+                  height={400}
+                  className="max-w-[280px] md:max-w-[320px] h-auto block"
                   unoptimized
                 />
               )}
