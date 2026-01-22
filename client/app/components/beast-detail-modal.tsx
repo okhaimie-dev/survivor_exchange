@@ -5,6 +5,139 @@ import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
 
+// Idle animation styles - injected once
+const idleAnimationStyles = `
+@keyframes beastIdle {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    filter: drop-shadow(0 0 8px rgba(50, 255, 52, 0.3));
+  }
+  50% {
+    transform: translateY(-6px) scale(1.01);
+    filter: drop-shadow(0 0 15px rgba(50, 255, 52, 0.5));
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(50, 255, 52, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 45px rgba(50, 255, 52, 0.5), 0 0 60px rgba(50, 255, 52, 0.2);
+  }
+}
+
+.beast-idle-animation {
+  animation: beastIdle 3s ease-in-out infinite;
+}
+
+.beast-card-glow {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+`;
+
+// Particle type for click effects
+interface Particle {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  color: string;
+  size: number;
+  life: number;
+}
+
+// Custom hook for click particle effects
+function useClickParticles(enabled: boolean = true) {
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const nextId = useRef(0);
+
+  const createParticles = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!enabled) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      const colors = [
+        "rgb(50, 255, 52)",    // Green
+        "rgb(186, 255, 188)",  // Light green
+        "rgb(255, 215, 0)",    // Gold
+        "rgb(138, 43, 226)",   // Purple
+        "rgb(255, 255, 255)",  // White
+      ];
+
+      const newParticles: Particle[] = [];
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI * 2 * i) / 12 + Math.random() * 0.5;
+        const speed = 3 + Math.random() * 4;
+        newParticles.push({
+          id: nextId.current++,
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: 4 + Math.random() * 6,
+          life: 1,
+        });
+      }
+
+      setParticles((prev) => [...prev, ...newParticles]);
+    },
+    [enabled]
+  );
+
+  // Animate particles
+  useEffect(() => {
+    if (particles.length === 0) return;
+
+    const interval = setInterval(() => {
+      setParticles((prev) =>
+        prev
+          .map((p) => ({
+            ...p,
+            x: p.x + p.vx,
+            y: p.y + p.vy,
+            vy: p.vy + 0.15, // gravity
+            life: p.life - 0.03,
+          }))
+          .filter((p) => p.life > 0)
+      );
+    }, 16);
+
+    return () => clearInterval(interval);
+  }, [particles.length]);
+
+  const ParticleLayer = useCallback(
+    () => (
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-20">
+        {particles.map((p) => (
+          <div
+            key={p.id}
+            className="absolute rounded-full"
+            style={{
+              left: p.x,
+              top: p.y,
+              width: p.size,
+              height: p.size,
+              backgroundColor: p.color,
+              opacity: p.life,
+              transform: "translate(-50%, -50%)",
+              boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
+            }}
+          />
+        ))}
+      </div>
+    ),
+    [particles]
+  );
+
+  return { createParticles, ParticleLayer };
+}
+
 // Custom hook for 3D tilt effect
 function useTilt(intensity: number = 15, enabled: boolean = true) {
   const [element, setElement] = useState<HTMLDivElement | null>(null);
@@ -142,6 +275,17 @@ export default function BeastDetailModal({
     };
   }, [isOpen]);
 
+  // Inject idle animation styles
+  useEffect(() => {
+    const styleId = "beast-idle-animation-styles";
+    if (!document.getElementById(styleId)) {
+      const styleElement = document.createElement("style");
+      styleElement.id = styleId;
+      styleElement.textContent = idleAnimationStyles;
+      document.head.appendChild(styleElement);
+    }
+  }, []);
+
   const handlePrev = useCallback(() => {
     if (currentIndex > 0) {
       onNavigate(currentIndex - 1);
@@ -156,6 +300,9 @@ export default function BeastDetailModal({
 
   // 3D Tilt effect for the beast card - must be called before any early returns
   const { ref: tiltRef, style: tiltStyle, glareStyle } = useTilt(20, isOpen);
+
+  // Click particles effect - must be called before any early returns
+  const { createParticles, ParticleLayer } = useClickParticles(isOpen);
 
   if (!isOpen || !currentNft) return null;
 
@@ -251,12 +398,15 @@ export default function BeastDetailModal({
           <div className="flex-shrink-0 flex items-center justify-center">
             <div
               ref={tiltRef}
-              className="relative rounded-xl overflow-hidden cursor-pointer border-2 border-[rgb(50,255,52)]/40 shadow-[0_0_30px_rgba(50,255,52,0.3)]"
+              className="relative rounded-xl overflow-hidden cursor-pointer border-2 border-[rgb(50,255,52)]/40 beast-card-glow"
               style={{
                 ...tiltStyle,
                 transformStyle: "preserve-3d",
               }}
+              onClick={createParticles}
             >
+              {/* Click particles layer */}
+              <ParticleLayer />
               {/* Holographic glare overlay */}
               <div
                 className="absolute inset-0 z-10 pointer-events-none rounded-xl transition-opacity duration-200"
@@ -276,7 +426,7 @@ export default function BeastDetailModal({
                 <img
                   src={imageSrc}
                   alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                  className="max-w-[280px] md:max-w-[320px] h-auto block"
+                  className="max-w-[280px] md:max-w-[320px] h-auto block beast-idle-animation"
                 />
               ) : (
                 <Image
@@ -284,7 +434,7 @@ export default function BeastDetailModal({
                   alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
                   width={320}
                   height={400}
-                  className="max-w-[280px] md:max-w-[320px] h-auto block"
+                  className="max-w-[280px] md:max-w-[320px] h-auto block beast-idle-animation"
                   unoptimized
                 />
               )}
