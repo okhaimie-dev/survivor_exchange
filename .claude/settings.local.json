@@ -17,7 +17,9 @@
       "Bash(agent-browser eval:*)",
       "Bash(agent-browser reload:*)",
       "Bash(agent-browser:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.provable.games)"
     ]
   }
 }
