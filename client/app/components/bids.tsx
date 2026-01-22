@@ -9,6 +9,7 @@ import BidsSkeleton from "./bids-skeleton";
 import CustomDropdown from "./custom-dropdown";
 import InfoTooltip from "./info-tooltip";
 import BeastDetailModal from "./beast-detail-modal";
+import { useWalletModal } from "../providers/wallet-modal-provider";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
 import { useBeastSkullRewards } from "../hooks/use-beast-skull-rewards";
@@ -116,6 +117,7 @@ export default function Bids({
   const { account, address } = useAccount();
   const explorer = useExplorer();
   const provider = useProvider();
+  const { openWalletModal } = useWalletModal();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txnHash, setTxnHash] = useState<string | undefined>();
   const [insufficientFundsError, setInsufficientFundsError] = useState<
@@ -2385,24 +2387,12 @@ export default function Bids({
                           }}
                           className="flex flex-col items-center justify-center py-4 px-2 rounded-lg bg-black/30 border border-dashed border-[rgb(50,255,52)]/40 hover:bg-[rgb(50,255,52)]/10 hover:border-[rgb(50,255,52)]/60 transition-all cursor-pointer w-full animate-pulse-glow"
                         >
-                          <svg
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="rgb(50,255,52)"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="mb-2 opacity-60"
-                          >
-                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                          </svg>
+                          <span className="text-xl mb-1">🔥</span>
                           <p className="text-[11px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] text-center">
-                            Be the first to bid!
+                            No bids yet — set the price!
                           </p>
                           <p className="text-[9px] text-[rgb(186,255,188)]/50 mt-1 text-center">
-                            Click to bid {formatUSDSmart((selectedCollection.startingPrice / 1e6) * 1.02)}
+                            Start at {formatUSDSmart((selectedCollection.startingPrice / 1e6) * 1.02)}
                           </p>
                         </button>
                       )}
@@ -2698,70 +2688,81 @@ export default function Bids({
                   })()}
                 </div>
 
-                <div className="flex flex-row gap-2 md:gap-3 w-full max-w-full md:max-w-[550px]">
-                  <button
-                    type="button"
-                    onClick={handlePlaceBid}
-                    disabled={
-                      !isBidValid || !account || isSubmitting || isUserSeller
-                    }
-                    className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
-                      isBidValid && account && !isSubmitting && !isUserSeller
-                        ? "border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:cursor-pointer hover:bg-[rgb(50,255,52)] hover:text-black"
-                        : "border border-white/12 text-[rgb(186,255,188)]/45"
-                    }`}
-                  >
-                    <span>{isSubmitting ? "..." : "Place Bid"}</span>
-                    {!isSubmitting && (
-                      <InfoTooltip content="Compete in the auction. Your bid must be higher than the current highest bid. Winner is determined when the auction ends." />
-                    )}
-                  </button>
-                  {!userOffer && (
+                <div className="flex flex-col gap-2 w-full max-w-full md:max-w-[550px]">
+                  <div className="flex flex-row gap-2 md:gap-3 w-full">
                     <button
                       type="button"
-                      onClick={handleMakeOffer}
+                      onClick={handlePlaceBid}
                       disabled={
-                        !isBidValid ||
-                        !account ||
-                        isSubmittingOffer ||
-                        isUserSeller
+                        !isBidValid || !account || isSubmitting || isUserSeller
                       }
                       className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
-                        isBidValid && account && !isSubmittingOffer && !isUserSeller
-                          ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
+                        isBidValid && account && !isSubmitting && !isUserSeller
+                          ? "bg-[rgb(50,255,52)] text-black font-bold hover:cursor-pointer hover:bg-[rgb(40,220,42)] shadow-[0_0_12px_rgba(50,255,52,0.4)]"
                           : "border border-white/12 text-[rgb(186,255,188)]/45"
                       }`}
                     >
-                      <span>{isSubmittingOffer ? "..." : "Make Offer"}</span>
-                      {!isSubmittingOffer && (
-                        <InfoTooltip content="Make a direct buyout offer to the seller. If accepted, the auction ends immediately and you get the NFTs. Your funds are held in escrow until accepted or auction ends." />
+                      <span>{isSubmitting ? "..." : "Place Bid"}</span>
+                      {!isSubmitting && (
+                        <InfoTooltip content="Compete in the auction. Your bid must be higher than the current highest bid. Winner is determined when the auction ends." />
                       )}
                     </button>
+                    {!userOffer && (
+                      <button
+                        type="button"
+                        onClick={handleMakeOffer}
+                        disabled={
+                          !isBidValid ||
+                          !account ||
+                          isSubmittingOffer ||
+                          isUserSeller
+                        }
+                        className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                          isBidValid && account && !isSubmittingOffer && !isUserSeller
+                            ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
+                            : "border border-white/12 text-[rgb(186,255,188)]/45"
+                        }`}
+                      >
+                        <span>{isSubmittingOffer ? "..." : "Make Offer"}</span>
+                        {!isSubmittingOffer && (
+                          <InfoTooltip content="Make a direct buyout offer to the seller. If accepted, the auction ends immediately and you get the NFTs. Your funds are held in escrow until accepted or auction ends." />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSettleAuction}
+                      disabled={
+                        !account ||
+                        isSettling ||
+                        !isAuctionExpired(
+                          selectedCollection.endTime,
+                          selectedCollection.status,
+                        )
+                      }
+                      className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                        account &&
+                        !isSettling &&
+                        isAuctionExpired(
+                          selectedCollection.endTime,
+                          selectedCollection.status,
+                        )
+                          ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black"
+                          : "border border-white/12 text-[rgb(186,255,188)]/45"
+                      }`}
+                    >
+                      {isSettling ? "..." : "Settle"}
+                    </button>
+                  </div>
+                  {!account && (
+                    <button
+                      type="button"
+                      onClick={openWalletModal}
+                      className="text-[10px] md:text-xs text-center text-[rgb(50,255,52)]/80 font-orbitron animate-pulse hover:text-[rgb(50,255,52)] hover:underline cursor-pointer transition-colors"
+                    >
+                      Connect wallet to place a bid →
+                    </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={handleSettleAuction}
-                    disabled={
-                      !account ||
-                      isSettling ||
-                      !isAuctionExpired(
-                        selectedCollection.endTime,
-                        selectedCollection.status,
-                      )
-                    }
-                    className={`inline-flex items-center justify-center rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
-                      account &&
-                      !isSettling &&
-                      isAuctionExpired(
-                        selectedCollection.endTime,
-                        selectedCollection.status,
-                      )
-                        ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black"
-                        : "border border-white/12 text-[rgb(186,255,188)]/45"
-                    }`}
-                  >
-                    {isSettling ? "..." : "Settle"}
-                  </button>
                 </div>
 
                 {userOffer && address && (

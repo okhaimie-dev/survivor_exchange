@@ -7,6 +7,7 @@ import Header from "./components/header";
 import DisclaimerModal from "./components/disclaimer-modal";
 import { StarknetProvider } from "./providers/starknet-provider";
 import { ApolloGraphQLProvider } from "./providers/apollo-provider";
+import { WalletModalProvider } from "./providers/wallet-modal-provider";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -21,10 +22,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Survivor Exchange - Beast Auctions</title>
+        <title>Survivor Exchange - Find Your Next Champion</title>
         <meta
           name="description"
-          content="Survivor Exchange is a marketplace for auctioning and bidding on Beasts from Loot Survivor"
+          content="Find your next champion. Buy, sell, and auction Loot Survivor beasts on Survivor Exchange."
         />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/logo.png" />
@@ -32,14 +33,14 @@ export default function RootLayout({
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="Survivor Exchange" />
-        <meta property="og:title" content="Survivor Exchange - Beast Auctions" />
-        <meta property="og:description" content="Marketplace for auctioning and bidding on Beasts from Loot Survivor" />
+        <meta property="og:title" content="Survivor Exchange - Find Your Next Champion" />
+        <meta property="og:description" content="Find your next champion. Buy, sell, and auction Loot Survivor beasts." />
         <meta property="og:image" content="/og-default.png" />
 
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Survivor Exchange - Beast Auctions" />
-        <meta name="twitter:description" content="Marketplace for auctioning and bidding on Beasts from Loot Survivor" />
+        <meta name="twitter:title" content="Survivor Exchange - Find Your Next Champion" />
+        <meta name="twitter:description" content="Find your next champion. Buy, sell, and auction Loot Survivor beasts." />
         <meta name="twitter:image" content="/og-default.png" />
       </head>
       <body
@@ -47,11 +48,13 @@ export default function RootLayout({
       >
         <ApolloGraphQLProvider>
           <StarknetProvider>
-            <Suspense>
-              <DisclaimerModal />
-              <Header />
-              {children}
-            </Suspense>
+            <WalletModalProvider>
+              <Suspense>
+                <DisclaimerModal />
+                <Header />
+                {children}
+              </Suspense>
+            </WalletModalProvider>
           </StarknetProvider>
         </ApolloGraphQLProvider>
       </body>

@@ -2,7 +2,7 @@ import { ControllerConnector } from "@cartridge/connector";
 import { useAccount, useDisconnect, useConnect } from "@starknet-react/core";
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
-import WalletConnectModal from "./wallet-connect-modal";
+import { useWalletModal } from "../providers/wallet-modal-provider";
 import { truncateAddress } from "../lib/utils/formatters";
 
     export default function Header() {
@@ -35,7 +35,7 @@ import { truncateAddress } from "../lib/utils/formatters";
         }, [connector, controller]);
         
         const [username, setUsername] = useState<string | undefined>(undefined);
-        const [isModalOpen, setIsModalOpen] = useState(false);
+        const { openWalletModal } = useWalletModal();
         
         // Only fetch username for Cartridge wallet
         useEffect(() => {
@@ -91,7 +91,7 @@ import { truncateAddress } from "../lib/utils/formatters";
         }, [address]);
 
         const handleConnect = () => {
-            setIsModalOpen(true);
+            openWalletModal();
         };
 
         const handleDisconnect = async () => {
@@ -99,12 +99,7 @@ import { truncateAddress } from "../lib/utils/formatters";
             setUsername(undefined);
         };
 
-        const handleModalClose = () => {
-            setIsModalOpen(false);
-        };
-
         return (
-            <>
             <div className="w-full min-h-14 bg-black flex flex-row items-center justify-center px-3 md:px-3.5 py-3">
                 <div className="w-full flex flex-row items-center justify-between gap-2">
                     <div className="flex-shrink-0">
@@ -131,7 +126,5 @@ import { truncateAddress } from "../lib/utils/formatters";
                     </div>
                 </div>
             </div>
-                <WalletConnectModal isOpen={isModalOpen} onClose={handleModalClose} />
-            </>
         )
     }
