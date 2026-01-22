@@ -342,7 +342,7 @@ export default function BidPriceChart({
                                 className="text-[8px] font-orbitron fill-[rgb(186,255,188)]/50 uppercase tracking-wider"
                                 style={{ fontFamily: 'var(--font-orbitron), sans-serif' }}
                             >
-                                Avg
+                                Average
                             </text>
                             <text
                                 x={statsX}
