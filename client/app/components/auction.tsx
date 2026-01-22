@@ -32,7 +32,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     // Beast detail modal state
     const [isBeastModalOpen, setIsBeastModalOpen] = useState(false);
-    const [selectedBeastForModal, setSelectedBeastForModal] = useState<FormattedNFT | null>(null);
+    const [selectedBeastIndex, setSelectedBeastIndex] = useState<number>(0);
 
     const dateToLocalDateTimeString = (date: Date): string => {
         const year = date.getFullYear();
@@ -379,7 +379,8 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
                     selected={selectedNFTIds.includes(nft.tokenId)}
                     onToggle={() => toggleCardSelection(nft.tokenId)}
                     onInfoClick={() => {
-                        setSelectedBeastForModal(nft);
+                        const index = filteredNFTs.findIndex(n => n.tokenId === nft.tokenId);
+                        setSelectedBeastIndex(index >= 0 ? index : 0);
                         setIsBeastModalOpen(true);
                     }}
                 />
@@ -632,13 +633,13 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
             <BeastDetailModal
                 isOpen={isBeastModalOpen}
                 onClose={() => setIsBeastModalOpen(false)}
-                nfts={selectedBeastForModal ? [selectedBeastForModal] : []}
-                currentIndex={0}
-                onNavigate={() => {}}
+                nfts={filteredNFTs}
+                currentIndex={selectedBeastIndex}
+                onNavigate={(index) => setSelectedBeastIndex(index)}
                 onSelect={(tokenId) => {
                     toggleCardSelection(tokenId);
                 }}
-                isSelected={selectedBeastForModal ? selectedNFTIds.includes(selectedBeastForModal.tokenId) : false}
+                isSelected={filteredNFTs[selectedBeastIndex] ? selectedNFTIds.includes(filteredNFTs[selectedBeastIndex].tokenId) : false}
             />
         </div>
     );

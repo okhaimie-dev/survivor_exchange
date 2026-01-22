@@ -619,12 +619,13 @@ export default function BeastDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-4xl mx-4 bg-black/95 border-2 border-[rgb(50,255,52)]/60 rounded-2xl shadow-[0_0_40px_rgba(50,255,52,0.2)] overflow-hidden"
+        className="relative w-full max-w-4xl bg-black/95 border-2 border-[rgb(50,255,52)]/60 rounded-2xl shadow-[0_0_40px_rgba(50,255,52,0.2)] my-auto"
         onClick={(e) => e.stopPropagation()}
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[rgb(50,255,52)]/30">
@@ -799,7 +800,7 @@ export default function BeastDetailModal({
           </div>
 
           {/* Stats */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4 overflow-hidden">
+          <div className="flex-1 min-w-0 flex flex-col gap-4">
             {/* Beast Name & Type */}
             <div className="text-center md:text-left">
               <p className="text-2xl font-orbitron text-[rgb(50,255,52)]">
