@@ -1836,10 +1836,11 @@ export default function Bids({
 
                   return (
                     <div className="w-full relative">
+                      {/* Grid layout on mobile, horizontal scroll on desktop */}
                       <div
                         ref={nftCarouselRef}
                         onScroll={checkScrollButtons}
-                        className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                        className="grid grid-cols-4 gap-1.5 sm:flex sm:gap-3 sm:overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                       >
                         {nfts.map((nft, index) => {
                           const imageSrc = nft.metadata?.image
@@ -1856,18 +1857,14 @@ export default function Bids({
                                 setSelectedBeastIndex(index);
                                 setIsBeastModalOpen(true);
                               }}
-                              className={`group/nft relative shrink-0 h-20 md:h-28 w-fit overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60 ${
-                                !isBase64
-                                  ? "border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10"
-                                  : ""
-                              }`}
+                              className={`group/nft relative shrink-0 aspect-square sm:aspect-auto sm:h-28 sm:w-auto overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60 rounded-lg sm:rounded-none border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10`}
                             >
                               {isBase64 ? (
                                 <img
                                   src={imageSrc}
                                   alt={nft.metadataName || `NFT ${nft.tokenId}`}
                                   draggable={false}
-                                  className="h-full w-full object-contain"
+                                  className="h-full w-full object-cover object-top sm:object-contain"
                                 />
                               ) : (
                                 <Image
@@ -1876,15 +1873,15 @@ export default function Bids({
                                   width={112}
                                   height={112}
                                   draggable={false}
-                                  className="h-full w-full object-contain"
+                                  className="h-full w-full object-cover object-top sm:object-contain"
                                   unoptimized
                                 />
                               )}
                               {/* Eye icon overlay on hover */}
                               <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/nft:opacity-100 transition-opacity">
                                 <svg
-                                  width="24"
-                                  height="24"
+                                  width="20"
+                                  height="20"
                                   viewBox="0 0 24 24"
                                   fill="none"
                                   stroke="rgb(50,255,52)"
