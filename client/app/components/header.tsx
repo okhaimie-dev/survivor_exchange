@@ -99,6 +99,17 @@ import { truncateAddress } from "../lib/utils/formatters";
             setUsername(undefined);
         };
 
+        const handleOpenProfile = () => {
+            // Open Cartridge inventory modal
+            if (isCartridge && connector) {
+                try {
+                    (connector as any)?.controller?.openProfile("inventory");
+                } catch (error) {
+                    console.error("Failed to open profile:", error);
+                }
+            }
+        };
+
         return (
             <div className="w-full min-h-14 bg-black flex flex-row items-center justify-center px-3 md:px-3.5 py-3">
                 <div className="w-full flex flex-row items-center justify-between gap-2">
@@ -108,19 +119,64 @@ import { truncateAddress } from "../lib/utils/formatters";
                     <div className="flex-shrink min-w-0">
                         {
                                 address ? (
-                                <div className="flex items-center gap-2 md:gap-3">
-                                        <p className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-xs md:text-sm truncate max-w-[100px] md:max-w-none">
-                                            {username || truncateAddress(address)}
-                                        </p>
+                                <div className="flex items-center rounded-lg border-2 border-[rgb(50,255,52)] overflow-hidden">
                                     <button
-                                        className="text-white text-xs md:text-sm font-orbitron tracking-wide uppercase hover:cursor-pointer border border-white px-2 py-1 md:px-3 md:py-1 rounded hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)] whitespace-nowrap"
-                                        onClick={handleDisconnect}
+                                        onClick={handleOpenProfile}
+                                        className="flex items-center gap-2 px-4 py-2 bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/20 transition-all cursor-pointer"
                                     >
-                                        Disconnect
+                                        {/* Controller/Wallet Icon */}
+                                        <svg
+                                            width="18"
+                                            height="18"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="rgb(50,255,52)"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <rect x="2" y="6" width="20" height="12" rx="2" />
+                                            <circle cx="8" cy="12" r="2" />
+                                            <path d="M16 10v4" />
+                                            <path d="M14 12h4" />
+                                        </svg>
+                                        <span className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-xs md:text-sm">
+                                            {username || truncateAddress(address)}
+                                        </span>
+                                    </button>
+                                    <div className="w-px h-6 bg-[rgb(50,255,52)]/40" />
+                                    <button
+                                        onClick={handleDisconnect}
+                                        title="Disconnect"
+                                        className="flex items-center justify-center px-3 py-2 bg-[rgb(50,255,52)]/10 hover:bg-red-500/20 transition-all cursor-pointer group"
+                                    >
+                                        {/* Exit/Logout Icon */}
+                                        <svg
+                                            width="18"
+                                            height="18"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="rgb(50,255,52)"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            className="group-hover:stroke-red-500 transition-colors"
+                                        >
+                                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                            <polyline points="16 17 21 12 16 7" />
+                                            <line x1="21" y1="12" x2="9" y2="12" />
+                                        </svg>
                                     </button>
                                 </div>
                             ) : (
-                                <button className="text-[rgb(50,255,52)] text-xs md:text-base font-medium font-orbitron tracking-wide uppercase hover:cursor-pointer hover:bg-transparent hover:text-[rgb(50,255,52)] hover:border-[rgb(50,255,52)] whitespace-nowrap" onClick={handleConnect}>Connect Wallet</button>
+                                <button
+                                    onClick={handleConnect}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/20 transition-all cursor-pointer"
+                                >
+                                    <span className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-xs md:text-sm">
+                                        Connect
+                                    </span>
+                                </button>
                             )
                         }
                     </div>

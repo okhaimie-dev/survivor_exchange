@@ -9,6 +9,7 @@ import BidsSkeleton from "./bids-skeleton";
 import CustomDropdown from "./custom-dropdown";
 import InfoTooltip from "./info-tooltip";
 import BeastDetailModal from "./beast-detail-modal";
+import AddressDisplay from "./address-display";
 import { useWalletModal } from "../providers/wallet-modal-provider";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
@@ -16,7 +17,6 @@ import { useBeastSkullRewards } from "../hooks/use-beast-skull-rewards";
 import { useSummitLeaderboard, findMatchingSummitBeast, SummitBeast } from "../hooks/use-summit-leaderboard";
 import { uint256 } from "starknet";
 import {
-  truncateAddress,
   formatUSD,
   formatUSDSmart,
   formatTokenAmount,
@@ -88,8 +88,6 @@ type Collection = {
   image: string;
   status: string;
   endTime: string;
-  seller: string;
-  highestBidder: string;
   sellerFull: string;
   highestBidderFull: string;
   executedAt?: string;
@@ -273,8 +271,6 @@ export default function Bids({
         image: "/logo.png",
         status: auction.status,
         endTime: auction.end_time,
-        seller: truncateAddress(auction.seller),
-        highestBidder: truncateAddress(auction.highest_bidder),
         sellerFull: auction.seller,
         highestBidderFull: auction.highest_bidder,
         executedAt: auction.executedAt,
@@ -1987,7 +1983,7 @@ export default function Bids({
                     rel="noopener noreferrer"
                     className="hover:text-[rgb(50,255,52)] hover:underline"
                   >
-                    {selectedCollection.seller}
+                    <AddressDisplay address={selectedCollection.sellerFull} showFullOnHover={false} />
                   </a>
                 </p>
                 <p className="text-xs leading-relaxed text-[rgb(186,255,188)]/70">
@@ -2026,7 +2022,7 @@ export default function Bids({
                         rel="noopener noreferrer"
                         className="hover:text-[rgb(50,255,52)] hover:underline"
                       >
-                        {selectedCollection.highestBidder}
+                        <AddressDisplay address={selectedCollection.highestBidderFull} showFullOnHover={false} />
                         {isUserBidder ? " (you)" : ""}
                       </a>
                     );
@@ -2366,7 +2362,7 @@ export default function Bids({
                                   className="flex items-center justify-between py-1.5 px-2 rounded-lg bg-black/30"
                                 >
                                   <span className="text-[10px] text-[rgb(186,255,188)]/60 truncate max-w-[80px]">
-                                    {truncateAddress(bid.bidder)}
+                                    <AddressDisplay address={bid.bidder} />
                                   </span>
                                   <span className="text-[11px] font-medium text-white">
                                     {formatUSDSmart(bidAmount)}

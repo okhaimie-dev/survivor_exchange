@@ -3,6 +3,7 @@ import moment from "moment";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import MyListingsSkeleton from "./my-listings-skeleton";
+import AddressDisplay from "./address-display";
 import { FormattedListing, FormattedOffer } from "../hooks/use-my-listings";
 import {
   AUCTION_CONTRACT_ADDRESS,
@@ -13,7 +14,6 @@ import {
 import {
   formatUSDCompact,
   truncateAuctionName,
-  truncateAddress,
 } from "../lib/utils";
 import { normalizeContractAddress } from "../lib/utils/normalization";
 import { uint256, num } from "starknet";
@@ -771,7 +771,7 @@ export default function MyListings({
                           </span>
                         </div>
                         <div className="text-xs text-[rgb(186,255,188)]/50">
-                          From: {truncateAddress(offer.buyer)}
+                          From: <AddressDisplay address={offer.buyer} />
                         </div>
                         <div className="flex gap-2 mt-auto">
                           <button
