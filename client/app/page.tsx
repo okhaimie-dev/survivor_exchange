@@ -3,6 +3,7 @@
 import BidAuctionMyListings from "./components/bid-auction-my-listings";
 import Footer from "./components/footer";
 import Hero from "./components/hero";
+import BeastUrlHandler from "./components/beast-url-handler";
 import { useAccount } from "@starknet-react/core";
 import { useMyNFTs } from "./hooks/use-my-nfts";
 import { useAuctions } from "./hooks/use-auctions";
@@ -31,7 +32,9 @@ export default function Home() {
   const token = searchParams.get('token');
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black"> 
+    <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black">
+      {/* Handle ?beast=tokenId URL parameter */}
+      <BeastUrlHandler />
       <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
         <Hero />
         <BidAuctionMyListings 

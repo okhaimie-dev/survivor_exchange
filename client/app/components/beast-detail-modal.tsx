@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
+import type { ShareResult, ShareCardConfig } from "../lib/types/beast-profile";
 import { IMAGE_BASE_URL } from "../lib/constants";
+import BeastProfileCard from "./beast-profile-card";
+import BeastShareCard from "./beast-share-card";
+import { shareToTwitter, copyBeastLink } from "../lib/utils/share-utils";
+import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-generator";
 
 // Combat Rating Gauge Component
 interface CombatRatingGaugeProps {
@@ -595,10 +600,79 @@ export default function BeastDetailModal({
   // Flip card state - must be called before any early returns
   const [isFlipped, setIsFlipped] = useState(false);
 
-  // Reset flip state when navigating or closing
+  // Share functionality state (T026-T028)
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareResult, setShareResult] = useState<ShareResult | null>(null);
+  const shareCardRef = useRef<HTMLDivElement>(null);
+
+  // Copy Link state
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  // Reset flip state, share result, and link copied when navigating or closing
   useEffect(() => {
     setIsFlipped(false);
+    setShareResult(null);
+    setLinkCopied(false);
   }, [currentIndex, isOpen]);
+
+  // Clear link copied feedback after 3 seconds
+  useEffect(() => {
+    if (linkCopied) {
+      const timer = setTimeout(() => setLinkCopied(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [linkCopied]);
+
+  // Copy Link handler
+  const handleCopyLink = useCallback(async () => {
+    if (!currentNft) return;
+    const success = await copyBeastLink(currentNft.tokenId);
+    setLinkCopied(success);
+  }, [currentNft]);
+
+  // Clear share result feedback after 4 seconds
+  useEffect(() => {
+    if (shareResult) {
+      const timer = setTimeout(() => setShareResult(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [shareResult]);
+
+  // T027: Share button click handler with fallback chain
+  const handleShare = useCallback(async () => {
+    if (!currentNft || !shareCardRef.current) return;
+
+    setIsSharing(true);
+    setShareResult(null);
+
+    try {
+      // Generate share card config from NFT
+      const stats = extractBeastStats(currentNft);
+      const profile = generateBeastProfile(stats);
+
+      const config: ShareCardConfig = {
+        beastName: stats.beastName,
+        fullName: profile.fullName,
+        tagline: profile.tagline,
+        tier: stats.tier,
+        percentileDisplay: profile.percentileDisplay,
+        beastType: stats.beastType,
+        beastArtUrl: currentNft.metadata?.image ||
+          (currentNft.imagePath ? `${IMAGE_BASE_URL}/${currentNft.imagePath}` : undefined),
+      };
+
+      const result = await shareToTwitter(shareCardRef.current, config);
+      setShareResult(result);
+    } catch (error) {
+      console.error("Share failed:", error);
+      setShareResult({
+        status: "error",
+        error: error instanceof Error ? error : new Error("Share failed"),
+      });
+    } finally {
+      setIsSharing(false);
+    }
+  }, [currentNft]);
 
   if (!isOpen || !currentNft) return null;
 
@@ -743,33 +817,16 @@ export default function BeastDetailModal({
                   )}
                 </div>
 
-                {/* Back face - Lore (Coming Soon) */}
-                <div className="flip-card-back rounded-xl overflow-hidden bg-gradient-to-br from-black via-[rgb(10,30,10)] to-black border-2 border-[rgb(50,255,52)]/40 flex flex-col items-center justify-center p-6">
+                {/* Back face - Beast Profile */}
+                <div className="flip-card-back rounded-xl overflow-hidden bg-gradient-to-br from-black via-[rgb(10,30,10)] to-black border-2 border-[rgb(50,255,52)]/40">
                   {/* Decorative corner elements */}
-                  <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-[rgb(50,255,52)]/50" />
-                  <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-[rgb(50,255,52)]/50" />
-                  <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-[rgb(50,255,52)]/50" />
-                  <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-[rgb(50,255,52)]/50" />
+                  <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-[rgb(50,255,52)]/50 z-10" />
+                  <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-[rgb(50,255,52)]/50 z-10" />
+                  <div className="absolute bottom-3 left-3 w-8 h-8 border-b-2 border-l-2 border-[rgb(50,255,52)]/50 z-10" />
+                  <div className="absolute bottom-3 right-3 w-8 h-8 border-b-2 border-r-2 border-[rgb(50,255,52)]/50 z-10" />
 
-                  {/* Beast silhouette icon */}
-                  <div className="mb-4 opacity-30">
-                    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="rgb(50, 255, 52)" strokeWidth="1">
-                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
-                      <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                      <circle cx="9" cy="10" r="1.5" fill="rgb(50, 255, 52)" />
-                      <circle cx="15" cy="10" r="1.5" fill="rgb(50, 255, 52)" />
-                    </svg>
-                  </div>
-
-                  <h3 className="text-xl font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] mb-2">
-                    Beast Lore
-                  </h3>
-                  <p className="text-[rgb(186,255,188)]/60 text-sm text-center font-mono">
-                    Coming Soon
-                  </p>
-                  <p className="text-[rgb(186,255,188)]/40 text-xs text-center mt-4 max-w-[200px]">
-                    Discover the ancient origins and legendary tales of this beast
-                  </p>
+                  {/* Beast Profile Card Content */}
+                  <BeastProfileCard nft={currentNft} />
 
                   {/* Animated scan line */}
                   <div
@@ -783,19 +840,94 @@ export default function BeastDetailModal({
               </div>
             </div>
 
-            {/* Flip button */}
-            <button
-              onClick={() => setIsFlipped(!isFlipped)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all text-xs font-orbitron uppercase tracking-wider"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-                <path d="M3 21v-5h5" />
-              </svg>
-              {isFlipped ? "View Beast" : "View Lore"}
-            </button>
+            {/* Flip button and icon actions */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsFlipped(!isFlipped)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all text-xs font-orbitron uppercase tracking-wider"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M3 21v-5h5" />
+                </svg>
+                {isFlipped ? "View Beast" : "View Lore"}
+              </button>
+
+              {/* Icon-only action buttons */}
+              <div className="flex items-center gap-1">
+                {/* Copy Link button (icon only) */}
+                <button
+                  onClick={handleCopyLink}
+                  aria-label="Copy link to this beast"
+                  title={linkCopied ? "Copied!" : "Copy Link"}
+                  className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${
+                    linkCopied
+                      ? "border-green-500/60 bg-green-500/20 text-green-400"
+                      : "border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20"
+                  }`}
+                >
+                  {linkCopied ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Share button (icon only) - only visible when flipped to profile */}
+                {isFlipped && (
+                  <button
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    aria-label="Share beast profile to Twitter"
+                    title="Share to Twitter"
+                    className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${
+                      isSharing
+                        ? "cursor-wait border-white/20 bg-white/5 text-white/50"
+                        : "border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20"
+                    }`}
+                  >
+                    {isSharing ? (
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Share result feedback */}
+            {shareResult && (
+              <div
+                className={`rounded-md px-3 py-1.5 text-xs ${
+                  shareResult.status === "shared"
+                    ? "bg-green-500/20 text-green-400"
+                    : shareResult.status === "copied"
+                      ? "bg-green-500/20 text-green-400"
+                      : shareResult.status === "downloaded"
+                        ? "bg-yellow-500/20 text-yellow-400"
+                        : shareResult.status === "error"
+                          ? "bg-red-500/20 text-red-400"
+                          : "bg-gray-500/20 text-gray-400"
+                }`}
+              >
+                {shareResult.status === "shared" && "Shared successfully!"}
+                {shareResult.status === "copied" && "Image copied! Paste (Ctrl+V) in Twitter"}
+                {shareResult.status === "downloaded" && "Image downloaded! Upload to Twitter"}
+                {shareResult.status === "cancelled" && "Share cancelled"}
+                {shareResult.status === "error" && "Share failed. Try again."}
+              </div>
+            )}
+
             <span className="text-[10px] text-[rgb(186,255,188)]/40">or double-click card</span>
           </div>
 
@@ -937,6 +1069,35 @@ export default function BeastDetailModal({
             )}
           </div>
         </div>
+
+        {/* Hidden Share Card for image generation (T024-T025) */}
+        {currentNft && (() => {
+          try {
+            const stats = extractBeastStats(currentNft);
+            const profile = generateBeastProfile(stats);
+            const config: ShareCardConfig = {
+              beastName: stats.beastName,
+              fullName: profile.fullName,
+              tagline: profile.tagline,
+              tier: stats.tier,
+              percentileDisplay: profile.percentileDisplay,
+              beastType: stats.beastType,
+              beastArtUrl: currentNft.metadata?.image ||
+                (currentNft.imagePath ? `${IMAGE_BASE_URL}/${currentNft.imagePath}` : undefined),
+            };
+            return (
+              <div
+                className="fixed pointer-events-none"
+                style={{ left: "-9999px", top: "-9999px" }}
+                aria-hidden="true"
+              >
+                <BeastShareCard ref={shareCardRef} config={config} />
+              </div>
+            );
+          } catch {
+            return null;
+          }
+        })()}
       </div>
     </div>
   );

@@ -31,7 +31,9 @@ const splitLink = split(
       queryString.includes("tokenBalances") ||
       queryString.includes("tokenMetadata") ||
       queryString.includes("ERC721") ||
+      queryString.includes("token(id:") ||
       operationName === "MyNFTS" ||
+      operationName === "BeastByTokenId" ||
       (operationName === "ConsolidatedQuery" && queryString.includes("myNFTs"));
 
     return isNFTQuery;
