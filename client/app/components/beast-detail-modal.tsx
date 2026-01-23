@@ -297,10 +297,12 @@ const idleAnimationStyles = `
   width: 100%;
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   transform-style: preserve-3d;
+  -webkit-transform-style: preserve-3d;
 }
 
 .flip-card-inner.flipped {
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
 }
 
 .flip-card-front {
@@ -308,6 +310,8 @@ const idleAnimationStyles = `
   width: 100%;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  transform: rotateY(0deg);
+  -webkit-transform: rotateY(0deg);
 }
 
 .flip-card-back {
@@ -319,6 +323,7 @@ const idleAnimationStyles = `
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: rotateY(180deg);
+  -webkit-transform: rotateY(180deg);
 }
 
 @keyframes scanline {
@@ -781,6 +786,9 @@ export default function BeastDetailModal({
               style={{
                 ...tiltStyle,
                 transformStyle: "preserve-3d",
+                WebkitTransformStyle: "preserve-3d",
+                perspective: "1000px",
+                WebkitPerspective: "1000px",
                 width: "280px",
               }}
               onClick={createParticles}
