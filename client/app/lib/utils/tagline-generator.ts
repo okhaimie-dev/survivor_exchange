@@ -159,14 +159,14 @@ export function selectTagline(
  * Main function that combines all utilities to produce the profile.
  */
 export function generateBeastProfile(stats: BeastStats): BeastProfile {
-  // Build full name from prefix + beast name + suffix
+  // Build full name: "Prefix Suffix" BeastName
+  // Prefix and suffix are combined in quotes, then the beast name follows
   let fullName = "";
-  if (stats.prefix) {
-    fullName += `"${stats.prefix}" `;
-  }
-  fullName += stats.beastName;
-  if (stats.suffix) {
-    fullName += ` "${stats.suffix}"`;
+  if (stats.prefix || stats.suffix) {
+    const titleParts = [stats.prefix, stats.suffix].filter(Boolean).join(" ");
+    fullName = `"${titleParts}" ${stats.beastName}`;
+  } else {
+    fullName = stats.beastName;
   }
 
   // Calculate combat power
