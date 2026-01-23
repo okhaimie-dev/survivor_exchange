@@ -7,6 +7,8 @@ import type { ShareResult, ShareCardConfig } from "../lib/types/beast-profile";
 import { IMAGE_BASE_URL } from "../lib/constants";
 import BeastProfileCard from "./beast-profile-card";
 import BeastShareCard from "./beast-share-card";
+import AddressDisplay from "./address-display";
+import { useBeastOwner } from "../hooks/use-beast-owner";
 import { shareToTwitter, copyBeastLink } from "../lib/utils/share-utils";
 import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-generator";
 
@@ -534,6 +536,12 @@ export default function BeastDetailModal({
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
+  // Fetch the owner of the current beast
+  const { owner: beastOwner, isLoading: isOwnerLoading } = useBeastOwner({
+    tokenId: currentNft?.tokenId || null,
+    skip: !isOpen || !currentNft,
+  });
+
   // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
@@ -933,20 +941,43 @@ export default function BeastDetailModal({
 
           {/* Stats */}
           <div className="flex-1 min-w-0 flex flex-col gap-4">
-            {/* Beast Name & Type */}
-            <div className="text-center md:text-left">
-              <p className="text-2xl font-orbitron text-[rgb(50,255,52)]">
-                {currentNft.beastName || "Unknown Beast"}
-              </p>
-              <p className="text-sm text-[rgb(186,255,188)]/70">
-                Token ID: {(() => {
-                  const tokenId = currentNft.tokenId;
-                  if (tokenId.startsWith("0x") || tokenId.startsWith("0X")) {
-                    return parseInt(tokenId, 16);
-                  }
-                  return tokenId;
-                })()}
-              </p>
+            {/* Beast Name & Owner */}
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+              <div className="text-center md:text-left">
+                <p className="text-2xl font-orbitron text-[rgb(50,255,52)]">
+                  {currentNft.beastName || "Unknown Beast"}
+                </p>
+                <p className="text-sm text-[rgb(186,255,188)]/70">
+                  Token ID: {(() => {
+                    const tokenId = currentNft.tokenId;
+                    if (tokenId.startsWith("0x") || tokenId.startsWith("0X")) {
+                      return parseInt(tokenId, 16);
+                    }
+                    return tokenId;
+                  })()}
+                </p>
+              </div>
+              {/* Owner display */}
+              <div className="flex justify-center md:justify-end">
+                <span className="text-xs font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5">
+                  Owned by{" "}
+                  <a
+                    href={beastOwner ? `https://voyager.online/contract/${beastOwner}` : "#"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`text-[rgb(50,255,52)] hover:underline ${isOwnerLoading ? "animate-pulse" : ""}`}
+                    onClick={(e) => !beastOwner && e.preventDefault()}
+                  >
+                    {isOwnerLoading ? (
+                      "..."
+                    ) : beastOwner ? (
+                      <AddressDisplay address={beastOwner} showFullOnHover={true} />
+                    ) : (
+                      "Unknown"
+                    )}
+                  </a>
+                </span>
+              </div>
             </div>
 
             {/* Combat Rating Gauge */}

@@ -1834,64 +1834,12 @@ export default function Bids({
                     );
                   }
 
-                  const showCarousel = nfts.length > 4;
-
                   return (
                     <div className="w-full relative">
-                      {showCarousel && (
-                        <>
-                          {canScrollLeft && (
-                            <button
-                              onClick={() => scrollNFTs("left")}
-                              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all shadow-lg cursor-pointer"
-                              aria-label="Scroll left"
-                            >
-                              <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M12.5 15L7.5 10L12.5 5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                          {canScrollRight && (
-                            <button
-                              onClick={() => scrollNFTs("right")}
-                              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 h-10 w-10 flex items-center justify-center rounded-full bg-black/70 border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all shadow-lg cursor-pointer"
-                              aria-label="Scroll right"
-                            >
-                              <svg
-                                width="20"
-                                height="20"
-                                viewBox="0 0 20 20"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M7.5 15L12.5 10L7.5 5"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                        </>
-                      )}
                       <div
                         ref={nftCarouselRef}
                         onScroll={checkScrollButtons}
-                        className="flex gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                        className="flex gap-2 md:gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                       >
                         {nfts.map((nft, index) => {
                           const imageSrc = nft.metadata?.image
@@ -1908,7 +1856,7 @@ export default function Bids({
                                 setSelectedBeastIndex(index);
                                 setIsBeastModalOpen(true);
                               }}
-                              className={`group/nft relative shrink-0 h-28 w-fit overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60 ${
+                              className={`group/nft relative shrink-0 h-20 md:h-28 w-fit overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60 ${
                                 !isBase64
                                   ? "border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10"
                                   : ""
@@ -2138,8 +2086,8 @@ export default function Bids({
                   }
 
                   return (
-                    <div className="w-full -mt-2 md:-mt-4">
-                      <div className="w-full mt-3 md:mt-4 rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-3 md:p-4">
+                    <div className="w-full mt-1">
+                      <div className="w-full rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-3 md:p-4">
                         <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-2 md:mb-3">
                           Auction Timeline
                         </p>
@@ -2191,45 +2139,44 @@ export default function Bids({
                             );
                           })}
                         </div>
-                      </div>
-                      <div className="w-full h-54 -mt-[154px] rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-3 flex flex-col justify-end">
-                        <div className="flex items-center justify-between">
-                          <p className="text-[10px] font-orbitron uppercase tracking-[0.16em] text-[rgb(50,255,52)]">
+                        {/* Countdown inside the same box */}
+                        <div className="mt-3 pt-3 border-t border-[rgb(50,255,52)]/20">
+                          <p className="text-[10px] font-orbitron uppercase tracking-[0.16em] text-[rgb(50,255,52)] mb-1">
                             COUNTDOWN
                           </p>
+                          {countdown ? (
+                            <div className="flex items-baseline gap-1.5 flex-wrap">
+                              <span className="text-white font-orbitron text-base tracking-wider">
+                                {countdown.days}
+                              </span>
+                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
+                                days
+                              </span>
+                              <span className="text-white font-orbitron text-base tracking-wider">
+                                {countdown.hours}
+                              </span>
+                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
+                                hrs
+                              </span>
+                              <span className="text-white font-orbitron text-base tracking-wider">
+                                {countdown.minutes}
+                              </span>
+                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
+                                Mins
+                              </span>
+                              <span className="text-white font-orbitron text-base tracking-wider">
+                                {countdown.seconds}
+                              </span>
+                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
+                                Secs
+                              </span>
+                            </div>
+                          ) : (
+                            <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase">
+                              Auction ended
+                            </p>
+                          )}
                         </div>
-                        {countdown ? (
-                          <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="text-white font-orbitron text-base tracking-wider">
-                              {countdown.days}
-                            </span>
-                            <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                              days
-                            </span>
-                            <span className="text-white font-orbitron text-base tracking-wider">
-                              {countdown.hours}
-                            </span>
-                            <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                              hrs
-                            </span>
-                            <span className="text-white font-orbitron text-base tracking-wider">
-                              {countdown.minutes}
-                            </span>
-                            <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                              Mins
-                            </span>
-                            <span className="text-white font-orbitron text-base tracking-wider">
-                              {countdown.seconds}
-                            </span>
-                            <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                              Secs
-                            </span>
-                          </div>
-                        ) : (
-                          <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase">
-                            Auction ended
-                          </p>
-                        )}
                       </div>
                     </div>
                   );
