@@ -2991,6 +2991,7 @@ export default function Bids({
         onPlaceBid={handlePlaceBid}
         onMakeOffer={handleMakeOffer}
         onOpenWallet={openWalletModal}
+        summitBeasts={auctionSummitBeasts}
       />
     </div>
   );

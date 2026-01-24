@@ -16,6 +16,20 @@ import InfoTooltip from "./info-tooltip";
 import CustomDropdown, { type DropdownOption } from "./custom-dropdown";
 import CountdownTimer from "./countdown-timer";
 
+/** Summit beast data for displaying badge */
+interface SummitBeastMatch {
+  nftTokenId: number;
+  summitBeast: {
+    tokenId: number;
+    blocksHeld: number;
+    prefix: string;
+    suffix: string;
+    beastName: string;
+    fullName: string;
+    rank: number;
+  };
+}
+
 // Combat Rating Gauge Component
 interface CombatRatingGaugeProps {
   power: number | string;
@@ -557,6 +571,8 @@ interface BeastDetailModalProps {
   onMakeOffer?: () => void;
   /** Callback to open wallet modal */
   onOpenWallet?: () => void;
+  /** Summit beasts in this auction (for displaying badge) */
+  summitBeasts?: SummitBeastMatch[];
 }
 
 // Helper to format Unix timestamps to readable dates
@@ -590,6 +606,7 @@ export default function BeastDetailModal({
   onPlaceBid,
   onMakeOffer,
   onOpenWallet,
+  summitBeasts = [],
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -1149,6 +1166,31 @@ export default function BeastDetailModal({
                       {attr.trait_type}
                     </span>
                   ))}
+                </div>
+              );
+            })()}
+
+            {/* Summit Badge - Show if this beast is in the summit leaderboard */}
+            {(() => {
+              // Find if current beast has a summit match
+              const tokenId = currentNft.tokenId.startsWith("0x") || currentNft.tokenId.startsWith("0X")
+                ? parseInt(currentNft.tokenId, 16)
+                : parseInt(currentNft.tokenId, 10);
+              const summitMatch = summitBeasts.find(m => m.nftTokenId === tokenId);
+
+              if (!summitMatch) return null;
+
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 rounded-full bg-[rgb(255,215,0)]/20 border border-[rgb(255,215,0)]/40 text-[rgb(255,215,0)] font-orbitron uppercase tracking-wider text-xs flex items-center gap-1.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                    </svg>
+                    Summit Top {summitMatch.summitBeast.rank}
+                  </span>
+                  <InfoTooltip
+                    content={`"${summitMatch.summitBeast.prefix} ${summitMatch.summitBeast.suffix}" held the Summit for ${summitMatch.summitBeast.blocksHeld.toLocaleString()} blocks`}
+                  />
                 </div>
               );
             })()}
