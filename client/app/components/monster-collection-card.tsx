@@ -9,6 +9,7 @@ type MonsterCollectionCardProps = {
     collection: {
         id: string;
         name: string;
+        fullName?: string; // Original untruncated name for tooltip
         totalMonsters: number;
         startingPrice: number;
         highestBid?: number;
@@ -30,7 +31,9 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
         },
         {
             label: "Highest Bid",
-            value: collection.highestBid !== undefined ? formatUSDSmart(collection.highestBid) : "—",
+            value: collection.highestBid && collection.highestBid > 0
+                ? formatUSDSmart(collection.highestBid)
+                : "Be first!",
             suffix: undefined,
         },
     ];
@@ -51,21 +54,26 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
             }`}
         >
             {isSelected && (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="absolute top-4 right-5 z-20 text-[rgb(50,255,52)] transition-all duration-200 group-hover:scale-110"
+                <div
+                    className="absolute top-4 right-5 z-20"
+                    title="Currently viewing this auction"
                 >
-                    <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
-                    <path d="m9 12 2 2 4-4" />
-                </svg>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-[rgb(50,255,52)] transition-all duration-200 group-hover:scale-110"
+                    >
+                        <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+                        <path d="m9 12 2 2 4-4" />
+                    </svg>
+                </div>
             )}
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
                 <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">
@@ -228,7 +236,12 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     )}
                 </div>
                 <div className="flex flex-col gap-2 text-white">
-                    <h3 className="text-xl font-orbitron uppercase tracking-[0.12em]">{truncateAuctionName(collection.name)}</h3>
+                    <h3
+                        className="text-xl font-orbitron uppercase tracking-[0.12em]"
+                        title={collection.fullName || collection.name}
+                    >
+                        {truncateAuctionName(collection.name)}
+                    </h3>
                     {collection.endTime && (
                         <p className="text-xs text-[rgb(186,255,188)]/70">
                             {collection.status && parseInt(collection.status) === 3 ? (

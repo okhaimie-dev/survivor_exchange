@@ -267,6 +267,7 @@ export default function Bids({
       return {
         id: String(auction.auction_id),
         name: truncateAuctionName(auction.name),
+        fullName: auction.name, // Original untruncated name for tooltip
         totalMonsters: parseInt(auction.item_count) || 0,
         startingPrice,
         highestBid,
@@ -2959,8 +2960,34 @@ export default function Bids({
           isSubmittingOffer,
           hasActiveOffer: !!userOffer,
           account: !!account,
+          paymentToken,
+          tokenSymbol: SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase())?.symbol || "USDC",
+          insufficientFundsError: insufficientFundsError || undefined,
         }}
+        tokenOptions={SUPPORTED_TOKENS.map((token) => {
+          const balanceInfo =
+            address && tokenBalances[token.address] !== undefined
+              ? tokenBalances[token.address]
+              : null;
+
+          let balanceDisplay: string;
+          if (!address) {
+            balanceDisplay = "—";
+          } else if (!balanceInfo) {
+            balanceDisplay = "...";
+          } else {
+            balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+          }
+
+          return {
+            value: token.address,
+            label: token.symbol,
+            balance: balanceDisplay,
+            logo: tokenLogos[token.address],
+          };
+        })}
         onBidAmountChange={setBidAmountToken}
+        onPaymentTokenChange={setPaymentToken}
         onPlaceBid={handlePlaceBid}
         onMakeOffer={handleMakeOffer}
         onOpenWallet={openWalletModal}

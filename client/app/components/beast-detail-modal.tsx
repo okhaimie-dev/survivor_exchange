@@ -13,6 +13,7 @@ import { shareToTwitter, copyBeastLink, copyAuctionLink } from "../lib/utils/sha
 import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-generator";
 import { formatUSDSmart } from "../lib/utils";
 import InfoTooltip from "./info-tooltip";
+import CustomDropdown, { type DropdownOption } from "./custom-dropdown";
 
 // Combat Rating Gauge Component
 interface CombatRatingGaugeProps {
@@ -524,6 +525,9 @@ interface BidState {
   isSubmittingOffer: boolean;
   hasActiveOffer: boolean;
   account: boolean; // whether user is connected
+  paymentToken: string; // currently selected payment token address
+  tokenSymbol: string; // symbol of selected token (e.g., "USDC", "ETH")
+  insufficientFundsError?: string; // error message when user doesn't have enough funds
 }
 
 interface BeastDetailModalProps {
@@ -540,8 +544,12 @@ interface BeastDetailModalProps {
   auctionBidData?: AuctionBidData;
   /** Current bid state from parent */
   bidState?: BidState;
+  /** Token options for payment selector */
+  tokenOptions?: DropdownOption[];
   /** Callback when bid amount changes */
   onBidAmountChange?: (amount: string) => void;
+  /** Callback when payment token changes */
+  onPaymentTokenChange?: (token: string) => void;
   /** Callback to place a bid */
   onPlaceBid?: () => void;
   /** Callback to make an offer */
@@ -575,7 +583,9 @@ export default function BeastDetailModal({
   auctionId,
   auctionBidData,
   bidState,
+  tokenOptions,
   onBidAmountChange,
+  onPaymentTokenChange,
   onPlaceBid,
   onMakeOffer,
   onOpenWallet,
@@ -766,20 +776,21 @@ export default function BeastDetailModal({
           <div className="flex items-center gap-4">
             {/* Navigation - only show when more than 1 item */}
             {nfts.length > 1 && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-[rgb(186,255,188)]/70 font-orbitron">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30">
                   {currentIndex + 1} OF {nfts.length}
                 </span>
                 <button
                   onClick={handlePrev}
                   disabled={currentIndex === 0}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Previous beast (← arrow key)"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M12.5 15L7.5 10L12.5 5"
                       stroke="currentColor"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -788,13 +799,14 @@ export default function BeastDetailModal({
                 <button
                   onClick={handleNext}
                   disabled={currentIndex === nfts.length - 1}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  title="Next beast (→ arrow key)"
+                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M7.5 15L12.5 10L7.5 5"
                       stroke="currentColor"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                       strokeLinecap="round"
                       strokeLinejoin="round"
                     />
@@ -1183,7 +1195,7 @@ export default function BeastDetailModal({
                     }`}>
                       {auctionBidData.highestBid && auctionBidData.highestBid > 0
                         ? formatUSDSmart(auctionBidData.highestBid)
-                        : "No bids yet"}
+                        : "Be first!"}
                     </p>
                   </div>
                 </div>
@@ -1191,9 +1203,31 @@ export default function BeastDetailModal({
                 {/* Bid input and quick bid buttons */}
                 {!auctionBidData.isUserSeller && (
                   <>
+                    {/* Token selector */}
+                    {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
+                      <div className="flex flex-col gap-2 mb-3">
+                        <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
+                          Pay With
+                        </label>
+                        <CustomDropdown
+                          id="modal-payment-token"
+                          value={bidState.paymentToken}
+                          onChange={onPaymentTokenChange}
+                          options={tokenOptions}
+                          variant="green"
+                          className="w-full"
+                        />
+                        {bidState.insufficientFundsError && (
+                          <p className="text-xs text-red-400">
+                            {bidState.insufficientFundsError}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-col gap-2 mb-3">
                       <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
-                        Your Bid (USDC)
+                        Your Bid ({bidState.tokenSymbol || "USDC"})
                       </label>
                       <input
                         type="number"
