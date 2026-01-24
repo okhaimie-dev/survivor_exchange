@@ -539,10 +539,20 @@ export default function MyListings({
             Auction habitat.
           </p>
         </header>
-        <div className="flex items-center justify-center py-12">
-          <p className="text-[rgb(186,255,188)]/70">
-            No listings found. Create your first auction to get started!
-          </p>
+        <div className="flex flex-col items-center justify-center py-12 gap-4">
+          <div className="w-16 h-16 rounded-full bg-[rgb(50,255,52)]/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[rgb(50,255,52)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </div>
+          <div className="text-center">
+            <p className="text-[rgb(186,255,188)]/70 mb-2">
+              You haven&apos;t created any auctions yet.
+            </p>
+            <p className="text-sm text-[rgb(186,255,188)]/50">
+              Switch to the &quot;Auction your collection&quot; tab to list your first beasts and start earning!
+            </p>
+          </div>
         </div>
       </section>
     );

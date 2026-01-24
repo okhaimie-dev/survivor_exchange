@@ -11,6 +11,7 @@ import CustomDropdown from "./custom-dropdown";
 import InfoTooltip from "./info-tooltip";
 import BeastDetailModal from "./beast-detail-modal";
 import AddressDisplay from "./address-display";
+import CountdownTimer from "./countdown-timer";
 import { useWalletModal } from "../providers/wallet-modal-provider";
 import type { AuctionItem } from "../lib/types";
 import { AuctionWithNFTs } from "../hooks/use-auctions";
@@ -154,6 +155,7 @@ export default function Bids({
     priceSort: "",
     tokenIdSort: "",
     summitTop15: "",
+    timeSort: "ending-soon", // Default to ending soon for urgency
   });
 
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
@@ -199,6 +201,49 @@ export default function Bids({
       }
       // Filter to only auctions containing summit beasts (by token ID or prefix+suffix)
       result = result.filter(auction => auctionHasSummitBeast(auction));
+    }
+
+    // Apply time-based sorting
+    if (filters.timeSort === "ending-soon") {
+      const now = Math.floor(Date.now() / 1000);
+      result = [...result].sort((a, b) => {
+        const getEndTime = (auction: AuctionWithNFTs) => {
+          const endTimeStr = auction.end_time || "0";
+          return endTimeStr.startsWith("0x") || endTimeStr.startsWith("0X")
+            ? parseInt(endTimeStr, 16)
+            : parseInt(endTimeStr, 10);
+        };
+        const isActive = (auction: AuctionWithNFTs) => {
+          const status = parseInt(auction.status);
+          const endTime = getEndTime(auction);
+          return status === 2 && endTime > now;
+        };
+
+        const endTimeA = getEndTime(a);
+        const endTimeB = getEndTime(b);
+        const activeA = isActive(a);
+        const activeB = isActive(b);
+
+        // Active auctions come first, then sort by ending soonest
+        if (activeA && !activeB) return -1;
+        if (!activeA && activeB) return 1;
+
+        // Both active or both inactive: sort by ending soonest (ascending)
+        return endTimeA - endTimeB;
+      });
+    } else if (filters.timeSort === "newest") {
+      result = [...result].sort((a, b) => {
+        const getEndTime = (auction: AuctionWithNFTs) => {
+          const endTimeStr = auction.end_time || "0";
+          return endTimeStr.startsWith("0x") || endTimeStr.startsWith("0X")
+            ? parseInt(endTimeStr, 16)
+            : parseInt(endTimeStr, 10);
+        };
+        const endTimeA = getEndTime(a);
+        const endTimeB = getEndTime(b);
+        // Sort by newest first (descending)
+        return endTimeB - endTimeA;
+      });
     }
 
     return result;
@@ -307,10 +352,19 @@ export default function Bids({
     if (selectedCollectionId && detailRef.current) {
       // Small delay to ensure the DOM has rendered the details
       const timer = setTimeout(() => {
-        detailRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+        // On mobile (< 768px), scroll to show the bid actions area
+        const isMobile = window.innerWidth < 768;
+        if (isMobile && bidActionsRef.current) {
+          bidActionsRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        } else {
+          detailRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
       }, 100);
       return () => clearTimeout(timer);
     }
@@ -321,6 +375,7 @@ export default function Bids({
 
   const nftCarouselRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
+  const bidActionsRef = useRef<HTMLDivElement>(null); // Ref for bid button area on mobile
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const [countdown, setCountdown] = useState<{
@@ -1809,12 +1864,33 @@ export default function Bids({
 
     if (collections.length === 0) {
       return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-          <p className="text-[rgb(186,255,188)]/70">
-            {auctions.length === 0
-              ? "No auctions available."
-              : "No auctions match your filters. Try adjusting your search criteria."}
-          </p>
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-6 px-4 py-12">
+          <div className="w-20 h-20 rounded-full bg-[rgb(50,255,52)]/10 flex items-center justify-center">
+            <svg className="w-10 h-10 text-[rgb(50,255,52)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+          </div>
+          <div className="text-center">
+            {auctions.length === 0 ? (
+              <>
+                <p className="text-lg text-[rgb(186,255,188)]/70 mb-2">
+                  No active auctions right now
+                </p>
+                <p className="text-sm text-[rgb(186,255,188)]/50 max-w-md">
+                  Be the first to list your beasts! Switch to the &quot;Auction your collection&quot; tab to create an auction.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg text-[rgb(186,255,188)]/70 mb-2">
+                  No auctions match your filters
+                </p>
+                <p className="text-sm text-[rgb(186,255,188)]/50 max-w-md">
+                  Try adjusting your search criteria or clear filters to see all available auctions.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       );
     }
@@ -2701,7 +2777,7 @@ export default function Bids({
                   })()}
                 </div>
 
-                <div className="flex flex-col gap-2 w-full max-w-full md:max-w-[550px]">
+                <div ref={bidActionsRef} className="flex flex-col gap-2 w-full max-w-full md:max-w-[550px]">
                   <div className="flex flex-row gap-2 md:gap-3 w-full">
                     <button
                       type="button"
@@ -2930,6 +3006,57 @@ export default function Bids({
                     </a>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Mobile Sticky CTA - Fixed at bottom on mobile */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 p-3 bg-black/95 backdrop-blur-md border-t border-[rgb(50,255,52)]/30 shadow-[0_-4px_20px_rgba(0,0,0,0.5)]">
+              <div className="flex items-center justify-between gap-3 max-w-6xl mx-auto">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 truncate">
+                    {selectedCollection.name}
+                  </p>
+                  <p className="text-sm font-orbitron text-white">
+                    {selectedCollection.highestBid && selectedCollection.highestBid > 0
+                      ? `$${formatUSDSmart(selectedCollection.highestBid)}`
+                      : `$${formatUSDSmart(selectedCollection.startingPrice / 1e6)}`
+                    }
+                    <span className="text-[10px] text-[rgb(186,255,188)]/50 ml-1">
+                      {selectedCollection.highestBid && selectedCollection.highestBid > 0 ? 'current bid' : 'reserve'}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CountdownTimer
+                    endTime={selectedCollection.endTime}
+                    status={selectedCollection.status}
+                    showUrgency={true}
+                    size="sm"
+                    className="text-xs font-orbitron"
+                  />
+                  {account ? (
+                    <button
+                      type="button"
+                      onClick={handlePlaceBid}
+                      disabled={!isBidValid || isSubmitting || isUserSeller}
+                      className={`px-4 py-2.5 rounded-lg font-orbitron font-bold text-xs uppercase tracking-wider transition ${
+                        isBidValid && !isSubmitting && !isUserSeller
+                          ? "bg-[rgb(50,255,52)] text-black"
+                          : "bg-white/20 text-white/50"
+                      }`}
+                    >
+                      {isSubmitting ? "..." : "Bid Now"}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={openWalletModal}
+                      className="px-4 py-2.5 rounded-lg bg-[rgb(50,255,52)] text-black font-orbitron font-bold text-xs uppercase tracking-wider animate-subtle-pulse"
+                    >
+                      Connect
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </section>

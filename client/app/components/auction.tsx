@@ -69,6 +69,7 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
         priceSort: "",
         tokenIdSort: "",
         summitTop15: "",
+        timeSort: "",
     });
 
     // Fetch top 15 summit beasts
@@ -321,8 +322,24 @@ export default function Auction({ nfts, loading, error }: AuctionProps) {
 
     if (nfts.length === 0) {
         return (
-            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
-                <p className="text-[rgb(186,255,188)]/70">No NFTs found. Connect your wallet to see your collection.</p>
+            <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-6 px-4 py-12">
+                <div className="w-20 h-20 rounded-full bg-[rgb(50,255,52)]/10 flex items-center justify-center">
+                    <svg className="w-10 h-10 text-[rgb(50,255,52)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                    </svg>
+                </div>
+                <div className="text-center">
+                    <p className="text-lg text-[rgb(186,255,188)]/70 mb-2">
+                        No BEAST NFTs found in your wallet
+                    </p>
+                    <p className="text-sm text-[rgb(186,255,188)]/50 max-w-md">
+                        Connect your wallet to see your Loot Survivor beast collection, or play{" "}
+                        <a href="https://lootsurvivor.io/" target="_blank" rel="noopener noreferrer" className="text-[rgb(50,255,52)] hover:underline">
+                            Loot Survivor
+                        </a>{" "}
+                        to acquire beasts!
+                    </p>
+                </div>
             </div>
         );
         }

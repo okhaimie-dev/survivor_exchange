@@ -171,10 +171,22 @@ import { truncateAddress } from "../lib/utils/formatters";
                             ) : (
                                 <button
                                     onClick={handleConnect}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/20 transition-all cursor-pointer"
+                                    className="group relative flex items-center gap-2.5 px-5 py-2.5 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/30 hover:scale-105 transition-all cursor-pointer animate-subtle-pulse"
                                 >
-                                    <span className="font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-xs md:text-sm">
-                                        Connect
+                                    {/* Glow effect - pointer-events-none ensures clicks pass through */}
+                                    <div className="absolute inset-0 rounded-lg bg-[rgb(50,255,52)]/20 blur-md opacity-50 group-hover:opacity-80 transition-opacity pointer-events-none" />
+                                    {/* Wallet icon */}
+                                    <svg
+                                        className="relative w-4 h-4 md:w-5 md:h-5 text-[rgb(50,255,52)]"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                                    </svg>
+                                    <span className="relative font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-sm md:text-base font-semibold">
+                                        Connect Wallet
                                     </span>
                                 </button>
                             )

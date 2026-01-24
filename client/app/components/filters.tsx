@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { BEAST_OPTIONS, TYPE_OPTIONS } from "../lib/constants/filters";
 import CustomDropdown from "./custom-dropdown";
+import InfoTooltip from "./info-tooltip";
 
 export interface FilterState {
     id: string;
@@ -19,6 +20,7 @@ export interface FilterState {
     priceSort: string;
     tokenIdSort: string;
     summitTop15: string;
+    timeSort: string; // New: sort by ending time
 }
 
 interface FiltersProps {
@@ -64,6 +66,7 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
             priceSort: "",
             tokenIdSort: "",
             summitTop15: "",
+            timeSort: "ending-soon", // Keep ending soon as default for urgency
         });
     }, [onFiltersChange]);
 
@@ -165,8 +168,9 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
                                 Type
+                                <InfoTooltip content="Beast combat type: Brute (high health), Hunter (balanced), or Magic (high damage). Type advantages apply in Loot Survivor combat." />
                             </label>
                             <CustomDropdown
                                 id="filter-type"
@@ -184,8 +188,9 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
                                 Tier
+                                <InfoTooltip content="Beast rarity tier from 1 (rarest/strongest) to 5 (common). Lower tier beasts are more powerful and valuable. Tier 1 beasts are the most sought after." />
                             </label>
                             <CustomDropdown
                                 id="filter-tier"
@@ -203,8 +208,9 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
                                 Level Range
+                                <InfoTooltip content="Beast level from 1-140. Higher level beasts are more powerful. Level is determined by how far the adventurer progressed before being slain." />
                             </label>
                             <div className="flex gap-2">
                                 <input
@@ -229,8 +235,9 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
                                 Power Range
+                                <InfoTooltip content="Overall beast combat power (1-550). Combines attack, defense, and special abilities. Higher power = more valuable and effective in battles." />
                             </label>
                             <div className="flex gap-2">
                                 <input
@@ -257,8 +264,9 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
                                 Rank Range
+                                <InfoTooltip content="Beast leaderboard ranking (1-1165). Lower rank = more prestigious. Rank 1 is the top beast. Affects Summit rewards eligibility." />
                             </label>
                             <div className="flex gap-2">
                                 <input
@@ -311,6 +319,26 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                     { value: "", label: "All" },
                                     { value: "true", label: "True" },
                                     { value: "false", label: "False" },
+                                ]}
+                                variant="default"
+                            />
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                                <svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                                </svg>
+                                Sort by Time
+                            </label>
+                            <CustomDropdown
+                                id="filter-time-sort"
+                                value={filters.timeSort}
+                                onChange={(value) => updateFilter("timeSort", value)}
+                                options={[
+                                    { value: "ending-soon", label: "Ending Soon (Recommended)" },
+                                    { value: "newest", label: "Newest First" },
+                                    { value: "", label: "None" },
                                 ]}
                                 variant="default"
                             />

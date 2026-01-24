@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../lib/types";
 import { IMAGE_BASE_URL } from "../lib/constants";
@@ -23,7 +24,55 @@ type MonsterCollectionCardProps = {
     nfts?: FormattedNFT[];
 };
 
+// Helper to calculate time remaining
+const getSecondsRemaining = (endTime?: string): number | null => {
+    if (!endTime) return null;
+    try {
+        const endTimeNum = endTime.startsWith("0x") || endTime.startsWith("0X")
+            ? parseInt(endTime, 16)
+            : parseInt(endTime, 10);
+        if (isNaN(endTimeNum) || endTimeNum === 0) return null;
+        const now = Math.floor(Date.now() / 1000);
+        return endTimeNum - now;
+    } catch {
+        return null;
+    }
+};
+
 export default function MonsterCollectionCard({ collection, isSelected, onSelect, onQuickBid, nfts = [] }: MonsterCollectionCardProps) {
+    // Calculate urgency level
+    const urgencyInfo = useMemo(() => {
+        const secondsRemaining = getSecondsRemaining(collection.endTime);
+        const hasBids = collection.highestBid && collection.highestBid > 0;
+        const isActive = collection.status && parseInt(collection.status) === 2;
+
+        if (!isActive || secondsRemaining === null || secondsRemaining <= 0) {
+            return { level: 'none', badge: null };
+        }
+
+        if (secondsRemaining <= 3600) { // < 1 hour
+            return {
+                level: 'critical',
+                badge: { text: 'Ending Soon!', color: 'bg-red-500', animate: true }
+            };
+        }
+        if (secondsRemaining <= 14400) { // < 4 hours
+            return {
+                level: 'high',
+                badge: { text: 'Ending Soon', color: 'bg-orange-500', animate: false }
+            };
+        }
+        if (hasBids) {
+            return {
+                level: 'active',
+                badge: { text: 'Hot', color: 'bg-[rgb(50,255,52)]', animate: false, icon: '🔥' }
+            };
+        }
+        return { level: 'normal', badge: null };
+    }, [collection.endTime, collection.highestBid, collection.status]);
+
+    const hasBids = collection.highestBid && collection.highestBid > 0;
+
     const stats = [
         {
             label: "Reserved Price",
@@ -32,10 +81,11 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
         },
         {
             label: "Highest Bid",
-            value: collection.highestBid && collection.highestBid > 0
-                ? formatUSDSmart(collection.highestBid)
+            value: hasBids
+                ? formatUSDSmart(collection.highestBid!)
                 : "Be first!",
-            suffix: undefined,
+            suffix: !hasBids ? "Set the price" : undefined,
+            highlight: !hasBids,
         },
     ];
 
@@ -76,6 +126,16 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     </svg>
                 </div>
             )}
+            {/* Urgency Badge */}
+            {urgencyInfo.badge && (
+                <div className={`absolute top-4 left-4 z-20 px-2.5 py-1 rounded-full text-[10px] font-orbitron uppercase tracking-wider font-bold text-black ${urgencyInfo.badge.color} ${urgencyInfo.badge.animate ? 'animate-urgency-pulse' : ''}`}>
+                    <span className="flex items-center gap-1">
+                        {urgencyInfo.badge.icon && <span className="animate-fire">{urgencyInfo.badge.icon}</span>}
+                        {urgencyInfo.badge.text}
+                    </span>
+                </div>
+            )}
+
             <header className="flex flex-col gap-1 text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/75">
                 <span className="text-[10px] tracking-[0.2em] text-[rgb(186,255,188)]/60">
                     {collection.totalMonsters} nft{collection.totalMonsters === 1 ? '' : 's'} in this collection
@@ -246,9 +306,9 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     {collection.endTime && (
                         <p className="text-xs text-[rgb(186,255,188)]/70">
                             {collection.status && parseInt(collection.status) === 3 ? (
-                                <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" />
+                                <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" showUrgency={false} />
                             ) : (
-                                <>Ends in: <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" /></>
+                                <>Ends in: <CountdownTimer endTime={collection.endTime} status={collection.status} className="font-orbitron" showUrgency={true} /></>
                             )}
                         </p>
                     )}
@@ -259,14 +319,22 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                 {stats.map((stat) => (
                     <div
                         key={stat.label}
-                        className="flex flex-col gap-1 rounded-2xl border border-white/12 bg-white/5 px-5 py-3 text-left"
+                        className={`flex flex-col gap-1 rounded-2xl border px-5 py-3 text-left ${
+                            stat.highlight
+                                ? 'border-orange-500/40 bg-orange-500/10'
+                                : 'border-white/12 bg-white/5'
+                        }`}
                     >
                         <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
                             {stat.label}
                         </p>
-                        <p className="text-2xl font-orbitrontracking-tight text-white">{stat.value}</p>
+                        <p className={`text-2xl font-orbitron tracking-tight ${
+                            stat.highlight ? 'text-orange-400' : 'text-white'
+                        }`}>{stat.value}</p>
                         {stat.suffix ? (
-                            <span className="text-xs font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/80">
+                            <span className={`text-xs font-orbitron uppercase tracking-[0.18em] ${
+                                stat.highlight ? 'text-orange-400/80' : 'text-[rgb(186,255,188)]/80'
+                            }`}>
                                 {stat.suffix}
                             </span>
                         ) : null}
@@ -291,13 +359,17 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                             e.stopPropagation();
                             onQuickBid();
                         }}
-                        className="w-full mt-2 py-3 px-4 rounded-xl bg-[rgb(50,255,52)] text-black font-orbitron font-bold text-sm uppercase tracking-wider transition-all hover:bg-[rgb(40,220,42)] hover:shadow-[0_0_20px_rgba(50,255,52,0.4)] active:scale-[0.98]"
+                        className={`w-full mt-2 py-3 px-4 rounded-xl font-orbitron font-bold text-sm uppercase tracking-wider transition-all active:scale-[0.98] ${
+                            urgencyInfo.level === 'critical'
+                                ? 'bg-orange-500 text-black hover:bg-orange-400 hover:shadow-[0_0_20px_rgba(249,115,22,0.5)] animate-subtle-pulse'
+                                : 'bg-[rgb(50,255,52)] text-black hover:bg-[rgb(40,220,42)] hover:shadow-[0_0_20px_rgba(50,255,52,0.4)]'
+                        }`}
                     >
                         <span className="flex items-center justify-center gap-2">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                             </svg>
-                            Quick Bid
+                            {hasBids ? 'Place Bid' : 'Be First to Bid'}
                         </span>
                     </button>
                 )}
