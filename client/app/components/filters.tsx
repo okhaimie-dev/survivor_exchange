@@ -65,16 +65,16 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
     }, [token]);
 
     return (
-        <div className="w-full">
-            <div className="mb-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        <div className="w-full overflow-hidden">
+            <div className="mb-4 flex flex-col gap-3">
                 <input
                     type="text"
                     value={filters.search}
                     onChange={(e) => updateFilter("search", e.target.value)}
                     placeholder="Search by name, token ID, or attributes..."
-                    className="flex-1 rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
+                    className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
                 />
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     {/* Summit filter button - hidden if API fails (summitListedCount = 0) */}
                     {summitListedCount > 0 && (
                         <button

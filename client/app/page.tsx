@@ -32,7 +32,7 @@ export default function Home() {
   const token = searchParams.get('auction');
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black">
+    <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black overflow-x-hidden">
       {/* Handle ?beast=tokenId URL parameter */}
       <BeastUrlHandler />
       <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
