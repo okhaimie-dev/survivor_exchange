@@ -806,25 +806,42 @@ export default function BeastDetailModal({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[rgb(50,255,52)]/30">
-          <h2 className="text-xl font-orbitron uppercase tracking-wider text-white">
-            {currentNft.metadataName || `Beast #${currentNft.tokenId}`}
-          </h2>
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between px-4 md:px-6 py-3 md:py-4 border-b border-[rgb(50,255,52)]/30 gap-2 md:gap-0">
+          {/* Title row - with close button on mobile */}
+          <div className="flex items-center justify-between md:justify-start">
+            <h2 className="text-base md:text-xl font-orbitron uppercase tracking-wider text-white truncate max-w-[200px] md:max-w-none">
+              {currentNft.metadataName || `Beast #${currentNft.tokenId}`}
+            </h2>
+            {/* Close button - mobile only position */}
+            <button
+              onClick={onClose}
+              className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all"
+            >
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+                <path
+                  d="M15 5L5 15M5 5L15 15"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </div>
+
+          {/* Navigation controls */}
+          <div className="flex items-center justify-center md:justify-end gap-2 md:gap-4">
             {/* Navigation - only show when more than 1 item */}
             {nfts.length > 1 && (
-              <div className="flex flex-col items-center gap-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30">
-                    {currentIndex + 1} OF {nfts.length}
-                  </span>
+              <div className="flex items-center gap-2 md:gap-3">
+                {/* Prev button */}
                 <button
                   onClick={handlePrev}
                   disabled={currentIndex === 0}
                   title="Previous beast (← arrow key)"
-                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M12.5 15L7.5 10L12.5 5"
                       stroke="currentColor"
@@ -834,13 +851,24 @@ export default function BeastDetailModal({
                     />
                   </svg>
                 </button>
+                {/* Counter with swipe hint on mobile */}
+                <div className="flex flex-col items-center">
+                  <span className="text-xs md:text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-2 md:px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30 whitespace-nowrap">
+                    {currentIndex + 1} OF {nfts.length}
+                  </span>
+                  {/* Mobile swipe hint */}
+                  <span className="text-[8px] text-[rgb(186,255,188)]/40 font-orbitron uppercase tracking-wider md:hidden mt-0.5">
+                    Swipe to navigate
+                  </span>
+                </div>
+                {/* Next button */}
                 <button
                   onClick={handleNext}
                   disabled={currentIndex === nfts.length - 1}
                   title="Next beast (→ arrow key)"
-                  className="w-10 h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M7.5 15L12.5 10L7.5 5"
                       stroke="currentColor"
@@ -850,17 +878,12 @@ export default function BeastDetailModal({
                     />
                   </svg>
                 </button>
-                </div>
-                {/* Mobile swipe hint - only visible on touch devices */}
-                <span className="text-[9px] text-[rgb(186,255,188)]/40 font-orbitron uppercase tracking-wider md:hidden">
-                  Swipe to navigate
-                </span>
               </div>
             )}
-            {/* Close button */}
+            {/* Close button - desktop only position */}
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all"
+              className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                 <path
