@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState, useEffect, useRef } from "react";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import MonsterCollectionCard from "./monster-collection-card";
 import Pagination from "./pagination";
@@ -116,6 +117,7 @@ export default function Bids({
   const explorer = useExplorer();
   const provider = useProvider();
   const { openWalletModal } = useWalletModal();
+  const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txnHash, setTxnHash] = useState<string | undefined>();
   const [insufficientFundsError, setInsufficientFundsError] = useState<
@@ -263,7 +265,7 @@ export default function Bids({
         : undefined;
 
       return {
-        id: auction.auction_id,
+        id: String(auction.auction_id),
         name: truncateAuctionName(auction.name),
         totalMonsters: parseInt(auction.item_count) || 0,
         startingPrice,
@@ -312,6 +314,10 @@ export default function Bids({
       return () => clearTimeout(timer);
     }
   }, [selectedCollectionId]);
+
+  // Track if we've auto-opened from URL to avoid re-triggering
+  const hasAutoOpenedFromUrl = useRef(false);
+
   const nftCarouselRef = useRef<HTMLDivElement>(null);
   const detailRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -378,20 +384,55 @@ export default function Bids({
   );
 
   // Get NFTs for the selected auction (for modal)
+  // When opened from URL, look up directly from auctions to avoid filter timing issues
   const selectedAuctionNfts = useMemo(() => {
     if (!selectedCollectionId) return [];
-    const auction = paginatedFilteredAuctions.find(
-      (a) => a.auction_id === selectedCollectionId,
+    // First try filtered auctions (normal flow)
+    const filteredAuction = paginatedFilteredAuctions.find(
+      (a) => String(a.auction_id) === selectedCollectionId,
     );
-    return auction?.nfts || [];
-  }, [selectedCollectionId, paginatedFilteredAuctions]);
+    if (filteredAuction?.nfts?.length) {
+      return filteredAuction.nfts;
+    }
+    // Fallback: look up directly from auctions prop (for URL-based opening)
+    const directAuction = auctions.find(
+      (a) => String(a.auction_id) === selectedCollectionId,
+    );
+    return directAuction?.nfts || [];
+  }, [selectedCollectionId, paginatedFilteredAuctions, auctions]);
+
+  // Track if we need to open modal after NFTs load
+  const shouldOpenModalOnNftsLoad = useRef(false);
+
+  // Auto-select auction from URL and prepare to open modal
+  // Wait for loading to complete before trying to auto-select
+  useEffect(() => {
+    if (token && !hasAutoOpenedFromUrl.current && !loading && auctions.length > 0) {
+      // Compare as strings to handle both number and string auction_id formats
+      const targetAuction = auctions.find((a) => String(a.auction_id) === token);
+      if (targetAuction) {
+        hasAutoOpenedFromUrl.current = true;
+        setSelectedCollectionId(String(targetAuction.auction_id));
+        shouldOpenModalOnNftsLoad.current = true;
+      }
+    }
+  }, [token, auctions, loading]);
+
+  // Open modal once NFTs are available
+  useEffect(() => {
+    if (shouldOpenModalOnNftsLoad.current && selectedAuctionNfts.length > 0) {
+      shouldOpenModalOnNftsLoad.current = false;
+      setSelectedBeastIndex(0);
+      setIsBeastModalOpen(true);
+    }
+  }, [selectedAuctionNfts]);
 
   // Prepare beast metadata for skull rewards hook
   const selectedAuctionBeastData = useMemo(() => {
     if (!selectedCollectionId) return [];
 
     const auction = paginatedFilteredAuctions.find(
-      (a) => a.auction_id === selectedCollectionId,
+      (a) => String(a.auction_id) === selectedCollectionId,
     );
     if (!auction?.nfts) return [];
 
@@ -1451,7 +1492,7 @@ export default function Bids({
 
     // Find the auction to get feeToken and currentBid
     const auction = paginatedFilteredAuctions.find(
-      (a) => a.auction_id === selectedCollectionId,
+      (a) => String(a.auction_id) === selectedCollectionId,
     );
     if (!auction) {
       console.error("Auction not found");
@@ -1765,7 +1806,7 @@ export default function Bids({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 w-full">
           {collections.map((collection, index) => {
             const auction = paginatedFilteredAuctions.find(
-              (a) => a.auction_id === collection.id,
+              (a) => String(a.auction_id) === collection.id,
             );
             const nfts = auction?.nfts || [];
             const isSelected = collection.id === selectedCollectionId;
@@ -1797,7 +1838,7 @@ export default function Bids({
       if (!selectedCollection) return null;
 
       const auction = paginatedFilteredAuctions.find(
-        (a) => a.auction_id === selectedCollection.id,
+        (a) => String(a.auction_id) === selectedCollection.id,
       );
       const isUserSeller =
         address && auction?.seller
@@ -2404,7 +2445,7 @@ export default function Bids({
                   </div>
                   {(() => {
                     const auction = paginatedFilteredAuctions.find(
-                      (a) => a.auction_id === selectedCollection.id,
+                      (a) => String(a.auction_id) === selectedCollection.id,
                     );
                     const nfts = auction?.nfts || [];
 
@@ -2560,7 +2601,7 @@ export default function Bids({
                   </div>
                   {(() => {
                     const auction = paginatedFilteredAuctions.find(
-                      (a) => a.auction_id === selectedCollection.id,
+                      (a) => String(a.auction_id) === selectedCollection.id,
                     );
                     const nfts = auction?.nfts || [];
 
@@ -2886,10 +2927,19 @@ export default function Bids({
 
       <BeastDetailModal
         isOpen={isBeastModalOpen}
-        onClose={() => setIsBeastModalOpen(false)}
+        onClose={() => {
+          setIsBeastModalOpen(false);
+          // Remove auction param from URL if it was opened from URL
+          if (token && hasAutoOpenedFromUrl.current) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("auction");
+            router.push(url.pathname + url.search, { scroll: false });
+          }
+        }}
         nfts={selectedAuctionNfts}
         currentIndex={selectedBeastIndex}
         onNavigate={setSelectedBeastIndex}
+        auctionId={selectedCollectionId}
       />
     </div>
   );

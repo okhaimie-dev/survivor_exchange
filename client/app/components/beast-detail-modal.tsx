@@ -9,7 +9,7 @@ import BeastProfileCard from "./beast-profile-card";
 import BeastShareCard from "./beast-share-card";
 import AddressDisplay from "./address-display";
 import { useBeastOwner } from "../hooks/use-beast-owner";
-import { shareToTwitter, copyBeastLink } from "../lib/utils/share-utils";
+import { shareToTwitter, copyBeastLink, copyAuctionLink } from "../lib/utils/share-utils";
 import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-generator";
 
 // Combat Rating Gauge Component
@@ -514,6 +514,8 @@ interface BeastDetailModalProps {
   onNavigate: (index: number) => void;
   onSelect?: (tokenId: string) => void;
   isSelected?: boolean;
+  /** When viewing beasts in an auction context, copy the auction link instead of beast link */
+  auctionId?: string;
 }
 
 // Helper to format Unix timestamps to readable dates
@@ -538,6 +540,7 @@ export default function BeastDetailModal({
   onNavigate,
   onSelect,
   isSelected,
+  auctionId,
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -636,12 +639,15 @@ export default function BeastDetailModal({
     }
   }, [linkCopied]);
 
-  // Copy Link handler
+  // Copy Link handler - copies auction link when in auction context, otherwise beast link
   const handleCopyLink = useCallback(async () => {
     if (!currentNft) return;
-    const success = await copyBeastLink(currentNft.tokenId);
+    // If viewing in auction context, copy the auction link so recipient sees all beasts
+    const success = auctionId
+      ? await copyAuctionLink(auctionId)
+      : await copyBeastLink(currentNft.tokenId);
     setLinkCopied(success);
-  }, [currentNft]);
+  }, [currentNft, auctionId]);
 
   // Clear share result feedback after 4 seconds
   useEffect(() => {
@@ -876,8 +882,8 @@ export default function BeastDetailModal({
                 {/* Copy Link button (icon only) */}
                 <button
                   onClick={handleCopyLink}
-                  aria-label="Copy link to this beast"
-                  title={linkCopied ? "Copied!" : "Copy Link"}
+                  aria-label={auctionId ? "Copy link to this auction" : "Copy link to this beast"}
+                  title={linkCopied ? "Copied!" : (auctionId ? "Copy Auction Link" : "Copy Link")}
                   className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all ${
                     linkCopied
                       ? "border-green-500/60 bg-green-500/20 text-green-400"

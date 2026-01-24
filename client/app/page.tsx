@@ -29,7 +29,7 @@ export default function Home() {
     error: listingsError 
   } = useMyListings({ seller: address || undefined });
   const searchParams = useSearchParams();
-  const token = searchParams.get('token');
+  const token = searchParams.get('auction');
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black">

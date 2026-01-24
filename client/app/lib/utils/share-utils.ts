@@ -273,3 +273,33 @@ export async function copyBeastLink(tokenId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Generate a shareable URL for an auction by auction ID.
+ * The URL format is: https://survivorexchange.com/auction/{auctionId}
+ * This route generates OG metadata and redirects to /?auction={id}
+ */
+export function generateAuctionUrl(auctionId: string): string {
+  // Get the base URL (works for both localhost and production)
+  const baseUrl = typeof window !== "undefined"
+    ? `${window.location.protocol}//${window.location.host}`
+    : "https://survivorexchange.com";
+
+  return `${baseUrl}/auction/${auctionId}`;
+}
+
+/**
+ * Copy auction link to clipboard.
+ * Returns true if successful, false otherwise.
+ */
+export async function copyAuctionLink(auctionId: string): Promise<boolean> {
+  const url = generateAuctionUrl(auctionId);
+
+  try {
+    await navigator.clipboard.writeText(url);
+    return true;
+  } catch (error) {
+    console.error("Failed to copy auction link:", error);
+    return false;
+  }
+}
