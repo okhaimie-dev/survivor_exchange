@@ -1164,16 +1164,28 @@ export default function BeastDetailModal({
                       {formatUSDSmart(auctionBidData.startingPrice)}
                     </p>
                   </div>
-                  {auctionBidData.highestBid !== undefined && auctionBidData.highestBid > 0 && (
-                    <div className="flex-1 min-w-[100px] rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-2">
-                      <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)]">
-                        Highest Bid
-                      </p>
-                      <p className="text-sm font-orbitron text-[rgb(50,255,52)]">
-                        {formatUSDSmart(auctionBidData.highestBid)}
-                      </p>
-                    </div>
-                  )}
+                  <div className={`flex-1 min-w-[100px] rounded-lg border px-3 py-2 ${
+                    auctionBidData.highestBid && auctionBidData.highestBid > 0
+                      ? "border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10"
+                      : "border-white/20 bg-white/5"
+                  }`}>
+                    <p className={`text-[10px] font-orbitron uppercase tracking-wider ${
+                      auctionBidData.highestBid && auctionBidData.highestBid > 0
+                        ? "text-[rgb(50,255,52)]"
+                        : "text-[rgb(186,255,188)]/50"
+                    }`}>
+                      Highest Bid
+                    </p>
+                    <p className={`text-sm font-orbitron ${
+                      auctionBidData.highestBid && auctionBidData.highestBid > 0
+                        ? "text-[rgb(50,255,52)]"
+                        : "text-white/50"
+                    }`}>
+                      {auctionBidData.highestBid && auctionBidData.highestBid > 0
+                        ? formatUSDSmart(auctionBidData.highestBid)
+                        : "No bids yet"}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Bid input and quick bid buttons */}
