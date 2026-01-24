@@ -1715,7 +1715,15 @@ export default function Bids({
     }
 
     setSelectedCollectionId(collection.id);
-    setBidAmountToken("");
+
+    // Pre-fill bid amount with minimum valid bid (2% above highest bid or reserve)
+    const hasHighestBid = collection.highestBid !== undefined && collection.highestBid > 0;
+    const basePrice = hasHighestBid
+      ? collection.highestBid!
+      : collection.startingPrice / 1e6;
+    const minBid = (basePrice * 1.02).toFixed(2);
+    setBidAmountToken(minBid);
+
     setTxnHash(undefined);
     setOfferTxnHash(undefined);
     setSettleTxnHash(undefined);
