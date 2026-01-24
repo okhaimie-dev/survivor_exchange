@@ -655,6 +655,41 @@ export default function BeastDetailModal({
     }
   }, [currentIndex, nfts.length, onNavigate]);
 
+  // Mobile swipe gesture support
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const minSwipeDistance = 50; // Minimum distance for a swipe
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+
+    // Only trigger swipe if horizontal movement is greater than vertical
+    // This prevents swipe from triggering during scroll
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > minSwipeDistance) {
+      if (deltaX > 0) {
+        // Swipe right -> go to previous
+        handlePrev();
+      } else {
+        // Swipe left -> go to next
+        handleNext();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  }, [handlePrev, handleNext]);
+
   // 3D Tilt effect for the beast card - must be called before any early returns
   const { ref: tiltRef, style: tiltStyle, glareStyle } = useTilt(20, isOpen);
 
@@ -766,6 +801,8 @@ export default function BeastDetailModal({
       <div
         className="relative w-full max-w-4xl bg-black/95 border-2 border-[rgb(50,255,52)]/60 rounded-2xl shadow-[0_0_40px_rgba(50,255,52,0.2)] my-auto"
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Header */}
@@ -776,10 +813,11 @@ export default function BeastDetailModal({
           <div className="flex items-center gap-4">
             {/* Navigation - only show when more than 1 item */}
             {nfts.length > 1 && (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30">
-                  {currentIndex + 1} OF {nfts.length}
-                </span>
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30">
+                    {currentIndex + 1} OF {nfts.length}
+                  </span>
                 <button
                   onClick={handlePrev}
                   disabled={currentIndex === 0}
@@ -812,6 +850,11 @@ export default function BeastDetailModal({
                     />
                   </svg>
                 </button>
+                </div>
+                {/* Mobile swipe hint - only visible on touch devices */}
+                <span className="text-[9px] text-[rgb(186,255,188)]/40 font-orbitron uppercase tracking-wider md:hidden">
+                  Swipe to navigate
+                </span>
               </div>
             )}
             {/* Close button */}
