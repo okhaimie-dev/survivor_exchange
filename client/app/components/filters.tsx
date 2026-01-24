@@ -29,7 +29,18 @@ interface FiltersProps {
 }
 
 export default function Filters({ token, filters, onFiltersChange, summitListedCount = 0 }: FiltersProps) {
+    // Default to expanded on desktop (md breakpoint = 768px)
     const [isExpanded, setIsExpanded] = useState(false);
+
+    // Expand by default on desktop
+    useEffect(() => {
+        const mediaQuery = window.matchMedia("(min-width: 768px)");
+        setIsExpanded(mediaQuery.matches);
+
+        const handler = (e: MediaQueryListEvent) => setIsExpanded(e.matches);
+        mediaQuery.addEventListener("change", handler);
+        return () => mediaQuery.removeEventListener("change", handler);
+    }, []);
 
     const updateFilter = useCallback((key: keyof FilterState, value: string) => {
         onFiltersChange({ ...filters, [key]: value });
@@ -57,6 +68,7 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
     }, [onFiltersChange]);
 
     const hasActiveFilters = Object.values(filters).some(value => value !== "");
+    const activeFilterCount = Object.values(filters).filter(value => value !== "").length;
 
     useEffect(() => {
         if (token) {
@@ -113,8 +125,8 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                     >
                         {isExpanded ? "Hide Filters" : "Show Filters"}
                         {hasActiveFilters && (
-                            <span className="ml-2 rounded-full bg-[rgb(50,255,52)] px-2 py-0.5 text-xs text-black">
-                                Active
+                            <span className="ml-2 rounded-full bg-[rgb(50,255,52)] min-w-[20px] px-1.5 py-0.5 text-xs text-black font-bold">
+                                {activeFilterCount}
                             </span>
                         )}
                     </button>

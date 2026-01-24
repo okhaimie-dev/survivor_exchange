@@ -19,10 +19,11 @@ type MonsterCollectionCardProps = {
     };
     isSelected: boolean;
     onSelect: () => void;
+    onQuickBid?: () => void;
     nfts?: FormattedNFT[];
 };
 
-export default function MonsterCollectionCard({ collection, isSelected, onSelect, nfts = [] }: MonsterCollectionCardProps) {
+export default function MonsterCollectionCard({ collection, isSelected, onSelect, onQuickBid, nfts = [] }: MonsterCollectionCardProps) {
     const stats = [
         {
             label: "Reserved Price",
@@ -275,13 +276,31 @@ export default function MonsterCollectionCard({ collection, isSelected, onSelect
                     <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase tracking-[0.18em]">
                         Live Price Chart
                     </p>
-                    <BidPriceChart 
-                        width={200} 
-                        height={60} 
+                    <BidPriceChart
+                        width={200}
+                        height={60}
                         startingPrice={collection.startingPrice / 1e6}
                         currentBid={collection.highestBid}
                     />
                 </div>
+                {/* Quick Bid Button - only show for active auctions */}
+                {onQuickBid && collection.status && parseInt(collection.status) === 2 && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onQuickBid();
+                        }}
+                        className="w-full mt-2 py-3 px-4 rounded-xl bg-[rgb(50,255,52)] text-black font-orbitron font-bold text-sm uppercase tracking-wider transition-all hover:bg-[rgb(40,220,42)] hover:shadow-[0_0_20px_rgba(50,255,52,0.4)] active:scale-[0.98]"
+                    >
+                        <span className="flex items-center justify-center gap-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Quick Bid
+                        </span>
+                    </button>
+                )}
             </div>
         </article>
     );

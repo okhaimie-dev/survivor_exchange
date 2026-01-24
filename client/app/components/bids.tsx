@@ -1739,6 +1739,28 @@ export default function Bids({
     [selectedCollectionId, updateSelection],
   );
 
+  const handleQuickBid = useCallback(
+    (collection: Collection) => {
+      // Select the auction if not already selected
+      if (selectedCollectionId !== collection.id) {
+        updateSelection(collection);
+      }
+      // Wait for the detail view to render, then scroll and highlight
+      setTimeout(() => {
+        if (detailRef.current) {
+          detailRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
+        // Flash the bid input to draw attention
+        setBidInputHighlight(true);
+        setTimeout(() => setBidInputHighlight(false), 1500);
+      }, 100);
+    },
+    [selectedCollectionId, updateSelection],
+  );
+
   const handlePageChange = useCallback(
     (page: number) => {
       const nextPage = Math.min(Math.max(page, 1), totalFilteredPages);
@@ -1821,6 +1843,7 @@ export default function Bids({
                   collection={collection}
                   isSelected={isSelected}
                   onSelect={() => handleSelectCollection(collection)}
+                  onQuickBid={() => handleQuickBid(collection)}
                   nfts={nfts}
                 />
                 {showDetailAfterThis && (
