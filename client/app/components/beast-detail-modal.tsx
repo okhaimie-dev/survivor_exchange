@@ -14,6 +14,7 @@ import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-ge
 import { formatUSDSmart } from "../lib/utils";
 import InfoTooltip from "./info-tooltip";
 import CustomDropdown, { type DropdownOption } from "./custom-dropdown";
+import CountdownTimer from "./countdown-timer";
 
 // Combat Rating Gauge Component
 interface CombatRatingGaugeProps {
@@ -1262,6 +1263,18 @@ export default function BeastDetailModal({
                       {auctionBidData.highestBid && auctionBidData.highestBid > 0
                         ? formatUSDSmart(auctionBidData.highestBid)
                         : "Be first!"}
+                    </p>
+                  </div>
+                  {/* Countdown timer */}
+                  <div className="flex-1 min-w-[100px] rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2">
+                    <p className="text-[10px] font-orbitron uppercase tracking-wider text-orange-400/70">
+                      Ends In
+                    </p>
+                    <p className="text-sm font-orbitron text-orange-400">
+                      <CountdownTimer
+                        endTime={auctionBidData.endTime}
+                        status={auctionBidData.status}
+                      />
                     </p>
                   </div>
                 </div>
