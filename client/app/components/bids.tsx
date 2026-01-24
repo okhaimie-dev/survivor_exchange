@@ -2940,6 +2940,30 @@ export default function Bids({
         currentIndex={selectedBeastIndex}
         onNavigate={setSelectedBeastIndex}
         auctionId={selectedCollectionId}
+        auctionBidData={selectedCollection ? {
+          startingPrice: selectedCollection.startingPrice / 1e6,
+          highestBid: selectedCollection.highestBid,
+          status: selectedCollection.status,
+          endTime: selectedCollection.endTime,
+          isUserSeller: (() => {
+            const auction = auctions.find((a) => String(a.auction_id) === selectedCollectionId);
+            if (!address || !auction?.seller) return false;
+            const userAddress = normalizeContractAddress(address).toLowerCase();
+            const sellerAddress = normalizeContractAddress(auction.seller).toLowerCase();
+            return userAddress === sellerAddress;
+          })(),
+        } : undefined}
+        bidState={{
+          bidAmount: bidAmountToken,
+          isSubmitting,
+          isSubmittingOffer,
+          hasActiveOffer: !!userOffer,
+          account: !!account,
+        }}
+        onBidAmountChange={setBidAmountToken}
+        onPlaceBid={handlePlaceBid}
+        onMakeOffer={handleMakeOffer}
+        onOpenWallet={openWalletModal}
       />
     </div>
   );

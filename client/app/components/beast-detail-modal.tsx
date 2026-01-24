@@ -11,6 +11,8 @@ import AddressDisplay from "./address-display";
 import { useBeastOwner } from "../hooks/use-beast-owner";
 import { shareToTwitter, copyBeastLink, copyAuctionLink } from "../lib/utils/share-utils";
 import { extractBeastStats, generateBeastProfile } from "../lib/utils/tagline-generator";
+import { formatUSDSmart } from "../lib/utils";
+import InfoTooltip from "./info-tooltip";
 
 // Combat Rating Gauge Component
 interface CombatRatingGaugeProps {
@@ -506,6 +508,24 @@ function useTilt(intensity: number = 15, enabled: boolean = true) {
   return { ref, style, glareStyle };
 }
 
+/** Auction data for bid/offer functionality */
+interface AuctionBidData {
+  startingPrice: number; // In USDC (already divided by 1e6)
+  highestBid?: number; // In USDC (already divided by 1e6)
+  status: string;
+  endTime: string;
+  isUserSeller: boolean;
+}
+
+/** Bid state from parent component */
+interface BidState {
+  bidAmount: string;
+  isSubmitting: boolean;
+  isSubmittingOffer: boolean;
+  hasActiveOffer: boolean;
+  account: boolean; // whether user is connected
+}
+
 interface BeastDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -516,6 +536,18 @@ interface BeastDetailModalProps {
   isSelected?: boolean;
   /** When viewing beasts in an auction context, copy the auction link instead of beast link */
   auctionId?: string;
+  /** Auction data for displaying bid info and enabling bid/offer actions */
+  auctionBidData?: AuctionBidData;
+  /** Current bid state from parent */
+  bidState?: BidState;
+  /** Callback when bid amount changes */
+  onBidAmountChange?: (amount: string) => void;
+  /** Callback to place a bid */
+  onPlaceBid?: () => void;
+  /** Callback to make an offer */
+  onMakeOffer?: () => void;
+  /** Callback to open wallet modal */
+  onOpenWallet?: () => void;
 }
 
 // Helper to format Unix timestamps to readable dates
@@ -541,6 +573,12 @@ export default function BeastDetailModal({
   onSelect,
   isSelected,
   auctionId,
+  auctionBidData,
+  bidState,
+  onBidAmountChange,
+  onPlaceBid,
+  onMakeOffer,
+  onOpenWallet,
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -1110,6 +1148,165 @@ export default function BeastDetailModal({
                     </>
                   )}
                 </button>
+              </div>
+            )}
+
+            {/* Bid/Offer Section - Only show in auction context with active auction */}
+            {auctionId && auctionBidData && bidState && parseInt(auctionBidData.status) === 2 && (
+              <div className="mt-4 pt-4 border-t border-[rgb(50,255,52)]/20">
+                {/* Price info */}
+                <div className="flex flex-wrap gap-3 mb-4">
+                  <div className="flex-1 min-w-[100px] rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-3 py-2">
+                    <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
+                      Reserve
+                    </p>
+                    <p className="text-sm font-orbitron text-white">
+                      {formatUSDSmart(auctionBidData.startingPrice)}
+                    </p>
+                  </div>
+                  {auctionBidData.highestBid !== undefined && auctionBidData.highestBid > 0 && (
+                    <div className="flex-1 min-w-[100px] rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-2">
+                      <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)]">
+                        Highest Bid
+                      </p>
+                      <p className="text-sm font-orbitron text-[rgb(50,255,52)]">
+                        {formatUSDSmart(auctionBidData.highestBid)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bid input and quick bid buttons */}
+                {!auctionBidData.isUserSeller && (
+                  <>
+                    <div className="flex flex-col gap-2 mb-3">
+                      <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
+                        Your Bid (USDC)
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        placeholder="Enter amount..."
+                        value={bidState.bidAmount}
+                        onChange={(e) => onBidAmountChange?.(e.target.value)}
+                        className="w-full rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-3 py-2 text-sm font-orbitron text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                    </div>
+
+                    {/* Quick bid buttons */}
+                    {(() => {
+                      const hasHighestBid = auctionBidData.highestBid !== undefined && auctionBidData.highestBid > 0;
+                      const basePrice = hasHighestBid
+                        ? auctionBidData.highestBid!
+                        : auctionBidData.startingPrice;
+                      const minBid = basePrice * 1.02;
+                      const midBid = basePrice * 1.5;
+                      const highBid = basePrice * 2;
+
+                      return (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          <button
+                            type="button"
+                            onClick={() => onBidAmountChange?.(minBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            +2%
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onBidAmountChange?.(midBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            1.5x
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onBidAmountChange?.(highBid.toFixed(2))}
+                            className="px-2 py-1 text-[9px] font-orbitron uppercase tracking-wider rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/15 transition"
+                          >
+                            2x
+                          </button>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Action buttons */}
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={onPlaceBid}
+                          disabled={
+                            !bidState.account ||
+                            bidState.isSubmitting ||
+                            !bidState.bidAmount ||
+                            parseFloat(bidState.bidAmount) <= 0
+                          }
+                          className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-10 text-xs font-orbitron uppercase tracking-[0.12em] transition whitespace-nowrap ${
+                            bidState.account &&
+                            !bidState.isSubmitting &&
+                            bidState.bidAmount &&
+                            parseFloat(bidState.bidAmount) > 0
+                              ? "bg-[rgb(50,255,52)] text-black font-bold hover:cursor-pointer hover:bg-[rgb(40,220,42)] shadow-[0_0_12px_rgba(50,255,52,0.4)]"
+                              : "border border-white/12 text-[rgb(186,255,188)]/45 cursor-not-allowed"
+                          }`}
+                        >
+                          <span>{bidState.isSubmitting ? "..." : "Place Bid"}</span>
+                          {!bidState.isSubmitting && (
+                            <InfoTooltip content="Compete in the auction. Your bid must be higher than the current highest bid." />
+                          )}
+                        </button>
+                        {!bidState.hasActiveOffer && (
+                          <button
+                            type="button"
+                            onClick={onMakeOffer}
+                            disabled={
+                              !bidState.account ||
+                              bidState.isSubmittingOffer ||
+                              !bidState.bidAmount ||
+                              parseFloat(bidState.bidAmount) <= 0
+                            }
+                            className={`flex-1 inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-10 text-xs font-orbitron uppercase tracking-[0.12em] transition whitespace-nowrap ${
+                              bidState.account &&
+                              !bidState.isSubmittingOffer &&
+                              bidState.bidAmount &&
+                              parseFloat(bidState.bidAmount) > 0
+                                ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
+                                : "border border-white/12 text-[rgb(186,255,188)]/45 cursor-not-allowed"
+                            }`}
+                          >
+                            <span>{bidState.isSubmittingOffer ? "..." : "Make Offer"}</span>
+                            {!bidState.isSubmittingOffer && (
+                              <InfoTooltip content="Make a direct buyout offer to the seller. If accepted, the auction ends immediately." />
+                            )}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Connect wallet prompt */}
+                      {!bidState.account && (
+                        <button
+                          type="button"
+                          onClick={onOpenWallet}
+                          className="text-xs text-center text-[rgb(50,255,52)]/80 font-orbitron animate-pulse hover:text-[rgb(50,255,52)] hover:underline cursor-pointer transition-colors"
+                        >
+                          Connect wallet to place a bid →
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Seller notice */}
+                {auctionBidData.isUserSeller && (
+                  <div className="text-center py-3 rounded-lg border border-yellow-500/30 bg-yellow-500/10">
+                    <p className="text-xs font-orbitron text-yellow-400">
+                      You are the seller of this auction
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
