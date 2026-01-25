@@ -8,6 +8,7 @@ import DisclaimerModal from "./components/disclaimer-modal";
 import { StarknetProvider } from "./providers/starknet-provider";
 import { ApolloGraphQLProvider } from "./providers/apollo-provider";
 import { WalletModalProvider } from "./providers/wallet-modal-provider";
+import { EVMProvider } from "./providers/evm-provider";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -46,17 +47,19 @@ export default function RootLayout({
       <body
         className={`${orbitron.variable} ${GeistMono.variable} antialiased bg-black`}
       >
-        <ApolloGraphQLProvider>
-          <StarknetProvider>
-            <WalletModalProvider>
-              <Suspense>
-                <DisclaimerModal />
-                <Header />
-                {children}
-              </Suspense>
-            </WalletModalProvider>
-          </StarknetProvider>
-        </ApolloGraphQLProvider>
+        <EVMProvider>
+          <ApolloGraphQLProvider>
+            <StarknetProvider>
+              <WalletModalProvider>
+                <Suspense>
+                  <DisclaimerModal />
+                  <Header />
+                  {children}
+                </Suspense>
+              </WalletModalProvider>
+            </StarknetProvider>
+          </ApolloGraphQLProvider>
+        </EVMProvider>
       </body>
     </html>
   );
