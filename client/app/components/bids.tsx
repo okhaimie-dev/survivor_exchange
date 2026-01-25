@@ -3017,12 +3017,16 @@ export default function Bids({
                     {selectedCollection.name}
                   </p>
                   <p className="text-sm font-orbitron text-white">
-                    {selectedCollection.highestBid && selectedCollection.highestBid > 0
-                      ? `$${formatUSDSmart(selectedCollection.highestBid)}`
-                      : `$${formatUSDSmart(selectedCollection.startingPrice / 1e6)}`
-                    }
+                    {(() => {
+                      // Calculate suggested bid: 2% above current highest bid or reserve
+                      const basePrice = selectedCollection.highestBid && selectedCollection.highestBid > 0
+                        ? selectedCollection.highestBid
+                        : selectedCollection.startingPrice / 1e6;
+                      const suggestedBid = basePrice * 1.02;
+                      return formatUSDSmart(suggestedBid);
+                    })()}
                     <span className="text-[10px] text-[rgb(186,255,188)]/50 ml-1">
-                      {selectedCollection.highestBid && selectedCollection.highestBid > 0 ? 'current bid' : 'reserve'}
+                      suggested bid
                     </span>
                   </p>
                 </div>
