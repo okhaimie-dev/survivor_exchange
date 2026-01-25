@@ -127,3 +127,19 @@ body {
 .animate-fire {
   animation: fire-flicker 0.8s ease-in-out infinite;
 }
+
+/* Toast slide down animation */
+@keyframes slide-down {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out forwards;
+}

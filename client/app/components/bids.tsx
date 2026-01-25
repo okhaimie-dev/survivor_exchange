@@ -3085,6 +3085,27 @@ export default function Bids({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4">
+      {/* Toast notification for errors */}
+      {insufficientFundsError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-slide-down">
+          <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-red-500/95 backdrop-blur-md border border-red-400 shadow-[0_4px_20px_rgba(239,68,68,0.4)]">
+            <svg className="w-5 h-5 text-white flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm font-semibold text-white">{insufficientFundsError}</p>
+            <button
+              type="button"
+              onClick={() => setInsufficientFundsError(null)}
+              className="ml-2 text-white/80 hover:text-white transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <Filters token={token} filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
       {renderContent()}
 
