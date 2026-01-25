@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
-import { mainnet, base, arbitrum, polygon } from 'wagmi/chains';
+import { base, arbitrum, polygon } from 'wagmi/chains';
 import { injected, coinbaseWallet, walletConnect } from 'wagmi/connectors';
 import { useState, type ReactNode } from 'react';
 
@@ -12,7 +12,6 @@ const WALLETCONNECT_PROJECT_ID = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_I
 // RPC URLs - use environment variables or fallback to public endpoints
 // For production, you should use your own RPC URLs (Alchemy, Infura, etc.)
 const RPC_URLS = {
-  mainnet: process.env.NEXT_PUBLIC_MAINNET_RPC_URL || 'https://eth.llamarpc.com',
   base: process.env.NEXT_PUBLIC_BASE_RPC_URL || 'https://base.llamarpc.com',
   arbitrum: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL || 'https://arbitrum.llamarpc.com',
   polygon: process.env.NEXT_PUBLIC_POLYGON_RPC_URL || 'https://polygon.llamarpc.com',
@@ -20,7 +19,7 @@ const RPC_URLS = {
 
 // Configure wagmi with injected, Coinbase Wallet, and WalletConnect
 const config = createConfig({
-  chains: [mainnet, base, arbitrum, polygon],
+  chains: [base, arbitrum, polygon],
   connectors: [
     injected(),
     coinbaseWallet({
@@ -41,7 +40,6 @@ const config = createConfig({
       : []),
   ],
   transports: {
-    [mainnet.id]: http(RPC_URLS.mainnet, { retryCount: 3, retryDelay: 1000 }),
     [base.id]: http(RPC_URLS.base, { retryCount: 3, retryDelay: 1000 }),
     [arbitrum.id]: http(RPC_URLS.arbitrum, { retryCount: 3, retryDelay: 1000 }),
     [polygon.id]: http(RPC_URLS.polygon, { retryCount: 3, retryDelay: 1000 }),

@@ -49,7 +49,7 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
   const { address: starknetAddress, isConnected: isStarknetConnected } = useStarknetAccount();
 
   // Form state (declared early for balance hooks)
-  const [sourceChain, setSourceChain] = useState<SupportedChainId>("ethereum");
+  const [sourceChain, setSourceChain] = useState<SupportedChainId>("base");
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
 
   // Get the chain ID for balance queries
@@ -443,9 +443,9 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
                     <label className="text-xs text-[rgb(186,255,188)]/70 font-orbitron uppercase tracking-wider">
                       From Chain
                     </label>
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       {(Object.keys(SUPPORTED_CHAINS) as SupportedChainId[])
-                        .filter((c) => c !== "solana") // EVM only for now
+                        .filter((c) => c !== "solana" && c !== "ethereum") // Base, Arbitrum, Polygon only
                         .map((chainId) => {
                           const chainInfo = SUPPORTED_CHAINS[chainId];
                           return (
