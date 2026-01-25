@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useAccount as useEVMAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain } from "wagmi";
-import { parseEther, parseUnits } from "viem";
+import { useAccount as useEVMAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt, useSwitchChain, useBalance, useReadContract, useWriteContract } from "wagmi";
+import { parseEther, parseUnits, formatUnits, erc20Abi } from "viem";
 import { useAccount as useStarknetAccount } from "@starknet-react/core";
 import {
   SUPPORTED_CHAINS,
@@ -33,7 +33,14 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
   const { connectors, connect } = useConnect();
   const { disconnect: disconnectEVM } = useDisconnect();
   const { switchChainAsync } = useSwitchChain();
-  const { sendTransaction, data: txHash, isPending: isSending, error: sendError } = useSendTransaction();
+  const { sendTransaction, data: nativeTxHash, isPending: isNativeSending, error: nativeSendError } = useSendTransaction();
+  const { writeContract, data: erc20TxHash, isPending: isErc20Sending, error: erc20SendError } = useWriteContract();
+
+  // Combine tx hashes and states for native and ERC20
+  const txHash = nativeTxHash || erc20TxHash;
+  const isSending = isNativeSending || isErc20Sending;
+  const sendError = nativeSendError || erc20SendError;
+
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: txHash,
   });
@@ -41,9 +48,39 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
   // Starknet wallet state
   const { address: starknetAddress, isConnected: isStarknetConnected } = useStarknetAccount();
 
-  // Form state
+  // Form state (declared early for balance hooks)
   const [sourceChain, setSourceChain] = useState<SupportedChainId>("ethereum");
   const [selectedToken, setSelectedToken] = useState<TokenInfo | null>(null);
+
+  // Get the chain ID for balance queries
+  const selectedChainId = SUPPORTED_CHAINS[sourceChain]?.chainId;
+
+  // Fetch native token balance
+  const { data: nativeBalance } = useBalance({
+    address: evmAddress,
+    chainId: selectedChainId,
+  });
+
+  // Fetch ERC20 token balance (only if token is not native)
+  const { data: erc20Balance } = useReadContract({
+    address: selectedToken?.address !== 'native' ? selectedToken?.address as `0x${string}` : undefined,
+    abi: erc20Abi,
+    functionName: 'balanceOf',
+    args: evmAddress ? [evmAddress] : undefined,
+    chainId: selectedChainId,
+    query: {
+      enabled: !!evmAddress && !!selectedToken && selectedToken.address !== 'native',
+    },
+  });
+
+  // Calculate display balance
+  const tokenBalance = selectedToken?.address === 'native'
+    ? nativeBalance ? formatUnits(nativeBalance.value, nativeBalance.decimals) : undefined
+    : erc20Balance && selectedToken
+      ? formatUnits(erc20Balance as bigint, selectedToken.decimals)
+      : undefined;
+
+  // Form state (sourceChain and selectedToken declared earlier for balance hooks)
   const [amount, setAmount] = useState("");
   const [destinationAddress, setDestinationAddress] = useState("");
   const [useConnectedStarknet, setUseConnectedStarknet] = useState(true);
@@ -249,7 +286,7 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
 
       // Send transaction
       if (selectedToken.address === "native") {
-        // Native token transfer
+        // Native token transfer (ETH, POL, etc.)
         console.log('Sending native token to:', liveQuote.depositAddress, 'amount:', amount, 'on chain:', requiredChainId);
         sendTransaction({
           to: liveQuote.depositAddress as `0x${string}`,
@@ -257,12 +294,14 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
           chainId: requiredChainId,
         });
       } else {
-        // ERC20 transfer - for simplicity, we're sending native for now
-        // Full implementation would use writeContract for ERC20 approve + transfer
-        console.log('Sending ERC20 token to:', liveQuote.depositAddress, 'amount:', amount, 'on chain:', requiredChainId);
-        sendTransaction({
-          to: liveQuote.depositAddress as `0x${string}`,
-          value: parseUnits(amount, selectedToken.decimals),
+        // ERC20 token transfer (USDC, USDT, etc.)
+        const tokenAmount = parseUnits(amount, selectedToken.decimals);
+        console.log('Sending ERC20 token to:', liveQuote.depositAddress, 'amount:', tokenAmount.toString(), 'token:', selectedToken.address, 'on chain:', requiredChainId);
+        writeContract({
+          address: selectedToken.address as `0x${string}`,
+          abi: erc20Abi,
+          functionName: 'transfer',
+          args: [liveQuote.depositAddress as `0x${string}`, tokenAmount],
           chainId: requiredChainId,
         });
       }
@@ -310,7 +349,9 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
   const isValidDest = destAddr && isValidStarknetAddress(destAddr);
   // For dry quotes, check amountOut; depositAddress only comes with non-dry quotes
   const hasValidQuote = quote && quote.amountOut && quote.amountOut !== '0';
-  const canBridge = isEVMConnected && selectedToken && amount && parseFloat(amount) > 0 && isValidDest && hasValidQuote && !quoteLoading;
+  // Check if user has sufficient balance
+  const hasInsufficientBalance = tokenBalance && amount && parseFloat(amount) > parseFloat(tokenBalance);
+  const canBridge = isEVMConnected && selectedToken && amount && parseFloat(amount) > 0 && isValidDest && hasValidQuote && !quoteLoading && !hasInsufficientBalance;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -441,9 +482,24 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
 
                   {/* Amount Input */}
                   <div className="space-y-2">
-                    <label className="text-xs text-[rgb(186,255,188)]/70 font-orbitron uppercase tracking-wider">
-                      Amount
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs text-[rgb(186,255,188)]/70 font-orbitron uppercase tracking-wider">
+                        Amount
+                      </label>
+                      {tokenBalance && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[rgb(186,255,188)]/50">
+                            Balance: {parseFloat(tokenBalance).toFixed(selectedToken?.address === 'native' ? 4 : 2)} {selectedToken?.symbol}
+                          </span>
+                          <button
+                            onClick={() => setAmount(tokenBalance)}
+                            className="text-xs text-[rgb(50,255,52)] hover:underline font-orbitron"
+                          >
+                            MAX
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <input
                       type="number"
                       value={amount}
@@ -537,6 +593,8 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
                     className={`w-full py-4 rounded-xl font-orbitron font-bold uppercase tracking-wider transition-all ${
                       canBridge
                         ? "bg-[rgb(50,255,52)] text-black hover:bg-[rgb(40,220,42)] shadow-[0_0_20px_rgba(50,255,52,0.4)]"
+                        : hasInsufficientBalance
+                        ? "bg-red-500/20 text-red-400 cursor-not-allowed border border-red-500/40"
                         : "bg-white/10 text-white/40 cursor-not-allowed"
                     }`}
                   >
@@ -546,6 +604,8 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
                       ? "Enter Starknet Address"
                       : !amount || parseFloat(amount) <= 0
                       ? "Enter Amount"
+                      : hasInsufficientBalance
+                      ? "Insufficient Balance"
                       : quoteLoading
                       ? "Getting Quote..."
                       : "Bridge to Starknet"}
