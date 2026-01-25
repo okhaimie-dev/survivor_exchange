@@ -182,9 +182,9 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
     return () => clearTimeout(debounce);
   }, [isOpen, selectedToken, amount, destinationAddress, starknetAddress, useConnectedStarknet, evmAddress]);
 
-  // Poll status when bridging
+  // Poll status when bridging (uses depositAddress, not quoteId)
   useEffect(() => {
-    if (step !== "bridging" || !quote?.quoteId || !isOpen) return;
+    if (step !== "bridging" || !quote?.depositAddress || !isOpen) return;
 
     let isPollingActive = true;
 
@@ -192,17 +192,22 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
       if (!isPollingActive || !isMountedRef.current) return;
 
       try {
-        const status = await getStatus(quote.quoteId);
+        const status = await getStatus(quote.depositAddress);
         if (!isPollingActive || !isMountedRef.current) return;
 
         setBridgeStatus(status);
 
-        if (status.status === "completed") {
+        // Check for completion status (SUCCESS)
+        if (status.status === "SUCCESS") {
           setStep("complete");
-        } else if (status.status === "failed") {
+        } else if (status.status === "FAILED") {
           setStep("error");
           setErrorMessage(status.error || "Bridge failed");
+        } else if (status.status === "REFUNDED") {
+          setStep("error");
+          setErrorMessage("Bridge was refunded. Funds returned to your wallet.");
         }
+        // Other statuses (PENDING_DEPOSIT, KNOWN_DEPOSIT_TX, PROCESSING, INCOMPLETE_DEPOSIT) mean still in progress
       } catch (error) {
         console.error("Status poll error:", error);
         // Don't set error state for polling failures - just log and continue
@@ -215,13 +220,15 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
       isPollingActive = false;
       clearInterval(interval);
     };
-  }, [step, quote?.quoteId, isOpen]);
+  }, [step, quote?.depositAddress, isOpen]);
 
   // Submit deposit hash when transaction confirms
   useEffect(() => {
-    if (isConfirmed && txHash && quote?.quoteId && step === "confirm") {
-      submitDeposit(quote.quoteId, txHash)
+    if (isConfirmed && txHash && quote?.depositAddress && step === "confirm") {
+      // Submit the deposit tx hash to speed up processing
+      submitDeposit(quote.quoteId || quote.depositAddress, txHash)
         .then(() => {
+          console.log("Deposit submitted successfully");
           if (isMountedRef.current) {
             setStep("bridging");
           }
@@ -234,7 +241,7 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
           }
         });
     }
-  }, [isConfirmed, txHash, quote?.quoteId, step]);
+  }, [isConfirmed, txHash, quote?.depositAddress, quote?.quoteId, step]);
 
   // Handle send error
   useEffect(() => {
@@ -629,13 +636,20 @@ export default function BridgeModal({ isOpen, onClose }: BridgeModalProps) {
               <div className="w-16 h-16 mx-auto border-4 border-[rgb(50,255,52)] border-t-transparent rounded-full animate-spin" />
               <p className="text-white font-orbitron">Bridging in progress...</p>
               <p className="text-sm text-[rgb(186,255,188)]/70">
-                Status: {bridgeStatus?.status || "pending"}
+                {bridgeStatus?.status === 'PENDING_DEPOSIT' && 'Waiting for deposit confirmation...'}
+                {bridgeStatus?.status === 'KNOWN_DEPOSIT_TX' && 'Deposit detected, processing...'}
+                {bridgeStatus?.status === 'PROCESSING' && 'Executing swap...'}
+                {bridgeStatus?.status === 'INCOMPLETE_DEPOSIT' && 'Partial deposit received...'}
+                {!bridgeStatus?.status && 'Initializing bridge...'}
               </p>
               {txHash && (
                 <p className="text-xs text-[rgb(186,255,188)]/50 break-all">
                   TX: {txHash.slice(0, 10)}...{txHash.slice(-8)}
                 </p>
               )}
+              <p className="text-[10px] text-[rgb(186,255,188)]/40 mt-4">
+                This may take 30-60 seconds. You can close this modal and check back later.
+              </p>
             </div>
           )}
 

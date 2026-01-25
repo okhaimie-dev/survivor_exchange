@@ -260,14 +260,32 @@ function normalizeQuoteResponse(raw: RawQuoteResponse): QuoteResponse {
   };
 }
 
-// Status response interface
+// Status response interface (matching 1Click API v0)
+// Possible statuses: KNOWN_DEPOSIT_TX, PENDING_DEPOSIT, INCOMPLETE_DEPOSIT, PROCESSING, SUCCESS, REFUNDED, FAILED
+export type BridgeStatus =
+  | 'KNOWN_DEPOSIT_TX'
+  | 'PENDING_DEPOSIT'
+  | 'INCOMPLETE_DEPOSIT'
+  | 'PROCESSING'
+  | 'SUCCESS'
+  | 'REFUNDED'
+  | 'FAILED';
+
 export interface StatusResponse {
-  quoteId: string;
-  status: 'pending' | 'deposited' | 'bridging' | 'completed' | 'failed' | 'expired';
-  depositTxHash?: string;
-  withdrawTxHash?: string;
-  amountIn?: string;
-  amountOut?: string;
+  correlationId: string;
+  status: BridgeStatus;
+  updatedAt?: string;
+  quoteResponse?: {
+    quote?: {
+      amountIn?: string;
+      amountOut?: string;
+    };
+  };
+  swapDetails?: {
+    depositTxHash?: string;
+    withdrawTxHash?: string;
+    refundTxHash?: string;
+  };
   error?: string;
 }
 
@@ -358,9 +376,10 @@ export async function submitDeposit(quoteId: string, txHash: string): Promise<vo
 
 /**
  * Check the status of a bridge transaction
+ * @param depositAddress - The deposit address from the quote response
  */
-export async function getStatus(quoteId: string): Promise<StatusResponse> {
-  const response = await fetch(`${API_BASE}/status?quoteId=${encodeURIComponent(quoteId)}`);
+export async function getStatus(depositAddress: string): Promise<StatusResponse> {
+  const response = await fetch(`${API_BASE}/status?depositAddress=${encodeURIComponent(depositAddress)}`);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
@@ -371,7 +390,9 @@ export async function getStatus(quoteId: string): Promise<StatusResponse> {
     );
   }
 
-  return response.json();
+  const rawResponse = await response.json();
+  console.log('Status API response:', rawResponse);
+  return rawResponse;
 }
 
 /**
