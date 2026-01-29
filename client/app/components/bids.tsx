@@ -416,11 +416,57 @@ const toast = useToast();
     };
   }, [selectedCollectionId, checkScrollButtons]);
 
-  const selectedCollection = useMemo(
-    () =>
-      collections.find((collection) => collection.id === selectedCollectionId),
-    [selectedCollectionId, collections],
-  );
+  // When opened from URL, the auction might not be in the filtered/paginated collections
+  // So we need a fallback that looks up directly from auctions and builds a Collection object
+  const selectedCollection = useMemo(() => {
+    if (!selectedCollectionId) return undefined;
+
+    // First try filtered collections (normal flow)
+    const fromCollections = collections.find(
+      (collection) => collection.id === selectedCollectionId
+    );
+    if (fromCollections) return fromCollections;
+
+    // Fallback: build Collection object directly from auctions prop (for URL-based opening)
+    const directAuction = auctions.find(
+      (a) => String(a.auction_id) === selectedCollectionId
+    );
+    if (!directAuction) return undefined;
+
+    // Parse starting_price
+    const startingPriceStr = directAuction.starting_price || "0";
+    const startingPrice =
+      startingPriceStr.startsWith("0x") || startingPriceStr.startsWith("0X")
+        ? parseInt(startingPriceStr, 16)
+        : parseFloat(startingPriceStr);
+
+    // Parse current_bid
+    const highestBid = directAuction.current_bid
+      ? (() => {
+          const bidStr = directAuction.current_bid;
+          const parsed =
+            bidStr.startsWith("0x") || bidStr.startsWith("0X")
+              ? parseInt(bidStr, 16)
+              : parseFloat(bidStr);
+          return parsed / 1e6;
+        })()
+      : undefined;
+
+    return {
+      id: String(directAuction.auction_id),
+      name: truncateAuctionName(directAuction.name),
+      fullName: directAuction.name,
+      totalMonsters: parseInt(directAuction.item_count) || 0,
+      startingPrice,
+      highestBid,
+      image: "/logo.png",
+      status: directAuction.status,
+      endTime: directAuction.end_time,
+      sellerFull: directAuction.seller,
+      highestBidderFull: directAuction.highest_bidder,
+      executedAt: directAuction.executedAt,
+    } as Collection;
+  }, [selectedCollectionId, collections, auctions]);
 
   // Get NFTs for the selected auction (for modal)
   // When opened from URL, look up directly from auctions to avoid filter timing issues
