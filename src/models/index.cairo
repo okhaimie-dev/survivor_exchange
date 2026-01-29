@@ -47,21 +47,6 @@ pub struct Bid {
 
 #[derive(Copy, Drop, IntrospectPacked, Serde)]
 #[dojo::model]
-pub struct Rental {
-    #[key]
-    pub token_id: u32,
-    pub rental_status: u8,
-    pub rental_price: u8,
-    pub duration: u64,
-    pub collateral: u64,
-    pub start_time: u64,
-    pub end_time: u64,
-    pub renter: felt252,
-    pub owner: felt252,
-}
-
-#[derive(Copy, Drop, IntrospectPacked, Serde)]
-#[dojo::model]
 pub struct SupportedNFTCollection {
     #[key]
     pub collection_address: felt252,

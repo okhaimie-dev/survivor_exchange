@@ -5,7 +5,7 @@ pub mod tests {
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
         spawn_test_world,
     };
-    use snforge_std::{ContractClassTrait, DeclareResultTrait, start_cheat_caller_address, declare};
+    use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address};
     use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
     use survivor_exchange::models::index::SupportedNFTCollection;
@@ -49,13 +49,12 @@ pub mod tests {
             namespace: DEFAULT_NS(),
             resources: [
                 TestResource::Model("Bid"), TestResource::Model("Auction"),
-                TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
-                TestResource::Model("ExchangeSettings"), TestResource::Model("Vault"),
-                TestResource::Model("VaultShare"), TestResource::Model("SupportedNFTCollection"),
-                TestResource::Model("Offer"), TestResource::Model("ListedToken"),
-                TestResource::Model("AuctionOfferIndex"), TestResource::Model("AuctionOfferCount"),
-                TestResource::Event("AuctionEvent"), TestResource::Event("BidPlaced"),
-                TestResource::Event("OfferEvent"),
+                TestResource::Model("AuctionItem"), TestResource::Model("ExchangeSettings"),
+                TestResource::Model("Vault"), TestResource::Model("VaultShare"),
+                TestResource::Model("SupportedNFTCollection"), TestResource::Model("Offer"),
+                TestResource::Model("ListedToken"), TestResource::Model("AuctionOfferIndex"),
+                TestResource::Model("AuctionOfferCount"), TestResource::Event("AuctionEvent"),
+                TestResource::Event("BidPlaced"), TestResource::Event("OfferEvent"),
                 TestResource::Contract("auction_systems"), TestResource::Contract("vault_systems"),
                 TestResource::Contract("admin_systems"),
             ]
@@ -94,7 +93,7 @@ pub mod tests {
     pub fn whitelist_collection(ref world: WorldStorage, collection_address: ContractAddress) {
         let mut store = StoreTrait::new(world);
         let collection = SupportedNFTCollection {
-            collection_address: collection_address.into(), standard: 1, // ERC721
+            collection_address: collection_address.into(), standard: 1 // ERC721
         };
         store.set_supported_nft_collection(@collection);
     }
