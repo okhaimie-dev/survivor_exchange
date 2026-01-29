@@ -19,7 +19,10 @@
       "Bash(agent-browser:*)",
       "Bash(npm run build:*)",
       "WebSearch",
-      "WebFetch(domain:docs.provable.games)"
+      "WebFetch(domain:docs.provable.games)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(git log:*)"
     ]
   }
 }
