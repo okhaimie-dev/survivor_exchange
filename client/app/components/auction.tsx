@@ -253,7 +253,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                 const value = gameOverAttr?.value;
                 if (value === undefined || value === null) return true;
                 const dead =
-                    value === "True" || value === "true" || value === "1" || value === true;
+                    value === "True" ||
+                    value === "true" ||
+                    value === "1" ||
+                    (value as string | number | boolean) === true;
                 return !dead;
             });
         }
