@@ -1,0 +1,7 @@
+target
+dojo_mainnet.toml
+.snfoundry_cache
+
+summit/
+death-mountain/
+.worktrees/

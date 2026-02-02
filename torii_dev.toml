@@ -1,0 +1,18 @@
+world_address = "0x0568850e36f9013d3ef1935c7481cf782f9e1dba11e3da37b2f70a1969f70fd5"
+rpc = "https://api.cartridge.gg/x/starknet/mainnet"
+
+[events]
+raw = true
+
+[indexing]
+namespaces = ["bm_0_2_1"]
+pending = true
+world_block = 2210150
+contracts = [
+]
+
+# Performance tuning
+events_chunk_size = 1024
+blocks_chunk_size = 10240
+polling_interval = 500
+max_concurrent_tasks = 100

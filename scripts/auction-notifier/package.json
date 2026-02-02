@@ -1,0 +1,16 @@
+{
+  "name": "survivor-exchange-notifier",
+  "version": "1.0.0",
+  "description": "Auto-post auction events to Discord and Twitter",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "twitter-api-v2": "^1.15.0",
+    "dotenv": "^16.3.1"
+  }
+}

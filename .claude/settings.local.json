@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(agent-browser snapshot:*)",
+      "Bash(agent-browser screenshot:*)",
+      "Bash(agent-browser scroll:*)",
+      "Bash(agent-browser click:*)",
+      "Bash(agent-browser open:*)",
+      "Bash(agent-browser exec \"JSON.stringify\\(console._logs || []\\)\")",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Skill(agent-browser)",
+      "Bash(agent-browser eval \"document.body.innerText.includes\\(''Unclaimed''\\)\")",
+      "Bash(agent-browser wait:*)",
+      "Bash(agent-browser eval \"document.querySelector\\(''button''\\)?.click\\(\\)\")",
+      "Bash(agent-browser console)",
+      "Bash(agent-browser eval:*)",
+      "Bash(agent-browser reload:*)",
+      "Bash(agent-browser:*)",
+      "Bash(npm run build:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.provable.games)",
+      "Bash(grep:*)",
+      "Bash(xargs:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}

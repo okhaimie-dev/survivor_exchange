@@ -1,0 +1,35 @@
+[package]
+name = "survivor_exchange"
+version = "1.8.0"
+edition = "2024_07"
+
+[cairo]
+sierra-replace-ids = true
+
+[scripts]
+test = "snforge test"
+
+[dependencies]
+dojo = "1.8.0"
+openzeppelin = "2.0.0"
+openzeppelin_token = "2.0.0"
+starknet = "2.13.1"
+beasts_nft = { git = "https://github.com/Provable-Games/beasts.git" }
+
+[[target.starknet-contract]]
+build-external-contracts = ["dojo::world::world_contract::world"]
+allowed-libfuncs-list.name = "experimental"
+
+[tool.scarb]
+allow-prebuilt-plugins = ["dojo_cairo_macros", "snforge_std"]
+
+[dev-dependencies]
+snforge_std = "0.51"
+dojo_snf_test = "1.8.0"
+assert_macros = "2.13"
+
+[[tool.snforge.fork]]
+name = "MAINNET_LATEST"
+# For Cartridge public endpoint: https://api.cartridge.gg/x/starknet/mainnet
+url = "https://api.cartridge.gg/x/starknet/mainnet"
+block_id.tag = "latest"
