@@ -920,7 +920,9 @@ export default function AdventurerDetailModal({
           </div>
 
           {/* Right column - Auction bidding UI (only shown in auction context), slightly more visible */}
-          {isActiveAuction && (
+          {isActiveAuction && auctionBidData && (() => {
+            const bidData: AuctionBidData = auctionBidData;
+            return (
             <div className="flex flex-col gap-4 rounded-xl border-2 border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/6 p-4">
               {/* Price info */}
               <div className="flex flex-col gap-3">
@@ -929,28 +931,28 @@ export default function AdventurerDetailModal({
                     Reserve Price (USD)
                   </p>
                   <p className="text-xl font-orbitron text-white">
-                    <ReservePriceDisplay value={auctionBidData.startingPrice} symbol={auctionBidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                    <ReservePriceDisplay value={bidData.startingPrice} symbol={bidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
                   </p>
                 </div>
                 <div className={`rounded-lg border px-4 py-3 ${
-                  auctionBidData.highestBid && auctionBidData.highestBid > 0
+                  bidData.highestBid && bidData.highestBid > 0
                     ? "border-[rgb(50,255,52)]/50 bg-[rgb(50,255,52)]/15"
                     : "border-white/30 bg-white/8"
                 }`}>
                   <p className={`text-xs font-orbitron uppercase tracking-wider ${
-                    auctionBidData.highestBid && auctionBidData.highestBid > 0
+                    bidData.highestBid && bidData.highestBid > 0
                       ? "text-[rgb(50,255,52)]"
                       : "text-[rgb(186,255,188)]/70"
                   }`}>
                     Highest Bid
                   </p>
                   <p className={`text-xl font-orbitron ${
-                    auctionBidData.highestBid && auctionBidData.highestBid > 0
+                    bidData.highestBid && bidData.highestBid > 0
                       ? "text-[rgb(50,255,52)]"
                       : "text-white/60"
                   }`}>
-                    {auctionBidData.highestBid && auctionBidData.highestBid > 0 ? (
-                      <ReservePriceDisplay value={auctionBidData.highestBid} symbol={auctionBidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                    {bidData.highestBid && bidData.highestBid > 0 ? (
+                      <ReservePriceDisplay value={bidData.highestBid} symbol={bidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
                     ) : "Be first!"}
                   </p>
                 </div>
@@ -961,15 +963,15 @@ export default function AdventurerDetailModal({
                   </p>
                   <p className="text-xl font-orbitron text-orange-400">
                     <CountdownTimer
-                      endTime={auctionBidData.endTime}
-                      status={auctionBidData.status}
+                      endTime={bidData.endTime}
+                      status={bidData.status}
                     />
                   </p>
                 </div>
               </div>
 
               {/* Bid input and actions (only for non-sellers) */}
-              {!auctionBidData.isUserSeller && (
+              {!bidData.isUserSeller && (
                 <>
                   {/* Token selector */}
                   {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
@@ -1011,10 +1013,10 @@ export default function AdventurerDetailModal({
 
                   {/* Quick bid buttons */}
                   {(() => {
-                    const hasHighestBid = auctionBidData.highestBid !== undefined && auctionBidData.highestBid > 0;
+                    const hasHighestBid = bidData.highestBid !== undefined && bidData.highestBid > 0;
                     const basePrice = hasHighestBid
-                      ? auctionBidData.highestBid!
-                      : auctionBidData.startingPrice;
+                      ? bidData.highestBid!
+                      : bidData.startingPrice;
                     const minBid = basePrice * 1.02;
                     const midBid = basePrice * 1.5;
                     const highBid = basePrice * 2;
@@ -1114,7 +1116,7 @@ export default function AdventurerDetailModal({
               )}
 
               {/* Seller notice */}
-              {auctionBidData.isUserSeller && (
+              {bidData.isUserSeller && (
                 <div className="text-center py-3 rounded-lg border border-yellow-500/45 bg-yellow-500/15">
                   <p className="text-xs font-orbitron text-yellow-400">
                     You are the seller of this auction
@@ -1122,7 +1124,8 @@ export default function AdventurerDetailModal({
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
             </>
           )}
         </div>

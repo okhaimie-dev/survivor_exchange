@@ -106,7 +106,6 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
             powerSort: "",
             summitTop15: "",
             timeSort: "",
-            battleFilter: "",
             ...emptyAdventurerFilters,
         });
     }, [onFiltersChange]);

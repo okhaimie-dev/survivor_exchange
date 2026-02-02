@@ -331,8 +331,8 @@ export function sortNFTs(nfts: FormattedNFT[], filters: FilterState): FormattedN
         sorted.sort((a, b) => {
             const attrsA = (a.attributes ?? []) as Array<{ trait_type: string; value: string | number }>;
             const attrsB = (b.attributes ?? []) as Array<{ trait_type: string; value: string | number }>;
-            const scoreA = attrsA.length > 0 ? calculateAdventurerRating(attrsA) : 0;
-            const scoreB = attrsB.length > 0 ? calculateAdventurerRating(attrsB) : 0;
+            const scoreA = attrsA.length > 0 ? (calculateAdventurerRating(attrsA) ?? 0) : 0;
+            const scoreB = attrsB.length > 0 ? (calculateAdventurerRating(attrsB) ?? 0) : 0;
             return filters.scoreSort === "low-high" ? scoreA - scoreB : scoreB - scoreA;
         });
     } else if (filters.tierSort) {

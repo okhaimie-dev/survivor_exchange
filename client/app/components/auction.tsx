@@ -223,7 +223,7 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
     }, []);
 
     // Merge attributes for filterNFT (Level, Health, stats). Sell grid uses Torii: list from useMyAdventurerNFTs is Torii SQL (adventurer-nfts); prefer per-token Torii (attributes API) when loaded, else use list attributes (Torii token_attributes).
-    const nftsWithAttributes = useMemo(() => {
+    const nftsWithAttributes = useMemo((): FormattedNFT[] => {
         if (selectedCollection !== "adventurers") return nfts;
         return nfts.map((nft) => {
             const decimal = toDecimalTokenId(nft.tokenId);
@@ -232,8 +232,9 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                 (decimal && attributesByTokenId[decimal]) ??
                 attributesByTokenId[nft.tokenId] ??
                 (normalized && attributesByTokenId[normalized]);
-            const merged = fetched?.length ? fetched : (nft.attributes ?? []);
-            return { ...nft, attributes: merged };
+            const raw = fetched?.length ? fetched : (nft.attributes ?? []);
+            const merged = Array.isArray(raw) ? raw : [];
+            return { ...nft, attributes: merged } as FormattedNFT;
         });
     }, [selectedCollection, nfts, attributesByTokenId]);
 
@@ -253,7 +254,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                 const value = gameOverAttr?.value;
                 if (value === undefined || value === null) return true;
                 const dead =
-                    value === "True" || value === "true" || value === "1" || value === true;
+                    value === "True" ||
+                    value === "true" ||
+                    value === "1" ||
+                    (value as string | number | boolean) === true;
                 return !dead;
             });
         }
@@ -321,7 +325,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                     );
                     const value = gameOverAttr?.value;
                     if (value === undefined || value === null) return true;
-                    dead = value === "True" || value === "true" || value === "1" || value === true;
+                    dead =
+                        value === "True" ||
+                        value === "true" ||
+                        value === "1" ||
+                        (value as string | number | boolean) === true;
                 }
                 return !dead;
             });
@@ -406,7 +414,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                     const gameOverAttr = nft.attributes?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
                     const value = gameOverAttr?.value;
                     if (value === undefined || value === null) return true;
-                    dead = value === "True" || value === "true" || value === "1" || value === true;
+                    dead =
+                        value === "True" ||
+                        value === "true" ||
+                        value === "1" ||
+                        (value as string | number | boolean) === true;
                 }
                 return !dead;
             });
@@ -492,7 +504,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                 const attrs = attrsMap[dec] ?? attributesByTokenId[dec];
                 const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
                 const value = attr?.value;
-                const dead = value === "True" || value === "true" || value === "1" || value === true;
+                const dead =
+                    value === "True" ||
+                    value === "true" ||
+                    value === "1" ||
+                    (value as string | number | boolean | undefined) === true;
                 const hexShort = "0x" + BigInt(dec).toString(16).toLowerCase();
                 const hexNormalized = normalizeTokenId(dec);
                 gameOverMap[dec] = dead;
@@ -526,7 +542,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                     const attributes = Array.isArray(r.attributes) ? r.attributes : [];
                     const attr = attributes.find((a: { trait_type?: string }) => (a.trait_type?.toLowerCase() ?? "") === "game over");
                     const value = attr?.value;
-                    const dead = value === "True" || value === "true" || value === "1" || value === true;
+                    const dead =
+                        value === "True" ||
+                        value === "true" ||
+                        value === "1" ||
+                        (value as string | undefined | boolean) === true;
                     return { tokenId: r.tokenId, dead, attributes };
                 });
             } catch {
@@ -580,7 +600,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                         const attrs = attrsMap[dec] ?? attributesByTokenId[dec];
                         const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
                         const value = attr?.value;
-                        const dead = value === "True" || value === "true" || value === "1" || value === true;
+                        const dead =
+                            value === "True" ||
+                            value === "true" ||
+                            value === "1" ||
+                            (value as string | number | boolean | undefined) === true;
                         next[dec] = dead;
                         next[hexShort] = dead;
                         next[hexNormalized] = dead;
@@ -862,8 +886,16 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                                 <ul className="flex flex-col gap-1.5 max-h-[240px] overflow-y-auto pr-1">
                                     {selectedNFTs.map((nft) => {
                                         const dec = toDecimalTokenId(nft.tokenId);
-                                        const attrs = (dec && attributesByTokenId[dec]) ?? attributesByTokenId[nft.tokenId] ?? nft.attributes ?? [];
-                                        const getAttr = (t: string) => attrs.find((a) => (a.trait_type?.toLowerCase() ?? "") === t.toLowerCase())?.value;
+                                        const rawAttrs =
+                                            (dec && attributesByTokenId[dec]) ??
+                                            attributesByTokenId[nft.tokenId] ??
+                                            nft.attributes ??
+                                            [];
+                                        const attrs = Array.isArray(rawAttrs) ? rawAttrs : [];
+                                        const getAttr = (t: string) =>
+                                            attrs.find((a: { trait_type?: string; value?: string | number }) =>
+                                                (a.trait_type?.toLowerCase() ?? "") === t.toLowerCase()
+                                            )?.value;
                                         const level = getAttr("Level") ?? nft.level;
                                         const health = getAttr("Health") ?? nft.health;
                                         const idDisplay = nft.tokenId.startsWith("0x") ? parseInt(nft.tokenId, 16).toString() : nft.tokenId;
