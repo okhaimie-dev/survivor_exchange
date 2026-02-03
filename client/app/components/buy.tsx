@@ -9,7 +9,7 @@ import { BidsSkeleton } from "./skeletons";
 import { BeastDetailModal, AdventurerDetailModal } from "./modals";
 import type { FormattedNFT, AuctionItem, Collection } from "../lib/types";
 import { AuctionWithNFTs, useBidActions } from "../hooks";
-import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress } from "../lib/constants";
+import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress, LORDS_ADDRESS } from "../lib/constants";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
 import { formatUSD, parseAmount, parseHexOrDecimal } from "../lib/utils";
 import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatBounds, type AdventurerStatBounds } from "../lib/filter-utils";
@@ -45,6 +45,8 @@ interface NFTWithAuction extends FormattedNFT {
   packNfts?: FormattedNFT[];
   reserveTokenSymbol?: string;
   reserveTokenAddress?: string;
+  /** Listing source for modal (e.g. eternum → "Buy on Realms") */
+  listingSource?: "survivor_exchange" | "eternum";
 }
 
 export default function Buy({
@@ -73,6 +75,8 @@ export default function Buy({
   const [isLoadingGameOver, setIsLoadingGameOver] = useState(false);
   const gameOverFetchRef = useRef(0);
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
+  // Eternum beasts: fetch metadata by contract+tokenId so grid shows attributes/image
+  const [beastMetadataByKey, setBeastMetadataByKey] = useState<Record<string, FormattedNFT | null>>({});
   // Shared adventurer attributes (batch + card fetches) so grid filtering sees Level, Health, stats. Fallback to local state when provider is missing (e.g. SSR).
   const adventurerAttrs = useAdventurerAttributesOptional();
   const [localAttributesByTokenId, setLocalAttributesByTokenId] = useState<Record<string, Array<{ trait_type: string; value: string }>>>({});
@@ -96,6 +100,24 @@ export default function Buy({
       setIsRefreshing(false);
     }
   }, [onRefresh]);
+
+  // Smooth loading bar progress (simulated 0 → ~90% while loading, then 100% on done) and Loot Survivor flavor text
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingFlavorIndex, setLoadingFlavorIndex] = useState(0);
+  const loadingProgressRef = useRef(0);
+  const loadingStartRef = useRef<number | null>(null);
+
+  const LOADING_FLAVOR_TEXTS = [
+    "Exploring Dungeon Data..",
+    "Recovering dead adventurers..",
+    "Hunting Beasts..",
+    "Scanning the marketplace..",
+    "Decrypting auction ledgers..",
+    "Consulting the Loot Survivor oracles..",
+    "Gathering loot from the depths..",
+    "Summoning Listings",
+  ];
+
   const [bidAmountToken, setBidAmountToken] = useState("");
   const [paymentToken, setPaymentToken] = useState(USDC_ADDRESS);
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
@@ -142,29 +164,39 @@ export default function Buy({
       const auctionIdStr = String(auction.auction_id);
       const items = getAuctionItems(auctionIdStr);
       
-      // Check if this is an adventurer auction
+      // Check if this is an adventurer auction or a beast auction (exclude Golden token, Realm cosmetics, etc.)
       const isAdventurerAuction = items.length > 0 && items.some(item => {
         const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
         const adventurerAddr = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
         return contractAddr === adventurerAddr;
       });
+      const isBeastAuction = items.length > 0 && items.some(item => {
+        const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
+        const beastsAddr = normalizeContractAddress(BEASTS_NFT_CONTRACT_ADDRESS).toLowerCase();
+        return contractAddr === beastsAddr;
+      });
 
-      // Only process if matches selected collection
+      // Only process if matches selected collection (beasts tab = beasts contract only; adventurers = adventurer contract)
       if (selectedCollection === "adventurers" && !isAdventurerAuction) continue;
-      if (selectedCollection === "beasts" && isAdventurerAuction) continue;
+      if (selectedCollection === "beasts" && !isBeastAuction) continue;
 
+      const isEternum = auction.source === "eternum";
       const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
       const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-      const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-      const decimals = reserveToken?.decimals ?? 6;
+      let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+      // Eternum returns LORDS prices in 18-decimal raw; override to 18 so display is correct (app constants use 6 for other contexts)
+      if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
+        reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
+      }
+      const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
       const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
       const startingPrice = parseAmount(startingPriceRaw, decimals);
       const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
       const highestBid = rawBid != null && rawBid > 0 ? rawBid : undefined;
       const price = (highestBid != null && highestBid > 0) ? highestBid : startingPrice;
-      // Reserve price is always in USD; display as $ only
-      const reserveTokenSymbol = "USDC";
+      const reserveTokenSymbol = isEternum ? (reserveToken?.symbol ?? "Amount") : "USDC";
       const reserveTokenAddress = reserveToken?.address;
+      const listingSource = (auction as { source?: "survivor_exchange" | "eternum" }).source ?? "survivor_exchange";
 
       // If pack (multiple items), show one card per auction with superposition
       if (items.length > 1) {
@@ -191,17 +223,34 @@ export default function Buy({
             packNfts: packNftsList,
             reserveTokenSymbol,
             reserveTokenAddress,
+            listingSource,
           });
         }
       } else if (items.length === 1) {
         // Single item auction
         const item = items[0];
-        const nft = auction.nfts?.find(n => 
+        const nft = auction.nfts?.find(n =>
           normalizeTokenId(n.tokenId) === normalizeTokenId(item.token_id)
         );
-        if (nft) {
+        // Eternum listings have auction.nfts = []; build synthetic NFT from item so the card shows
+        const syntheticNft: FormattedNFT | null =
+          auction.source === "eternum" && !nft
+            ? {
+                metadataName: "",
+                metadataDescription: "",
+                contractAddress: normalizeContractAddress(item.contract_address || ""),
+                imagePath: "",
+                metadata: null,
+                attributes: [],
+                name: "",
+                symbol: "",
+                tokenId: normalizeTokenId(item.token_id),
+              }
+            : null;
+        const displayNft = nft ?? syntheticNft;
+        if (displayNft) {
           nfts.push({
-            ...nft,
+            ...displayNft,
             auctionId: auctionIdStr,
             auctionName: auction.name,
             price,
@@ -212,6 +261,7 @@ export default function Buy({
             isPack: false,
             reserveTokenSymbol,
             reserveTokenAddress,
+            listingSource,
           });
         }
       }
@@ -219,6 +269,54 @@ export default function Buy({
 
     return nfts;
   }, [auctions, getAuctionItems, selectedCollection]);
+
+  // Eternum beasts: items that need metadata (empty attributes = synthetic from Eternum)
+  const beastMetadataItemsToFetch = useMemo(() => {
+    if (selectedCollection !== "beasts") return [];
+    const items: Array<{ contractAddress: string; tokenId: string }> = [];
+    for (const nft of allNFTsWithAuction) {
+      const hasNoMetadata = !nft.attributes?.length && nft.contractAddress && nft.tokenId;
+      if (hasNoMetadata) {
+        items.push({
+          contractAddress: normalizeContractAddress(nft.contractAddress),
+          tokenId: nft.tokenId,
+        });
+      }
+    }
+    return items;
+  }, [selectedCollection, allNFTsWithAuction]);
+
+  useEffect(() => {
+    if (beastMetadataItemsToFetch.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/beast-metadata", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: beastMetadataItemsToFetch }),
+        });
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const nfts = Array.isArray(data?.nfts) ? data.nfts : [];
+        const keys = beastMetadataItemsToFetch.map(
+          (i) => `${normalizeContractAddress(i.contractAddress)}:${normalizeTokenId(i.tokenId)}`
+        );
+        setBeastMetadataByKey((prev) => {
+          const next = { ...prev };
+          keys.forEach((key, idx) => {
+            if (nfts[idx] != null) next[key] = nfts[idx] as FormattedNFT;
+          });
+          return next;
+        });
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [beastMetadataItemsToFetch]);
 
   const adventurerTokenIds = useMemo(() => {
     if (selectedCollection !== "adventurers" || allNFTsWithAuction.length === 0) return [];
@@ -241,7 +339,6 @@ export default function Buy({
     return adventurerTokenIds.filter((id) => !attributesByTokenId[String(id)]?.length);
   }, [adventurerTokenIds, attributesByTokenId]);
 
-  const BATCH_CHUNK = 50;
   useEffect(() => {
     if (selectedCollection !== "adventurers" || adventurerTokenIds.length === 0) {
       setGameOverByTokenId({});
@@ -280,76 +377,81 @@ export default function Buy({
     }
 
     setIsLoadingGameOver(true);
-    const chunks: string[][] = [];
-    for (let i = 0; i < tokenIdsToRequest.length; i += BATCH_CHUNK) {
-      chunks.push(tokenIdsToRequest.slice(i, i + BATCH_CHUNK));
-    }
-    Promise.all(
-      chunks.map(async (chunk) => {
-        const res = await fetch(`/api/adventurer-attributes?tokenIds=${chunk.map((id) => encodeURIComponent(id)).join(",")}`, { cache: "no-store" });
-        if (!res.ok) return [] as Array<{ tokenId: string; dead: boolean; attributes: Array<{ trait_type: string; value: string }> }>;
+    (async () => {
+      try {
+        const res = await fetch("/api/adventurer-attributes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tokenIds: tokenIdsToRequest }),
+          cache: "no-store",
+        });
+        if (fetchId !== gameOverFetchRef.current) return;
+        if (!res.ok) {
+          setIsLoadingGameOver(false);
+          return;
+        }
         const data = await res.json();
-        const results = Array.isArray(data.results) ? data.results : [];
-        return results.map((r: { tokenId: string; attributes?: Array<{ trait_type?: string; value?: string }> }) => {
+        const rawResults = Array.isArray(data.results) ? data.results : [];
+        const results = rawResults.map((r: { tokenId: string; attributes?: Array<{ trait_type?: string; value?: string }> }) => {
           const attributes = Array.isArray(r.attributes) ? r.attributes : [];
           const attr = attributes.find((a: { trait_type?: string }) => (a.trait_type?.toLowerCase() ?? "") === "game over");
           const value = attr?.value;
           const dead =
-          value === "True" ||
-          value === "true" ||
-          value === "1" ||
-          (value as string | undefined | boolean) === true;
-          return { tokenId: r.tokenId, dead, attributes };
+            value === "True" ||
+            value === "true" ||
+            value === "1" ||
+            (value as string | undefined | boolean) === true;
+          return { tokenId: String(r.tokenId), dead, attributes };
         });
-      })
-    ).then((chunkResults) => {
-      if (fetchId !== gameOverFetchRef.current) return;
-      const results = chunkResults.flat();
-      const attrsMap: Record<string, Array<{ trait_type: string; value: string }>> = {};
-      const fetchedByDec = new Set<string>();
-      for (const { tokenId, dead, attributes } of results) {
-        const decimal = String(tokenId);
-        const hexShort = "0x" + BigInt(tokenId).toString(16).toLowerCase();
-        const hexNormalized = normalizeTokenId(tokenId);
-        fetchedByDec.add(decimal);
-        if (attributes.length > 0) {
-          attrsMap[decimal] = attributes;
-          attrsMap[hexShort] = attributes;
-          attrsMap[hexNormalized] = attributes;
-        }
-      }
-      mergeAttributes(attrsMap);
-      setGameOverByTokenId((prev) => {
-        const next = { ...prev };
-        for (const id of adventurerTokenIds) {
-          const dec = String(id);
-          const hexShort = "0x" + BigInt(dec).toString(16).toLowerCase();
-          const hexNormalized = normalizeTokenId(dec);
-          if (fetchedByDec.has(dec)) {
-            const r = results.find((x: { tokenId: string; dead: boolean }) => String(x.tokenId) === dec);
-            if (r) {
-              next[dec] = r.dead;
-              next[hexShort] = r.dead;
-              next[hexNormalized] = r.dead;
-            }
-          } else {
-            const attrs = attrsMap[dec] ?? attributesByTokenId[dec];
-            const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
-            const value = attr?.value;
-            const dead =
-          value === "True" ||
-          value === "true" ||
-          value === "1" ||
-          (value as string | undefined | boolean) === true;
-            next[dec] = dead;
-            next[hexShort] = dead;
-            next[hexNormalized] = dead;
+        if (fetchId !== gameOverFetchRef.current) return;
+        const attrsMap: Record<string, Array<{ trait_type: string; value: string }>> = {};
+        const fetchedByDec = new Set<string>();
+        for (const { tokenId, dead, attributes } of results) {
+          const decimal = String(tokenId);
+          const hexShort = "0x" + BigInt(tokenId).toString(16).toLowerCase();
+          const hexNormalized = normalizeTokenId(tokenId);
+          fetchedByDec.add(decimal);
+          if (attributes.length > 0) {
+            attrsMap[decimal] = attributes;
+            attrsMap[hexShort] = attributes;
+            attrsMap[hexNormalized] = attributes;
           }
         }
-        return next;
-      });
-      setIsLoadingGameOver(false);
-    });
+        mergeAttributes(attrsMap);
+        setGameOverByTokenId((prev) => {
+          const next = { ...prev };
+          for (const id of adventurerTokenIds) {
+            const dec = String(id);
+            const hexShort = "0x" + BigInt(dec).toString(16).toLowerCase();
+            const hexNormalized = normalizeTokenId(dec);
+            if (fetchedByDec.has(dec)) {
+              const r = results.find((x: { tokenId: string; dead: boolean }) => String(x.tokenId) === dec);
+              if (r) {
+                next[dec] = r.dead;
+                next[hexShort] = r.dead;
+                next[hexNormalized] = r.dead;
+              }
+            } else {
+              const attrs = attrsMap[dec] ?? attributesByTokenId[dec];
+              const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
+              const value = attr?.value;
+              const dead =
+                value === "True" ||
+                value === "true" ||
+                value === "1" ||
+                (value as string | undefined | boolean) === true;
+              next[dec] = dead;
+              next[hexShort] = dead;
+              next[hexNormalized] = dead;
+            }
+          }
+          return next;
+        });
+        setIsLoadingGameOver(false);
+      } catch {
+        if (fetchId === gameOverFetchRef.current) setIsLoadingGameOver(false);
+      }
+    })();
   }, [selectedCollection, adventurerTokenIds, tokenIdsToRequest, attributesByTokenId, mergeAttributes]);
 
   // Fetch battle status (in_battle) for adventurers from Torii GameSettings
@@ -369,21 +471,30 @@ export default function Buy({
   }, [selectedCollection]);
 
   // Merge fetched attributes into NFT list so filterNFT (Level, Health, stats) sees them.
-  // Lookup by canonical decimal and by nft.tokenId (often 0x-padded long hex from use-auctions).
-  // Prefer API-fetched attributes. Fall back to nft.attributes so NFTs show while attributes load; filterNFT only excludes when we have a value and it's out of range.
+  // Adventurers: API-fetched attributes. Beasts: Eternum listings get metadata from beast-metadata API (contract+tokenId).
   const nftsWithAttributes = useMemo(() => {
-    if (selectedCollection !== "adventurers") return allNFTsWithAuction;
-    return allNFTsWithAuction.map((nft) => {
-      const decimal = toDecimalTokenId(nft.tokenId);
-      const normalized = decimal ? normalizeTokenId(decimal) : "";
-      const fetched =
-        (decimal && attributesByTokenId[decimal]) ??
-        attributesByTokenId[nft.tokenId] ??
-        (normalized && attributesByTokenId[normalized]);
-      const merged = fetched && fetched.length > 0 ? fetched : (nft.attributes ?? []);
-      return { ...nft, attributes: merged };
-    });
-  }, [selectedCollection, allNFTsWithAuction, attributesByTokenId]);
+    if (selectedCollection === "adventurers") {
+      return allNFTsWithAuction.map((nft) => {
+        const decimal = toDecimalTokenId(nft.tokenId);
+        const normalized = decimal ? normalizeTokenId(decimal) : "";
+        const fetched =
+          (decimal && attributesByTokenId[decimal]) ??
+          attributesByTokenId[nft.tokenId] ??
+          (normalized && attributesByTokenId[normalized]);
+        const merged = fetched && fetched.length > 0 ? fetched : (nft.attributes ?? []);
+        return { ...nft, attributes: merged };
+      });
+    }
+    if (selectedCollection === "beasts") {
+      return allNFTsWithAuction.map((nft) => {
+        const key = `${normalizeContractAddress(nft.contractAddress)}:${normalizeTokenId(nft.tokenId)}`;
+        const meta = beastMetadataByKey[key];
+        if (meta) return { ...nft, ...meta };
+        return nft;
+      });
+    }
+    return allNFTsWithAuction;
+  }, [selectedCollection, allNFTsWithAuction, attributesByTokenId, beastMetadataByKey]);
 
   // Filter NFTs - uses nftsWithAttributes so Level/Health/stats filters work (attributes from API)
   const filteredNFTs = useMemo((): NFTWithAuction[] => {
@@ -613,10 +724,14 @@ export default function Buy({
     if (!modalAuctionId) return undefined;
     const auction = auctions.find((a) => String(a.auction_id) === modalAuctionId);
     if (!auction) return undefined;
+    const isEternum = auction.source === "eternum";
     const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
     const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-    const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-    const decimals = reserveToken?.decimals ?? 6;
+    let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+    if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
+      reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
+    }
+    const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
     const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
     const startingPrice = parseAmount(startingPriceRaw, decimals);
     const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
@@ -790,9 +905,65 @@ export default function Buy({
     setIsModalOpen(true);
   }, [filteredNFTs]);
 
+  const attributesLoading =
+    selectedCollection === "adventurers" &&
+    (tokenIdsToRequest.length > 0 || isLoadingGameOver);
+  const effectiveLoading = loading || attributesLoading;
+
+  useEffect(() => {
+    if (!effectiveLoading) {
+      loadingStartRef.current = null;
+      setLoadingProgress(100);
+      const t = setTimeout(() => setLoadingProgress(0), 400);
+      return () => clearTimeout(t);
+    }
+    loadingStartRef.current = Date.now();
+    loadingProgressRef.current = 0;
+    setLoadingProgress(0);
+    setLoadingFlavorIndex(0);
+
+    const progressInterval = setInterval(() => {
+      const start = loadingStartRef.current ?? Date.now();
+      const elapsed = Date.now() - start;
+      const target = 92 * (1 - Math.exp(-elapsed / 2200));
+      const current = loadingProgressRef.current;
+      const next = Math.min(92, current + (target - current) * 0.12);
+      loadingProgressRef.current = next;
+      setLoadingProgress(Math.round(next));
+    }, 80);
+
+    const flavorInterval = setInterval(() => {
+      setLoadingFlavorIndex((i) =>
+        i < LOADING_FLAVOR_TEXTS.length - 1 ? i + 1 : i
+      );
+    }, 2200);
+
+    return () => {
+      clearInterval(progressInterval);
+      clearInterval(flavorInterval);
+    };
+  }, [effectiveLoading]);
+
   const renderContent = () => {
-    if (loading) {
-      return <BidsSkeleton />;
+    if (effectiveLoading) {
+      const flavorText = LOADING_FLAVOR_TEXTS[loadingFlavorIndex % LOADING_FLAVOR_TEXTS.length];
+      return (
+        <div className="flex flex-col flex-1 min-h-0 w-full">
+          <div className="shrink-0 mb-3 flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2 text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/90">
+              <span>{flavorText}</span>
+              <span className="tabular-nums text-[rgb(50,255,52)]">{loadingProgress}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-[rgb(50,255,52)]/20 rounded-full overflow-hidden" role="progressbar" aria-valuenow={loadingProgress} aria-valuemin={0} aria-valuemax={100} aria-valuetext={`${loadingProgress}%`}>
+              <div
+                className="h-full bg-[rgb(50,255,52)]/70 rounded-full transition-[width] duration-150 ease-out"
+                style={{ width: `${loadingProgress}%` }}
+              />
+            </div>
+          </div>
+          <BidsSkeleton />
+        </div>
+      );
     }
 
     if (error) {
@@ -992,11 +1163,11 @@ export default function Buy({
             <button
               type="button"
               onClick={handleRefresh}
-              disabled={loading || isRefreshing}
+              disabled={effectiveLoading || isRefreshing}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               title="Reload auctions"
             >
-              {(loading || isRefreshing) ? (
+              {(effectiveLoading || isRefreshing) ? (
                 <>
                   <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
                   Refreshing...
@@ -1056,6 +1227,7 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
+          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? {
             startingPrice: currentModalNft.startingPrice,
             highestBid: currentModalNft.highestBid,
@@ -1094,6 +1266,7 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
+          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? (() => {
             const auction = auctions.find((a) => String(a.auction_id) === currentModalNft.auctionId);
             return {

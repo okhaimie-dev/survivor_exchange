@@ -166,12 +166,14 @@ export default function MonsterCard({
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-col md:flex-row items-center md:justify-between rounded-md md:rounded-lg bg-white/5 px-1.5 md:px-3 py-1.5 md:py-2"
+            className="flex flex-col md:flex-row items-center md:justify-between gap-1 md:gap-2 rounded-md md:rounded-lg bg-white/5 px-1.5 md:px-3 py-1.5 md:py-2"
           >
             <span className="text-[rgb(186,255,188)]/50 text-[7px] md:text-[10px] uppercase">
               {stat.label}
             </span>
-            <span className="text-[11px] md:text-sm font-medium text-white">
+            <span
+              className={`text-[11px] md:text-sm font-medium ${stat.label === "Health" ? "text-red-400" : "text-white"}`}
+            >
               {stat.value}
             </span>
           </div>
