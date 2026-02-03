@@ -23,6 +23,7 @@ import {
   truncateAuctionName,
 } from "../lib/utils";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
+import { isAuctionExpired } from "../lib/utils/auction-status";
 import type { FormattedNFT, AuctionItem } from "../lib/types";
 import { uint256, num } from "starknet";
 import { getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
@@ -102,6 +103,11 @@ const getStatusLabel = (status: string): string => {
 
   return status;
 };
+
+/** Effective display status: show "Ended" when end time has passed, even if API still returns Active. */
+function getDisplayStatus(listing: FormattedListing, isAuctionExpired: (endTime: string, status: string) => boolean): string {
+  return isAuctionExpired(listing.endTime, listing.status) ? "3" : listing.status;
+}
 
 function formatEndTime(endTime: string): string {
   if (!endTime || endTime === "0") return "—";
@@ -188,8 +194,8 @@ function ListingDetailModal({ listing, items, itemsLoading = false, nfts = [], o
             </div>
             <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
               <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Status</p>
-              <p className={`font-orbitron ${getStatusStyle(listing.status)} rounded px-1 py-0.5 inline-block`}>
-                {getStatusLabel(listing.status)}
+              <p className={`font-orbitron ${getStatusStyle(getDisplayStatus(listing, isAuctionExpired))} rounded px-1 py-0.5 inline-block`}>
+                {getStatusLabel(getDisplayStatus(listing, isAuctionExpired))}
               </p>
             </div>
             <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
@@ -333,7 +339,7 @@ export default function MyListings({
     {},
   );
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
-  const [listingsSort, setListingsSort] = useState<string>("time-ending-soon");
+  const [listingsSort, setListingsSort] = useState<string>("time-newest");
   const [listingsFilter, setListingsFilter] = useState<"all" | "active" | "inactive">("all");
   const [adventurerModalOpen, setAdventurerModalOpen] = useState(false);
   const [adventurerModalNfts, setAdventurerModalNfts] = useState<FormattedNFT[]>([]);
@@ -429,26 +435,39 @@ export default function MyListings({
   }, [listings, listingsFilter]);
 
   const sortedListings = useMemo(() => {
-    const arr = [...filteredListings];
-    if (listingsSort === "price-high-low") {
-      arr.sort((a, b) => {
-        const priceA = a.currentBid ?? a.startingPrice ?? 0;
-        const priceB = b.currentBid ?? b.startingPrice ?? 0;
-        return priceB - priceA;
-      });
-    } else if (listingsSort === "price-low-high") {
-      arr.sort((a, b) => {
-        const priceA = a.currentBid ?? a.startingPrice ?? 0;
-        const priceB = b.currentBid ?? b.startingPrice ?? 0;
-        return priceA - priceB;
-      });
-    } else if (listingsSort === "time-ending-soon") {
-      arr.sort((a, b) => parseEndTimeNum(a.endTime) - parseEndTimeNum(b.endTime));
-    } else if (listingsSort === "time-newest") {
-      arr.sort((a, b) => parseEndTimeNum(b.endTime) - parseEndTimeNum(a.endTime));
+    const sortBySelected = (arr: FormattedListing[]) => {
+      const a = [...arr];
+      if (listingsSort === "price-high-low") {
+        a.sort((x, y) => {
+          const priceA = x.currentBid ?? x.startingPrice ?? 0;
+          const priceB = y.currentBid ?? y.startingPrice ?? 0;
+          return priceB - priceA;
+        });
+      } else if (listingsSort === "price-low-high") {
+        a.sort((x, y) => {
+          const priceA = x.currentBid ?? x.startingPrice ?? 0;
+          const priceB = y.currentBid ?? y.startingPrice ?? 0;
+          return priceA - priceB;
+        });
+      } else if (listingsSort === "time-ending-soon") {
+        a.sort((x, y) => parseEndTimeNum(x.endTime) - parseEndTimeNum(y.endTime));
+      } else {
+        // time-newest (default): latest first by auction ID (higher = newer)
+        a.sort((x, y) => {
+          const idA = parseInt(x.auctionId, 10) || 0;
+          const idB = parseInt(y.auctionId, 10) || 0;
+          return idB - idA;
+        });
+      }
+      return a;
+    };
+    if (listingsFilter === "all") {
+      const active = filteredListings.filter((l) => String(l.status) === "2");
+      const inactive = filteredListings.filter((l) => String(l.status) !== "2");
+      return [...sortBySelected(active), ...sortBySelected(inactive)];
     }
-    return arr;
-  }, [filteredListings, listingsSort, parseEndTimeNum]);
+    return sortBySelected([...filteredListings]);
+  }, [filteredListings, listingsFilter, listingsSort, parseEndTimeNum]);
 
   const totalPages = useMemo(
     () => Math.max(1, Math.ceil(sortedListings.length / DEFAULT_PAGE_SIZE)),
@@ -996,9 +1015,9 @@ export default function MyListings({
               </div>
 
               <span
-                className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-orbitron uppercase ${getStatusStyle(listing.status)}`}
+                className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-orbitron uppercase ${getStatusStyle(getDisplayStatus(listing, isAuctionExpired))}`}
               >
-                {getStatusLabel(listing.status)}
+                {getStatusLabel(getDisplayStatus(listing, isAuctionExpired))}
               </span>
 
               <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
@@ -1008,7 +1027,9 @@ export default function MyListings({
                   disabled={
                     !account ||
                     isEndingAuction === listing.auctionId ||
-                    Number(listing.status) !== 2
+                    Number(listing.status) !== 2 ||
+                    isAuctionExpired(listing.endTime, listing.status) ||
+                    Number(listing.status) === 3
                   }
                   className="rounded border border-red-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-red-400 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

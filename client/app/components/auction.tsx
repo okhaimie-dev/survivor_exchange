@@ -13,15 +13,18 @@ import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatB
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, COLLECTIONS, CollectionType } from "../lib/constants";
 import { fetchTokens } from "@avnu/avnu-sdk";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
+import { parseEndTime } from "../lib/utils/auction-status";
 function isListedToken(listedTokenIds: Set<string>, nftTokenId: string): boolean {
+    const raw = String(nftTokenId).trim();
     const normalized = normalizeTokenId(nftTokenId);
     const decimal = toDecimalTokenId(nftTokenId);
-    return listedTokenIds.has(normalized) || listedTokenIds.has(decimal);
+    return listedTokenIds.has(raw) || listedTokenIds.has(normalized) || listedTokenIds.has(decimal);
 }
 import { useSummitLeaderboard, findMatchingSummitBeast, useMyNFTs, useMyAdventurerNFTs, useMyListings } from "../hooks";
-import { useQuery } from "@apollo/client/react";
-import { AUCTIONS_QUERY } from "../lib/queries";
+import { useQuery, useApolloClient } from "@apollo/client/react";
+import { AUCTIONS_QUERY, AUCTION_ITEMS_BY_ID_QUERY } from "../lib/queries";
 import type { AuctionsResponse } from "../lib/types";
+import type { AuctionItem } from "../lib/types";
 
 interface AuctionProps {
     nfts?: FormattedNFT[];
@@ -151,62 +154,120 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
     }, [summitTopBeasts]);
 
     const { listings } = useMyListings({ seller: dataAddress });
+    const apolloClient = useApolloClient();
     const { data: auctionsData } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
         fetchPolicy: "cache-and-network",
         errorPolicy: "all",
     });
+
+    // Only treat listings as "listed" when they are Active (status 2) and not expired/settled
+    const activeListings = useMemo(() => {
+        if (!listings?.length) return [];
+        const now = Math.floor(Date.now() / 1000);
+        return listings.filter((l) => {
+            const statusNum = Number(l.status);
+            if (statusNum !== 2) return false; // only Active
+            const endSec = parseEndTime(l.endTime);
+            if (endSec <= 0) return true; // no end time
+            return endSec > now; // not expired
+        });
+    }, [listings]);
+
+    // Fetch auction items for the seller's active listings so we have token IDs even when they're not in the global AUCTIONS_QUERY limit
+    const [sellerListingItems, setSellerListingItems] = useState<AuctionItem[]>([]);
+    useEffect(() => {
+        if (!dataAddress || !activeListings.length) {
+            setSellerListingItems([]);
+            return;
+        }
+        const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
+        let cancelled = false;
+        (async () => {
+            const results = await Promise.all(
+                activeListings.map(async (l) => {
+                    const auctionIdInt = parseInt(String(l.auctionId), 10);
+                    if (isNaN(auctionIdInt)) return [] as AuctionItem[];
+                    try {
+                        const res = await apolloClient.query<{ bm021AuctionItemModels: { edges: { node: AuctionItem }[] } }>({
+                            query: AUCTION_ITEMS_BY_ID_QUERY,
+                            variables: { auctionId: auctionIdInt },
+                        });
+                        const nodes = res.data?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? [];
+                        return nodes.filter((node) => normalizeContractAddress(node.contract_address) === collectionContract);
+                    } catch {
+                        return [] as AuctionItem[];
+                    }
+                })
+            );
+            if (cancelled) return;
+            setSellerListingItems(results.flat());
+        })();
+        return () => { cancelled = true; };
+    }, [dataAddress, activeListings, collectionConfig.contractAddress, apolloClient]);
+
     const listedTokenIds = useMemo(() => {
-        if (!dataAddress || !listings?.length) return new Set<string>();
-        const myAuctionIds = new Set(listings.map((l) => String(l.auctionId)));
-        const items = auctionsData?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? [];
+        if (!dataAddress || !activeListings.length) return new Set<string>();
+        const myAuctionIds = new Set(activeListings.map((l) => String(l.auctionId)));
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
         const listed = new Set<string>();
-        for (const item of items) {
-            if (!myAuctionIds.has(String(item.auction_id))) continue;
-            if (normalizeContractAddress(item.contract_address) !== collectionContract) continue;
+        const addToken = (item: { token_id?: string | number | null }) => {
+            const raw = item.token_id != null ? String(item.token_id).trim() : "";
+            if (raw) listed.add(raw);
             listed.add(normalizeTokenId(item.token_id));
             listed.add(toDecimalTokenId(item.token_id));
+        };
+        // From global query (may miss seller's items if beyond limit)
+        const globalItems = auctionsData?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? [];
+        for (const item of globalItems) {
+            if (!myAuctionIds.has(String(item.auction_id))) continue;
+            if (normalizeContractAddress(item.contract_address) !== collectionContract) continue;
+            addToken(item);
+        }
+        // From seller-specific fetch (ensures we have token IDs for all seller's active listings)
+        for (const item of sellerListingItems) {
+            addToken(item);
         }
         return listed;
-    }, [dataAddress, listings, auctionsData, collectionConfig.contractAddress]);
+    }, [dataAddress, activeListings, auctionsData, collectionConfig.contractAddress, sellerListingItems]);
 
-    // Map tokenId -> reserve (starting price + symbol) and endTime for listed NFTs (Sell grid reserve display + Ending soon sort)
+    // Map tokenId -> reserve and endTime only for active listings (Sell grid). Use both global auctionsData and seller-fetched items.
+    const listingByAuctionId = useMemo(() => new Map(activeListings.map((l) => [String(l.auctionId), l])), [activeListings]);
     const reserveByTokenId = useMemo(() => {
         const map: Record<string, { price: number; symbol?: string }> = {};
-        if (!listings?.length || !auctionsData?.bm021AuctionItemModels?.edges) return map;
-        const listingByAuctionId = new Map(listings.map((l) => [String(l.auctionId), l]));
-        const items = auctionsData.bm021AuctionItemModels.edges.map((e) => e.node);
+        if (!activeListings.length) return map;
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
-        for (const item of items) {
+        const processItem = (item: { auction_id: string; contract_address: string; token_id?: string | number | null }) => {
             const listing = listingByAuctionId.get(String(item.auction_id));
-            if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) continue;
+            if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) return;
             const norm = normalizeTokenId(item.token_id);
             const dec = toDecimalTokenId(item.token_id);
             map[norm] = { price: listing.startingPrice, symbol: listing.reserveTokenSymbol };
             map[dec] = { price: listing.startingPrice, symbol: listing.reserveTokenSymbol };
-        }
+        };
+        (auctionsData?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? []).forEach(processItem);
+        sellerListingItems.forEach(processItem);
         return map;
-    }, [listings, auctionsData, collectionConfig.contractAddress]);
+    }, [activeListings, auctionsData, collectionConfig.contractAddress, listingByAuctionId, sellerListingItems]);
 
     const endTimeByTokenId = useMemo(() => {
         const map: Record<string, string> = {};
-        if (!listings?.length || !auctionsData?.bm021AuctionItemModels?.edges) return map;
-        const listingByAuctionId = new Map(listings.map((l) => [String(l.auctionId), l]));
-        const items = auctionsData.bm021AuctionItemModels.edges.map((e) => e.node);
+        if (!activeListings.length) return map;
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
-        for (const item of items) {
+        const processItem = (item: { auction_id: string; contract_address: string; token_id?: string | number | null }) => {
             const listing = listingByAuctionId.get(String(item.auction_id));
-            if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) continue;
+            if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) return;
             const raw = item.token_id != null ? String(item.token_id).trim() : "";
-            if (!raw) continue;
+            if (!raw) return;
             const norm = normalizeTokenId(raw);
             const dec = toDecimalTokenId(raw);
             map[raw] = listing.endTime;
             if (norm) map[norm] = listing.endTime;
             if (dec) map[dec] = listing.endTime;
-        }
+        };
+        (auctionsData?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? []).forEach(processItem);
+        sellerListingItems.forEach(processItem);
         return map;
-    }, [listings, auctionsData, collectionConfig.contractAddress]);
+    }, [activeListings, auctionsData, collectionConfig.contractAddress, listingByAuctionId, sellerListingItems]);
 
     const toggleCardSelection = useCallback((nftId: string) => {
         setSelectedNFTIds((previouslySelected) => {
@@ -355,9 +416,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
         // Exclude listed adventurers (Sell left filters)
         if (selectedCollection === "adventurers" && excludeListed && listedTokenIds.size > 0) {
             result = result.filter((nft) => {
+                const rawId = String(nft.tokenId ?? "").trim();
                 const dec = toDecimalTokenId(nft.tokenId);
                 const norm = normalizeTokenId(nft.tokenId);
-                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(nft.tokenId);
+                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(rawId);
             });
         }
 
@@ -440,9 +502,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
         }
         if (selectedCollection === "adventurers" && excludeListed && listedTokenIds.size > 0) {
             result = result.filter((nft) => {
+                const rawId = String(nft.tokenId ?? "").trim();
                 const dec = toDecimalTokenId(nft.tokenId);
                 const norm = normalizeTokenId(nft.tokenId);
-                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(nft.tokenId);
+                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(rawId);
             });
         }
         return result;
@@ -1194,7 +1257,19 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
         <div key={gridKey} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
                 const CardComponent = selectedCollection === "beasts" ? MonsterCard : AdventurerCard;
-                const listed = isListedToken(listedTokenIds, nft.tokenId);
+                // Use exact same "is listed" check as Exclude listed filter: dec, norm, and raw tokenId (as string)
+                const rawId = String(nft.tokenId ?? "").trim();
+                const dec = toDecimalTokenId(nft.tokenId);
+                const norm = normalizeTokenId(nft.tokenId);
+                const listed =
+                    listedTokenIds.has(dec) ||
+                    listedTokenIds.has(norm) ||
+                    listedTokenIds.has(rawId);
+                const endTime = endTimeByTokenId[nft.tokenId] ?? endTimeByTokenId[norm] ?? endTimeByTokenId[dec] ?? endTimeByTokenId[rawId] ?? "";
+                const endTimeSec = parseEndTime(endTime);
+                const isExpired = listed && endTimeSec > 0 && endTimeSec <= Math.floor(Date.now() / 1000);
+                // Show Listed tag when token is in listedTokenIds (same check as Exclude listed filter). Hide tag only when auction end time has passed.
+                const showListedTag = listed && !isExpired;
                 const reserve = listed
                     ? reserveByTokenId[nft.tokenId] ?? reserveByTokenId[normalizeTokenId(nft.tokenId)] ?? reserveByTokenId[toDecimalTokenId(nft.tokenId)]
                     : undefined;
@@ -1205,7 +1280,7 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                         selected={selectedNFTIds.includes(nft.tokenId)}
                         onToggle={() => toggleCardSelection(nft.tokenId)}
                         onInfoClick={() => openDetailModal(nft)}
-                        listed={listed}
+                        listed={showListedTag}
                         inBattle={inBattleByTokenId[toDecimalTokenId(nft.tokenId)] === true || inBattleByTokenId[normalizeTokenId(nft.tokenId)] === true}
                         priority={selectedCollection === "adventurers" && index === 0}
                         price={reserve?.price}
