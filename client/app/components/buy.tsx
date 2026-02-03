@@ -258,7 +258,11 @@ export default function Buy({
         const attrs = attrsByToken[dec];
         const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
         const value = attr?.value;
-        const dead = value === "True" || value === "true" || value === "1" || value === true;
+        const dead =
+          value === "True" ||
+          value === "true" ||
+          value === "1" ||
+          (value as string | undefined | boolean) === true;
         const hexShort = "0x" + BigInt(dec).toString(16).toLowerCase();
         const hexNormalized = normalizeTokenId(dec);
         gameOverMap[dec] = dead;
@@ -290,7 +294,11 @@ export default function Buy({
           const attributes = Array.isArray(r.attributes) ? r.attributes : [];
           const attr = attributes.find((a: { trait_type?: string }) => (a.trait_type?.toLowerCase() ?? "") === "game over");
           const value = attr?.value;
-          const dead = value === "True" || value === "true" || value === "1" || value === true;
+          const dead =
+          value === "True" ||
+          value === "true" ||
+          value === "1" ||
+          (value as string | undefined | boolean) === true;
           return { tokenId: r.tokenId, dead, attributes };
         });
       })
@@ -328,7 +336,11 @@ export default function Buy({
             const attrs = attrsMap[dec] ?? attributesByTokenId[dec];
             const attr = attrs?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
             const value = attr?.value;
-            const dead = value === "True" || value === "true" || value === "1" || value === true;
+            const dead =
+          value === "True" ||
+          value === "true" ||
+          value === "1" ||
+          (value as string | undefined | boolean) === true;
             next[dec] = dead;
             next[hexShort] = dead;
             next[hexNormalized] = dead;
@@ -374,7 +386,7 @@ export default function Buy({
   }, [selectedCollection, allNFTsWithAuction, attributesByTokenId]);
 
   // Filter NFTs - uses nftsWithAttributes so Level/Health/stats filters work (attributes from API)
-  const filteredNFTs = useMemo(() => {
+  const filteredNFTs = useMemo((): NFTWithAuction[] => {
     let result = applyFiltersToNFTs(nftsWithAttributes, filters);
 
     // Filter: only alive adventurers (if enabled) using API-fetched Game Over when available
@@ -396,7 +408,10 @@ export default function Buy({
           const value = gameOverAttr?.value;
           if (value === undefined || value === null) return true;
           const dead =
-            value === "True" || value === "true" || value === "1" || value === true;
+            value === "True" ||
+            value === "true" ||
+            value === "1" ||
+            (value as string | undefined | boolean) === true;
           return !dead;
         });
       }
@@ -429,7 +444,7 @@ export default function Buy({
       });
     }
 
-    return result;
+    return result as NFTWithAuction[];
   }, [
     nftsWithAttributes,
     filters,
@@ -485,7 +500,11 @@ export default function Buy({
           const gameOverAttr = nft.attributes?.find((a) => (a.trait_type?.toLowerCase() ?? "") === "game over");
           const value = gameOverAttr?.value;
           if (value === undefined || value === null) return true;
-          const dead = value === "True" || value === "true" || value === "1" || value === true;
+          const dead =
+          value === "True" ||
+          value === "true" ||
+          value === "1" ||
+          (value as string | undefined | boolean) === true;
           return !dead;
         });
       }
