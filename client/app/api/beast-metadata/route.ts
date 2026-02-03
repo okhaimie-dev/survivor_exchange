@@ -28,7 +28,9 @@ interface BeastMetadataItem {
   tokenId: string;
 }
 
-async function fetchTokenById(endpoint: string, id: string): Promise<{ data: unknown } | null> {
+type TokenByIdResponse = { data?: { token?: { tokenMetadata?: ERC721Token } } } | null;
+
+async function fetchTokenById(endpoint: string, id: string): Promise<TokenByIdResponse> {
   const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -38,9 +40,9 @@ async function fetchTokenById(endpoint: string, id: string): Promise<{ data: unk
     }),
   });
   if (!res.ok) return null;
-  const data = await res.json();
-  if (data?.errors?.length) return null;
-  return data;
+  const raw = await res.json();
+  if (raw?.errors?.length) return null;
+  return raw as TokenByIdResponse;
 }
 
 /** POST body: { items: BeastMetadataItem[] } — fetches beast metadata by contract+tokenId for Eternum grid. */
@@ -70,7 +72,7 @@ export async function POST(request: NextRequest) {
       ];
 
       let tokenMetadata: ERC721Token | null | undefined;
-      let data: { data?: { token?: { tokenMetadata?: ERC721Token } } } | null = null;
+      let data: TokenByIdResponse = null;
 
       for (const id of idCandidates) {
         data = await fetchTokenById(BEASTS_GRAPHQL_ENDPOINT, id);
