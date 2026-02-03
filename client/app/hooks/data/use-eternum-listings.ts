@@ -147,7 +147,7 @@ export function useEternumListings(): {
         let usePagination = false;
         for (let page = 0; page < ORDERS_MAX_PAGES && !cancelled; page++) {
           const isFirst = page === 0;
-          const ordRes = await fetch(ETERNUM_GRAPHQL_URL, {
+          const ordRes: Response = await fetch(ETERNUM_GRAPHQL_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: isFirst
@@ -158,7 +158,7 @@ export function useEternumListings(): {
                 }),
           });
           if (!ordRes.ok) break;
-          const ordData = await ordRes.json();
+          const ordData = await ordRes.json() as { data?: { marketplaceMarketOrderModelModels?: { edges?: { node: EternumOrderNode }[]; pageInfo?: { hasNextPage?: boolean; endCursor?: string } } }; errors?: { message?: string }[] };
           if (ordData.errors?.length) {
             throw new Error(ordData.errors?.[0]?.message || "Eternum orders error");
           }

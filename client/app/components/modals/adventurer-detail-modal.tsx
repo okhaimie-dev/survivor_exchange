@@ -962,6 +962,7 @@ export default function AdventurerDetailModal({
                 </div>
               );
             }
+            if (!bidState) return null;
             const bidData: AuctionBidData = auctionBidData;
             return (
             <div className="flex flex-col gap-4 rounded-xl border-2 border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/6 p-4">
