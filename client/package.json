@@ -6,7 +6,8 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "vercel-check": "node -e \"const fs=require('fs'); const ok = fs.existsSync('app/page.tsx') && fs.existsSync('app/layout.tsx') && fs.existsSync('next.config.ts'); console.log(ok ? 'OK: app structure valid' : 'FAIL: missing app/page.tsx, app/layout.tsx, or next.config.ts'); process.exit(ok?0:1);\""
   },
   "dependencies": {
     "@apollo/client": "^4.0.9",

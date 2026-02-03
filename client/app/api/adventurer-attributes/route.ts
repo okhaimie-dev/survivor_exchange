@@ -8,15 +8,55 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const MAX_TOKENS = 100;
+const MAX_TOKENS_POST = 500;
 const CONCURRENCY = 6;
 
 export type BattleStatusResponse = Record<string, boolean>;
+
+async function fetchAttributesBatch(tokenIds: string[]) {
+  const results = await runWithConcurrency(tokenIds, CONCURRENCY, async (tokenId) => {
+    const { attributes, source } = await fetchAttributesForToken(tokenId);
+    const in_battle = getInBattleFromAttributes(attributes);
+    return { tokenId, attributes, source, in_battle };
+  });
+  return results;
+}
+
+/**
+ * POST /api/adventurer-attributes
+ * Body: { tokenIds: string[] } – no URL length limit; server chunks and returns combined results.
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const raw = body?.tokenIds;
+    const tokenIds = Array.isArray(raw)
+      ? Array.from(new Set(raw.map((s: unknown) => String(s).trim()).filter(Boolean))).slice(0, MAX_TOKENS_POST)
+      : [];
+    if (tokenIds.length === 0) {
+      return NextResponse.json({ results: [] });
+    }
+    const allResults: Array<{ tokenId: string; attributes: Array<{ trait_type: string; value: string }>; source?: string; in_battle?: boolean }> = [];
+    for (let i = 0; i < tokenIds.length; i += MAX_TOKENS) {
+      const chunk = tokenIds.slice(i, i + MAX_TOKENS);
+      const chunkResults = await fetchAttributesBatch(chunk);
+      allResults.push(...chunkResults);
+    }
+    return NextResponse.json({ results: allResults });
+  } catch (error) {
+    console.warn("[Adventurer Attributes POST] Error:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Batch fetch failed", results: [] },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * GET /api/adventurer-attributes
  * - No query params: returns battle status map { [adventurerId]: in_battle } (beast_health > 0).
  *   Optional: ?debug=1 (raw sample), ?test=id1,id2 (force true for given ids).
- * - ?tokenIds=1,2,3: returns attributes (and in_battle) for each token.
+ * - ?tokenIds=1,2,3: returns attributes (and in_battle) for each token (max 100; use POST for more).
  */
 export async function GET(request: NextRequest) {
   const tokenIdsParam = request.nextUrl.searchParams.get("tokenIds");
@@ -39,11 +79,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const results = await runWithConcurrency(tokenIds, CONCURRENCY, async (tokenId) => {
-      const { attributes, source } = await fetchAttributesForToken(tokenId);
-      const in_battle = getInBattleFromAttributes(attributes);
-      return { tokenId, attributes, source, in_battle };
-    });
+    const results = await fetchAttributesBatch(tokenIds);
     return NextResponse.json({ results });
   } catch (error) {
     console.warn("[Adventurer Attributes Batch] Error:", error);

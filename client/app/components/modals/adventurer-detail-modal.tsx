@@ -9,6 +9,7 @@ import { copyAuctionLink } from "../../lib/utils/share-utils";
 import { normalizeTokenId } from "../../lib/utils/normalization";
 import { calculateAdventurerRating } from "../../lib/utils/adventurer-rating";
 import { useAdventurerAttributesOptional } from "../../providers/adventurer-attributes-provider";
+import { EMPIRE_TRADE_ADVENTURERS_URL } from "../../lib/constants";
 
 /** Auction bid data for displaying price info */
 interface AuctionBidData {
@@ -68,6 +69,8 @@ interface AdventurerDetailModalProps {
   sellFormContent?: React.ReactNode;
   /** When true, use same compact layout as Sell (stats, inventory, Level/XP/Score) but hide sell/bid section (e.g. My Listings view) */
   viewOnly?: boolean;
+  /** When "eternum", show "Buy on Realms" redirect instead of in-app bid (Realms marketplace listing) */
+  listingSource?: "survivor_exchange" | "eternum";
 }
 
 /** Metadata attribute from NFT metadata or Torii SQL */
@@ -103,6 +106,7 @@ export default function AdventurerDetailModal({
   onOpenWallet,
   sellFormContent,
   viewOnly = false,
+  listingSource,
 }: AdventurerDetailModalProps) {
   const currentNft = nfts[currentIndex];
   const [attributes, setAttributes] = useState<MetadataAttribute[]>([]);
@@ -625,11 +629,28 @@ export default function AdventurerDetailModal({
                   <span className="text-[8px] uppercase tracking-wider text-[rgb(186,255,188)]/70">Score</span>
                 </div>
               </div>
-              {/* Sell form or Buy (bid/offer) at bottom - only show when we have sell or bid UI (hidden in viewOnly) */}
-              {(sellFormContent || (auctionBidData && bidState)) && (
+              {/* Sell form or Buy (bid/offer) at bottom - only show when we have sell or bid UI (hidden in viewOnly); Realms listing = "Buy on Realms" only */}
+              {(sellFormContent || (auctionBidData && bidState) || listingSource === "eternum") && (
               <div className="pt-2 border-t-2 border-[rgb(50,255,52)]/40 rounded-lg bg-[rgb(50,255,52)]/8 px-2.5 py-2 shrink-0">
                 {sellFormContent ? (
                   sellFormContent
+                ) : listingSource === "eternum" ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-xs font-orbitron text-[rgb(186,255,188)]/90">This adventurer is listed on Realms.</p>
+                    <a
+                      href={EMPIRE_TRADE_ADVENTURERS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-10 text-xs font-orbitron uppercase tracking-[0.12em] bg-[rgb(50,255,52)] text-black font-bold hover:bg-[rgb(40,220,42)] transition"
+                    >
+                      Buy on Realms
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  </div>
                 ) : auctionBidData && bidState ? (
                   /* Buy element: same structure as Sell but with bid/offer UI */
                   <div className="flex flex-col gap-3">
@@ -919,8 +940,28 @@ export default function AdventurerDetailModal({
             ) : null}
           </div>
 
-          {/* Right column - Auction bidding UI (only shown in auction context), slightly more visible */}
-          {isActiveAuction && auctionBidData && (() => {
+          {/* Right column - Auction bidding UI (only shown in auction context); Realms listing = "Buy on Realms" only */}
+          {auctionId && auctionBidData && (listingSource === "eternum" || (isActiveAuction && bidState)) && (() => {
+            if (listingSource === "eternum") {
+              return (
+                <div className="flex flex-col gap-4 rounded-xl border-2 border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/6 p-4">
+                  <p className="text-sm font-orbitron text-[rgb(186,255,188)]/90">This adventurer is listed on Realms.</p>
+                  <a
+                    href={EMPIRE_TRADE_ADVENTURERS_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-11 text-xs font-orbitron uppercase tracking-[0.12em] bg-[rgb(50,255,52)] text-black font-bold hover:bg-[rgb(40,220,42)] transition"
+                  >
+                    Buy on Realms
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                      <polyline points="15 3 21 3 21 9" />
+                      <line x1="10" y1="14" x2="21" y2="3" />
+                    </svg>
+                  </a>
+                </div>
+              );
+            }
             const bidData: AuctionBidData = auctionBidData;
             return (
             <div className="flex flex-col gap-4 rounded-xl border-2 border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/6 p-4">

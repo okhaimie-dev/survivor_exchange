@@ -367,7 +367,7 @@ export default function AdventurerCard({
         </div>
         <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-white/5 border border-white/10">
           <span className="text-base font-orbitron font-bold text-blue-400">
-            {score != null ? score.toFixed(2) : "—"}
+            {score != null ? Math.min(999, Math.max(0, Math.round(score))) : "—"}
           </span>
           <span className="text-[8px] uppercase text-[rgb(186,255,188)]/50">Score</span>
         </div>
