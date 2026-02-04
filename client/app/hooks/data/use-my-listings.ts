@@ -6,11 +6,10 @@ import {
   byteArrayToString,
   parseStatus,
   parseAmount,
-  parseHexOrDecimal,
   safeParseInt,
 } from "../../lib/utils";
 import { normalizeContractAddress } from "../../lib/utils/normalization";
-import { DEFAULT_POLL_INTERVAL } from "../../lib/constants";
+import { getTokenByAddress } from "../../lib/constants";
 
 export interface FormattedOffer {
   buyer: string;
@@ -32,6 +31,8 @@ export interface FormattedListing {
   seller: string;
   auctionId: string;
   feeToken: string;
+  /** Token symbol for reserve display (e.g. USDC, STRK) */
+  reserveTokenSymbol?: string;
   offers: FormattedOffer[];
 }
 
@@ -45,13 +46,13 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     ? normalizeContractAddress(seller)
     : undefined;
 
-  const { data, loading, error } = useQuery<MyListingsResponse>(
+  const { data, loading, error, refetch } = useQuery<MyListingsResponse>(
     MY_LISTINGS_QUERY,
     {
       variables: { seller: normalizedSeller || "" },
       skip: !normalizedSeller,
-      pollInterval: DEFAULT_POLL_INTERVAL,
-      fetchPolicy: "cache-and-network",
+      pollInterval: 0,
+      fetchPolicy: "cache-first",
       errorPolicy: "all",
       notifyOnNetworkStatusChange: false,
     },
@@ -98,29 +99,31 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     return auctions.map((auction) => {
       const decodedName = byteArrayToString(auction.name);
 
-      // Parse starting_price - handle both decimal and hex strings
-      const startingPrice = parseHexOrDecimal(auction.starting_price) || 0;
+      const normalizedFeeToken = auction.fee_token
+        ? normalizeContractAddress(auction.fee_token)
+        : "";
+      const reserveToken = normalizedFeeToken ? getTokenByAddress(normalizedFeeToken) : undefined;
+      const decimals = reserveToken?.decimals ?? 6;
 
-      // Parse current_bid with 6 decimals (USDC standard)
+      const startingPrice = parseAmount(auction.starting_price, decimals);
       const currentBid = auction.current_bid
-        ? parseAmount(auction.current_bid, 6)
+        ? parseAmount(auction.current_bid, decimals)
         : null;
 
       const tokenCount = safeParseInt(auction.item_count, 0);
 
-      // Normalize addresses from GraphQL response
       const normalizedSeller = auction.seller
         ? normalizeContractAddress(auction.seller)
         : "";
       const normalizedHighestBidder = auction.highest_bidder
         ? normalizeContractAddress(auction.highest_bidder)
         : null;
-      const normalizedFeeToken = auction.fee_token
-        ? normalizeContractAddress(auction.fee_token)
-        : "";
 
-      // Get offers for this auction
       const offers = offersByAuction.get(auction.auction_id) || [];
+
+      const statusNum = parseStatus(auction.status);
+      const status =
+        statusNum >= 0 ? String(statusNum) : (auction.status || "pending");
 
       return {
         id: `#${auction.auction_id}`,
@@ -129,11 +132,12 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         startingPrice,
         currentBid,
         highestBidder: normalizedHighestBidder,
-        status: auction.status || "pending",
+        status,
         endTime: auction.end_time,
         seller: normalizedSeller,
         auctionId: auction.auction_id,
         feeToken: normalizedFeeToken,
+        reserveTokenSymbol: "USDC", // Reserve price is always in USD; display as $ only
         offers,
       };
     });
@@ -145,5 +149,6 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
     error: error
       ? new Error(error.message || "Failed to fetch listings")
       : null,
+    refetch,
   };
 }

@@ -55,13 +55,15 @@ export async function GET(request: NextRequest) {
 
     const attributes = allAttributes;
 
-    // Group attributes by token_id
+    // Group attributes by token_id (normalize key so casing/format mismatches still match)
+    const normalizeTokenIdKey = (id: string) => id.trim().toLowerCase();
     const attributesByToken = new Map<string, Array<{ trait_type: string; value: string }>>();
     for (const attr of attributes) {
-      if (!attributesByToken.has(attr.token_id)) {
-        attributesByToken.set(attr.token_id, []);
+      const key = normalizeTokenIdKey(attr.token_id);
+      if (!attributesByToken.has(key)) {
+        attributesByToken.set(key, []);
       }
-      attributesByToken.get(attr.token_id)!.push({
+      attributesByToken.get(key)!.push({
         trait_type: attr.trait_name,
         value: String(attr.trait_value),
       });
@@ -70,11 +72,14 @@ export async function GET(request: NextRequest) {
     // Format NFTs
     const nfts = balances
       .map((balance: { token_id: string; contract_address: string }) => {
-        const tokenAttributes = attributesByToken.get(balance.token_id) || [];
+        const tokenAttributes = attributesByToken.get(normalizeTokenIdKey(balance.token_id)) || [];
 
         const getAttribute = (name: string) => {
-          const attr = tokenAttributes.find((a) => a.trait_type === name);
-          return attr?.value;
+          const exact = tokenAttributes.find((a) => a.trait_type === name);
+          if (exact) return exact.value;
+          const lower = name.toLowerCase();
+          const insensitive = tokenAttributes.find((a) => (a.trait_type ?? '').toLowerCase() === lower);
+          return insensitive?.value;
         };
 
         // Skip soulbound NFTs
@@ -99,7 +104,7 @@ export async function GET(request: NextRequest) {
           symbol: 'GAME',
           tokenId: rawTokenId,
           level,
-          health: getAttribute('Health'),
+          health: getAttribute('Health') ?? getAttribute('health'),
           power: xp,
         };
       })

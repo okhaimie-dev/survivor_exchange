@@ -48,6 +48,8 @@ interface BidActionsState {
 
 interface BidActionsCallbacks {
   handlePlaceBid: () => Promise<void>;
+  /** Place a single bid on the given auction (for bulk buy). */
+  placeBidForAuction: (auctionId: string, amountUsd: number, minimumBidUsd?: number) => Promise<void>;
   handleMakeOffer: () => Promise<void>;
   handleWithdrawOffer: () => Promise<void>;
   handleSettleAuction: () => Promise<void>;
@@ -377,6 +379,91 @@ export function useBidActions(
     toast,
     executeWithPaymaster,
   ]);
+
+  const placeBidForAuction = useCallback(
+    async (auctionId: string, amountUsd: number, minimumBidUsd?: number) => {
+      if (!account || !address) return;
+      if (minimumBidUsd !== undefined && amountUsd < minimumBidUsd) {
+        throw new Error(`Minimum bid is $${minimumBidUsd.toFixed(2)}`);
+      }
+      const calls: Array<{
+        contractAddress: string;
+        entrypoint: string;
+        calldata: string[];
+      }> = [];
+      const auctionIdNum = parseInt(auctionId, 10);
+      const finalUSDAmount = Math.floor(amountUsd * 1e6);
+
+      if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+        let currentTokenPrice = tokenPrice;
+        if (shouldRefetchPrice(paymentToken)) {
+          currentTokenPrice = await getTokenPriceInUSDC(paymentToken, address);
+          onTokenPriceUpdate(currentTokenPrice);
+        }
+        if (currentTokenPrice === null || !isValidPrice(currentTokenPrice)) {
+          throw new Error("Unable to get token price");
+        }
+        const { calls: swapCalls, finalAmount } = await buildSwapCalls(amountUsd, currentTokenPrice);
+        calls.push(...swapCalls);
+        const usdcApproval = uint256.bnToUint256(finalAmount);
+        calls.push({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "approve",
+          calldata: [
+            VAULT_CONTRACT_ADDRESS,
+            usdcApproval.low.toString(),
+            usdcApproval.high.toString(),
+          ],
+        });
+        calls.push({
+          contractAddress: AUCTION_CONTRACT_ADDRESS,
+          entrypoint: "bid",
+          calldata: [auctionIdNum.toString(), finalAmount.toString()],
+        });
+      } else {
+        const usdcBalanceResult = await provider.provider.callContract({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "balanceOf",
+          calldata: [address],
+        });
+        if (!usdcBalanceResult || usdcBalanceResult.length < 2) {
+          throw new Error("Invalid balance response");
+        }
+        const usdcLow = usdcBalanceResult[0];
+        const usdcHigh = usdcBalanceResult[1];
+        const usdcBalance = BigInt(usdcLow) + (BigInt(usdcHigh) << BigInt(128));
+        if (usdcBalance < BigInt(finalUSDAmount)) {
+          throw new Error("Insufficient funds to place bid.");
+        }
+        const approvalAmountValue = (BigInt(finalUSDAmount) * 102n) / 100n;
+        const approvalAmount = uint256.bnToUint256(approvalAmountValue);
+        calls.push({
+          contractAddress: USDC_ADDRESS,
+          entrypoint: "approve",
+          calldata: [
+            VAULT_CONTRACT_ADDRESS,
+            approvalAmount.low.toString(),
+            approvalAmount.high.toString(),
+          ],
+        });
+        calls.push({
+          contractAddress: AUCTION_CONTRACT_ADDRESS,
+          entrypoint: "bid",
+          calldata: [auctionIdNum.toString(), finalUSDAmount.toString()],
+        });
+      }
+      await account.execute(calls);
+    },
+    [
+      account,
+      address,
+      paymentToken,
+      tokenPrice,
+      provider,
+      buildSwapCalls,
+      onTokenPriceUpdate,
+    ]
+  );
 
   const handleMakeOffer = useCallback(async () => {
     const amount = bidAmountToken || localBidAmount;
@@ -771,6 +858,7 @@ export function useBidActions(
     insufficientFundsError,
     // Actions
     handlePlaceBid,
+    placeBidForAuction,
     handleMakeOffer,
     handleWithdrawOffer,
     handleSettleAuction,

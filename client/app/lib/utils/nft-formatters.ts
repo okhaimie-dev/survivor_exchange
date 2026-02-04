@@ -24,8 +24,11 @@ export function getAdventurerImageUrl(tokenId: string | number): string {
 }
 
 function getAttributeValue(attributes: MetadataAttribute[], traitType: string): string | undefined {
-  const attr = attributes.find((a) => a.trait_type === traitType);
-  return attr ? String(attr.value) : undefined;
+  const exact = attributes.find((a) => a.trait_type === traitType);
+  if (exact) return String(exact.value);
+  const lower = traitType.toLowerCase();
+  const insensitive = attributes.find((a) => (a.trait_type ?? '').toLowerCase() === lower);
+  return insensitive ? String(insensitive.value) : undefined;
 }
 
 function cleanupMetadataName(name: string | null | undefined): string {

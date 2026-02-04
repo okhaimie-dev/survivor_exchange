@@ -1,12 +1,26 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import { IMAGE_BASE_URL } from "../../lib/constants";
+import { ReservePriceDisplay } from "../ui";
 
 type MonsterCardProps = {
   nft: FormattedNFT;
   selected: boolean;
   onToggle: () => void;
   onInfoClick?: () => void;
+  price?: number;
+  reserveTokenSymbol?: string;
+  auctionName?: string;
+  /** When true, show a "Listed" tag (e.g. in sell grid). */
+  listed?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type. */
+  inBattle?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type. */
+  priority?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type (Sell tab uses "Price"). */
+  priceLabel?: "Buy" | "Price";
+  /** When true, auction is expired; show "Price" (no buy button) and red Expired tag. */
+  expired?: boolean;
 };
 
 export default function MonsterCard({
@@ -14,6 +28,14 @@ export default function MonsterCard({
   selected,
   onToggle,
   onInfoClick,
+  price,
+  reserveTokenSymbol,
+  auctionName,
+  listed,
+  inBattle: _inBattle,
+  priority: _priority,
+  priceLabel = "Price",
+  expired,
 }: MonsterCardProps) {
   const getAttribute = (traitType: string) => {
     const attr = nft.attributes.find((a) => a.trait_type === traitType);
@@ -25,11 +47,7 @@ export default function MonsterCard({
   const tier = nft.tier || getAttribute("Tier") || "—";
   const level = nft.level || getAttribute("Level") || "0";
   const power = nft.power || getAttribute("Power") || "0";
-  const prefix = getAttribute("Prefix");
-  const suffix = getAttribute("Suffix");
-
-  const epithet =
-    prefix && suffix ? `${prefix} ${suffix}` : prefix || suffix || "";
+  const health = getAttribute("Health") || "—";
 
   const imageSrc = nft.metadata?.image
     ? nft.metadata.image
@@ -37,73 +55,66 @@ export default function MonsterCard({
       ? `${IMAGE_BASE_URL}/${nft.imagePath}`
       : "/logo.png";
 
-  const tokenIdDisplay = `#${parseInt(nft.tokenId, 16).toString()}`;
-
   const stats = [
-    { label: "Type", value: beastType },
-    { label: "Tier", value: tier },
-    { label: "Level", value: level },
     { label: "Power", value: parseFloat(power).toFixed(0) },
+    { label: "Level", value: level },
+    { label: "Tier", value: tier },
+    { label: "Health", value: health },
+    { label: "Type", value: beastType },
   ];
+
+  const handleCardClick = () => {
+    if (onInfoClick) onInfoClick();
+    else onToggle();
+  };
 
   return (
     <article
       role="button"
       tabIndex={0}
       aria-pressed={selected}
-      onClick={onToggle}
+      onClick={handleCardClick}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          onToggle();
+          handleCardClick();
         }
       }}
-      className={`group relative flex h-full w-full flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
+      className={`group relative flex h-full w-full min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
         selected
           ? "border-[rgb(50,255,52)] shadow-[0_0_20px_rgba(50,255,52,0.3)]"
           : "border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 hover:bg-black/80"
       }`}
     >
-      {/* Selected state: always visible checkmark */}
-      {selected && (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 text-[rgb(50,255,52)]"
-        >
-          <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>
-      )}
-      {/* Unselected state: faded empty checkbox on hover */}
-      {!selected && (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 text-white/30 opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="4" />
-        </svg>
-      )}
-
-      <header className="flex items-center justify-between text-[9px] md:text-[10px] uppercase tracking-wider text-[rgb(186,255,188)]/60">
-        <span>{tokenIdDisplay}</span>
-        {epithet && (
-          <span className="truncate max-w-[50%] text-right">
-            {epithet}
+      {listed && (
+        <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
+          <span className="rounded border border-[rgb(50,255,52)]/60 bg-black/80 px-2 py-0.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)]">
+            Listed
           </span>
+        </div>
+      )}
+      {/* Small select checkbox top-right: click toggles selection only */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70"
+        aria-pressed={selected}
+        title={selected ? "Remove from selection" : "Add to selection"}
+      >
+        {selected ? (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-[rgb(50,255,52)]">
+            <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-white/30 opacity-0 group-hover:opacity-100 transition-opacity">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+          </svg>
         )}
-      </header>
+      </button>
 
       <div className="flex flex-row md:flex-col items-center gap-3 text-white">
         <div className="relative flex h-20 w-20 md:h-28 md:w-28 flex-shrink-0 items-center justify-center">
@@ -151,21 +162,61 @@ export default function MonsterCard({
         </div>
       </div>
 
-      <div className="grid grid-cols-4 md:grid-cols-2 gap-1 md:gap-2 text-white mt-auto">
+      <div className="grid grid-cols-2 gap-1 md:gap-2 text-white mt-auto flex-1 min-h-0">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-col md:flex-row items-center md:justify-between rounded-md md:rounded-lg bg-white/5 px-1.5 md:px-3 py-1.5 md:py-2"
+            className="flex flex-col md:flex-row items-center md:justify-between gap-1 md:gap-2 rounded-md md:rounded-lg bg-white/5 px-1.5 md:px-3 py-1.5 md:py-2"
           >
             <span className="text-[rgb(186,255,188)]/50 text-[7px] md:text-[10px] uppercase">
               {stat.label}
             </span>
-            <span className="text-[11px] md:text-sm font-medium text-white">
+            <span
+              className={`text-[11px] md:text-sm font-medium ${stat.label === "Health" ? "text-red-400" : "text-white"}`}
+            >
               {stat.value}
             </span>
           </div>
         ))}
       </div>
+
+      {/* Expired tag - red, below card content */}
+      {expired && (
+        <div className="flex justify-center shrink-0">
+          <span className="rounded border border-red-500/60 bg-red-500/20 px-2 py-0.5 text-[9px] font-orbitron uppercase tracking-wider text-red-400">
+            Expired
+          </span>
+        </div>
+      )}
+
+      {/* Price - fixed height; when expired or priceLabel=Price show static, else Buy button */}
+      {price !== undefined && (
+        <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center">
+          {priceLabel === "Price" || expired ? (
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Price</span>
+              <span className="text-sm font-orbitron font-bold text-[rgb(50,255,52)] whitespace-nowrap">
+                <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+              </span>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onInfoClick) onInfoClick();
+              }}
+              className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer"
+              title="Open buy modal"
+            >
+              <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
+              <span className="text-sm font-orbitron font-bold whitespace-nowrap">
+                <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+              </span>
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }

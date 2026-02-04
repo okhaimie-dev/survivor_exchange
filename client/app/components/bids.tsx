@@ -98,8 +98,27 @@ export default function Bids({
     animated: "",
     priceSort: "",
     tokenIdSort: "",
+    levelSort: "",
+    scoreSort: "",
+    tierSort: "",
+    powerSort: "",
     summitTop15: "",
     timeSort: "ending-soon", // Default to ending soon for urgency
+    healthMin: "",
+    healthMax: "",
+    strengthMin: "",
+    strengthMax: "",
+    dexterityMin: "",
+    dexterityMax: "",
+    vitalityMin: "",
+    vitalityMax: "",
+    intelligenceMin: "",
+    intelligenceMax: "",
+    wisdomMin: "",
+    wisdomMax: "",
+    charismaMin: "",
+    charismaMax: "",
+    battleFilter: "",
   });
 
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
@@ -3083,7 +3102,12 @@ export default function Bids({
         </div>
       )}
 
-      <Filters token={token} filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
+      <Filters
+        token={token}
+        filters={filters}
+        onFiltersChange={(updates) => setFilters((prev) => ({ ...prev, ...updates }))}
+        summitListedCount={summitListedCount}
+      />
       {renderContent()}
 
       <BeastDetailModal

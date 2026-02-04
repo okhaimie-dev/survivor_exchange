@@ -104,6 +104,25 @@ export async function fetchMyListings(
   throw new Error("Use Apollo Client hooks instead. See useMyListings hook.");
 }
 
+/** Fetch items (tokens) for a single auction by auction_id. Used by listing detail modal. */
+export const AUCTION_ITEMS_BY_ID_QUERY = gql`
+  query AuctionItemsByAuctionId($auctionId: Int!) {
+    bm021AuctionItemModels(where: { auction_id: $auctionId }, limit: 100) {
+      edges {
+        node {
+          auction_id
+          contract_address
+          item_index
+          token_id
+          entity {
+            executedAt
+          }
+        }
+      }
+    }
+  }
+`;
+
 export const CONSOLIDATED_QUERY = gql`
   query ConsolidatedQuery($accountAddress: String, $seller: String, $skipNFTs: Boolean = false, $skipListings: Boolean = false) {
     myNFTs: tokenBalances(limit: ${GRAPHQL_QUERY_LIMIT}, accountAddress: $accountAddress) @skip(if: $skipNFTs) {

@@ -1,8 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
 import BidAuctionMyListings from "./components/bid-auction-my-listings";
-import { Footer, Hero } from "./components/layout";
+import { Footer } from "./components/layout";
 import BeastUrlHandler from "./components/beast-url-handler";
 import { useAccount } from "@starknet-react/core";
 import { useMyNFTs, useAuctions, useMyListings } from "./hooks";
@@ -10,7 +9,10 @@ import { useSearchParams } from "next/navigation";
 
 export default function Home() {
   const { address } = useAccount();
-  const { nfts, loading, error } = useMyNFTs({ address });
+  const searchParams = useSearchParams();
+  const walletParam = searchParams.get('wallet');
+  const effectiveAddress = walletParam ?? address ?? undefined;
+  const { nfts, loading, error } = useMyNFTs({ address: effectiveAddress });
   const {
     auctions,
     allAuctions,
@@ -19,58 +21,22 @@ export default function Home() {
     currentPage,
     totalPages,
     setCurrentPage,
-    getAuctionItems
+    getAuctionItems,
+    refetch: refetchAuctions,
   } = useAuctions();
   const {
     listings,
     loading: listingsLoading,
-    error: listingsError
-  } = useMyListings({ seller: address || undefined });
-  const searchParams = useSearchParams();
+    error: listingsError,
+    refetch: refetchListings,
+  } = useMyListings({ seller: effectiveAddress ?? undefined });
   const token = searchParams.get('auction');
-
-  // Calculate platform stats for social proof
-  const platformStats = useMemo(() => {
-    const activeAuctions = allAuctions?.filter(a => {
-      const status = parseInt(a.status);
-      return status === 2; // Active status
-    }).length || 0;
-
-    // Calculate total volume from settled auctions
-    const totalVolume = allAuctions?.reduce((sum, auction) => {
-      const status = parseInt(auction.status);
-      if (status === 4) { // Settled
-        const bidStr = auction.current_bid || "0";
-        const bid = bidStr.startsWith("0x") || bidStr.startsWith("0X")
-          ? parseInt(bidStr, 16)
-          : parseFloat(bidStr);
-        return sum + (bid / 1e6); // Convert from USDC decimals
-      }
-      return sum;
-    }, 0) || 0;
-
-    // Count total bids across all auctions
-    const totalBids = allAuctions?.filter(a => {
-      const bidStr = a.current_bid || "0";
-      const bid = bidStr.startsWith("0x") || bidStr.startsWith("0X")
-        ? parseInt(bidStr, 16)
-        : parseFloat(bidStr);
-      return bid > 0;
-    }).length || 0;
-
-    return { activeAuctions, totalVolume: Math.round(totalVolume), totalBids };
-  }, [allAuctions]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center font-sans bg-black overflow-x-hidden">
       {/* Handle ?beast=tokenId URL parameter */}
       <BeastUrlHandler />
-      <div className="flex flex-col items-center justify-center gap-4 w-full h-full">
-        <Hero
-          activeAuctions={platformStats.activeAuctions}
-          totalVolume={platformStats.totalVolume}
-          totalBids={platformStats.totalBids}
-        />
+      <div className="flex flex-1 flex-col items-center w-full gap-2">
         <BidAuctionMyListings 
           nfts={nfts} 
           loading={loading} 
@@ -83,10 +49,13 @@ export default function Home() {
           totalPages={totalPages}
           setCurrentPage={setCurrentPage}
           getAuctionItems={getAuctionItems}
+          refetchAuctions={refetchAuctions}
           listings={listings}
           listingsLoading={listingsLoading}
           listingsError={listingsError}
+          refetchListings={refetchListings}
           token={token}
+          walletOverride={walletParam ?? undefined}
         />
         <Footer />
       </div>

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { BEAST_OPTIONS, TYPE_OPTIONS } from "../../lib/constants/filters";
 import { CollectionType } from "../../lib/constants";
+import type { AdventurerStatBounds } from "../../lib/filter-utils";
 import { CustomDropdown, InfoTooltip } from "../ui";
 
 export interface FilterState {
@@ -19,36 +20,68 @@ export interface FilterState {
     animated: string;
     priceSort: string;
     tokenIdSort: string;
+    levelSort: string;
+    scoreSort: string;
+    tierSort: string;
+    powerSort: string;
     summitTop15: string;
-    timeSort: string; // New: sort by ending time
+    timeSort: string;
+    // Adventurer stats (min/max)
+    healthMin: string;
+    healthMax: string;
+    strengthMin: string;
+    strengthMax: string;
+    dexterityMin: string;
+    dexterityMax: string;
+    vitalityMin: string;
+    vitalityMax: string;
+    intelligenceMin: string;
+    intelligenceMax: string;
+    wisdomMin: string;
+    wisdomMax: string;
+    charismaMin: string;
+    charismaMax: string;
+    /** Adventurer: "" = all, "in" = in battle only, "out" = not in battle */
+    battleFilter: string;
 }
 
 interface FiltersProps {
     token?: string | null;
     filters: FilterState;
-    onFiltersChange: (filters: FilterState) => void;
+    /** Called with partial updates (single key) or full state (e.g. clear). Parent should merge: setFilters(prev => ({ ...prev, ...updates })). */
+    onFiltersChange: (filters: FilterState | Partial<FilterState>) => void;
     summitListedCount?: number;
     collection?: CollectionType;
+    /** When true, expand state is controlled by parent; trigger button is not rendered (put it in sidebar). */
+    isExpanded?: boolean;
+    onToggleExpanded?: (value: boolean) => void;
+    /** Min/max from displayed NFTs for adventurer sliders; when set, sliders use these instead of fixed defaults. */
+    adventurerStatBounds?: AdventurerStatBounds | null;
+    /** Compact layout for sidebar: single column, smaller padding and inputs, sliders below Filters button. */
+    compact?: boolean;
 }
 
-export default function Filters({ token, filters, onFiltersChange, summitListedCount = 0, collection = "beasts" }: FiltersProps) {
+const emptyAdventurerFilters = {
+    healthMin: "", healthMax: "", strengthMin: "", strengthMax: "", dexterityMin: "", dexterityMax: "",
+    vitalityMin: "", vitalityMax: "", intelligenceMin: "", intelligenceMax: "", wisdomMin: "", wisdomMax: "", charismaMin: "", charismaMax: "",
+    battleFilter: "",
+};
+
+const DEFAULT_LEVEL_MAX = 100;
+const DEFAULT_HEALTH_MAX = 100;
+const DEFAULT_STAT_MAX = 30;
+
+export default function Filters({ token, filters, onFiltersChange, summitListedCount = 0, collection = "beasts", isExpanded: controlledExpanded, onToggleExpanded, adventurerStatBounds, compact = false }: FiltersProps) {
     const isBeastsCollection = collection === "beasts";
-    // Default to expanded on desktop (md breakpoint = 768px)
-    const [isExpanded, setIsExpanded] = useState(false);
+    const [internalExpanded, setInternalExpanded] = useState(false);
+    const isControlled = controlledExpanded !== undefined && onToggleExpanded !== undefined;
+    const isExpanded = isControlled ? controlledExpanded : internalExpanded;
+    const setIsExpanded = isControlled ? onToggleExpanded : setInternalExpanded;
 
-    // Expand by default on desktop
-    useEffect(() => {
-        const mediaQuery = window.matchMedia("(min-width: 768px)");
-        setIsExpanded(mediaQuery.matches);
-
-        const handler = (e: MediaQueryListEvent) => setIsExpanded(e.matches);
-        mediaQuery.addEventListener("change", handler);
-        return () => mediaQuery.removeEventListener("change", handler);
-    }, []);
-
+    // Pass only the changed key so parent merges from its own state (avoids stale filters in Sell grid)
     const updateFilter = useCallback((key: keyof FilterState, value: string) => {
-        onFiltersChange({ ...filters, [key]: value });
-    }, [filters, onFiltersChange]);
+        onFiltersChange({ [key]: value });
+    }, [onFiltersChange]);
 
     const clearFilters = useCallback(() => {
         onFiltersChange({
@@ -65,45 +98,51 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
             rankMax: "",
             shiny: "",
             animated: "",
-            priceSort: "",
+            priceSort: "high-low",
             tokenIdSort: "",
+            levelSort: "",
+            scoreSort: "",
+            tierSort: "",
+            powerSort: "",
             summitTop15: "",
-            timeSort: "ending-soon", // Keep ending soon as default for urgency
+            timeSort: "",
+            ...emptyAdventurerFilters,
         });
     }, [onFiltersChange]);
 
     const hasActiveFilters = Object.values(filters).some(value => value !== "");
     const activeFilterCount = Object.values(filters).filter(value => value !== "").length;
+    const labelClass = compact ? "text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70" : "text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70";
 
     useEffect(() => {
         if (token) {
-            onFiltersChange({...filters, id: token });
+            onFiltersChange({ id: token });
         }
-    }, [token]);
+    }, [token, onFiltersChange]);
 
     return (
-        <div className="w-full overflow-hidden">
-            <div className="mb-4 flex flex-col gap-3">
+        <div className={compact ? "w-full overflow-hidden" : "w-full overflow-hidden"}>
+            <div className={compact ? "flex flex-col gap-2" : "mb-4 flex flex-col gap-3"}>
                 <input
                     type="text"
                     value={filters.search}
                     onChange={(e) => updateFilter("search", e.target.value)}
-                    placeholder="Search by name, token ID, or attributes..."
-                    className="w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"
+                    placeholder={compact ? "Search..." : "Search by name, token ID, or attributes..."}
+                    className={compact ? "w-full rounded-lg border border-white/12 bg-black/60 px-2.5 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none transition focus:border-[rgb(50,255,52)] placeholder:text-[rgb(186,255,188)]/40" : "w-full rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 placeholder:text-[rgb(186,255,188)]/40"}
                 />
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className={compact ? "flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-2 sm:gap-3"}>
                     {/* Summit filter button - hidden if API fails (summitListedCount = 0) */}
                     {summitListedCount > 0 && (
                         <button
                             type="button"
                             onClick={() => {
                                 if (filters.summitTop15) {
-                                    onFiltersChange({ ...filters, summitTop15: "" });
+                                    onFiltersChange({ summitTop15: "" });
                                 } else {
-                                    onFiltersChange({ ...filters, summitTop15: "true" });
+                                    onFiltersChange({ summitTop15: "true" });
                                 }
                             }}
-                            className={`inline-flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-orbitron uppercase tracking-[0.12em] transition whitespace-nowrap ${
+                            className={`inline-flex items-center justify-center gap-1 rounded-full px-2 py-1.5 text-[10px] font-orbitron uppercase tracking-[0.1em] transition whitespace-nowrap ${
                                 filters.summitTop15
                                     ? "border border-[rgb(255,215,0)] bg-[rgb(255,215,0)]/20 text-[rgb(255,215,0)]"
                                     : "border border-[rgb(255,215,0)]/40 bg-[rgb(255,215,0)]/10 text-[rgb(255,215,0)]/80 hover:bg-[rgb(255,215,0)]/20 hover:text-[rgb(255,215,0)]"
@@ -123,23 +162,25 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                             </span>
                         </button>
                     )}
-                    <button
-                        type="button"
-                        onClick={() => setIsExpanded(!isExpanded)}
-                        className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 whitespace-nowrap"
-                    >
-                        {isExpanded ? "Hide Filters" : "Show Filters"}
-                        {hasActiveFilters && (
-                            <span className="ml-2 rounded-full bg-[rgb(50,255,52)] min-w-[20px] px-1.5 py-0.5 text-xs text-black font-bold">
-                                {activeFilterCount}
-                            </span>
-                        )}
-                    </button>
+                    {!isControlled && (
+                        <button
+                            type="button"
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-xs font-orbitron uppercase tracking-[0.12em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 whitespace-nowrap"
+                        >
+                            {isExpanded ? "Hide" : "Filters"}
+                            {hasActiveFilters && (
+                                <span className="ml-1.5 rounded-full bg-[rgb(50,255,52)] min-w-[18px] px-1 py-0.5 text-[10px] text-black font-bold">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </button>
+                    )}
                     {hasActiveFilters && (
                         <button
                             type="button"
                             onClick={clearFilters}
-                            className="text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70 hover:text-[rgb(50,255,52)] transition whitespace-nowrap"
+                            className={compact ? "text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 hover:text-[rgb(50,255,52)] transition whitespace-nowrap" : "text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70 hover:text-[rgb(50,255,52)] transition whitespace-nowrap"}
                         >
                             Clear All
                         </button>
@@ -148,15 +189,13 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
             </div>
 
             {isExpanded && (
-                <div className="rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 p-6 shadow-[0_16px_40px_rgba(5,20,5,0.35)]">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className={compact ? "rounded-xl border border-[rgb(50,255,52)]/20 bg-black/55 p-3 shadow-[0_8px_24px_rgba(5,20,5,0.3)] max-h-[70vh] overflow-y-auto" : "rounded-2xl border border-[rgb(50,255,52)]/20 bg-black/55 p-6 shadow-[0_16px_40px_rgba(5,20,5,0.35)]"}>
+                    <div className={compact ? "grid grid-cols-1 gap-2" : "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"}>
                         {/* Beast-specific filters */}
                         {isBeastsCollection && (
                             <>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                        Beast
-                                    </label>
+                                <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                    <label className={labelClass}>Beast</label>
                                     <CustomDropdown
                                         id="filter-beast"
                                         value={filters.beast}
@@ -168,12 +207,12 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                                 label: beast,
                                             })),
                                         ]}
-                                        variant="default"
+                                        variant={compact ? "compact" : "default"}
                                     />
                                 </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                                <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                    <label className={`${labelClass} flex items-center gap-1.5`}>
                                         Type
                                         <InfoTooltip content="Beast combat type: Brute (high health), Hunter (balanced), or Magic (high damage). Type advantages apply in Loot Survivor combat." />
                                     </label>
@@ -188,12 +227,12 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                                 label: type,
                                             })),
                                         ]}
-                                        variant="default"
+                                        variant={compact ? "compact" : "default"}
                                     />
                                 </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                                <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                    <label className={`${labelClass} flex items-center gap-1.5`}>
                                         Tier
                                         <InfoTooltip content="Beast rarity tier from 1 (rarest/strongest) to 5 (common). Lower tier beasts are more powerful and valuable. Tier 1 beasts are the most sought after." />
                                     </label>
@@ -208,43 +247,41 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                                 label: `Tier ${tier}`,
                                             })),
                                         ]}
-                                        variant="default"
+                                        variant={compact ? "compact" : "default"}
                                     />
                                 </div>
                             </>
                         )}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                        <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                            <label className={`${labelClass} flex items-center gap-1.5`}>
                                 Level Range
-                                <InfoTooltip content="Beast level from 1-140. Higher level beasts are more powerful. Level is determined by how far the adventurer progressed before being slain." />
+                                <InfoTooltip content="Beast level 1-140. Adventurer: min input + slider for max." />
                             </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="140"
-                                    value={filters.levelMin}
-                                    onChange={(e) => updateFilter("levelMin", e.target.value)}
-                                    placeholder="Min"
-                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                />
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="140"
-                                    value={filters.levelMax}
-                                    onChange={(e) => updateFilter("levelMax", e.target.value)}
-                                    placeholder="Max"
-                                    className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                />
-                            </div>
+                            {isBeastsCollection ? (
+                                <div className="flex gap-2">
+                                    <input type="number" min="1" max="140" value={filters.levelMin} onChange={(e) => updateFilter("levelMin", e.target.value)} placeholder="Min" className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"} />
+                                    <input type="number" min="1" max="140" value={filters.levelMax} onChange={(e) => updateFilter("levelMax", e.target.value)} placeholder="Max" className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"} />
+                                </div>
+                            ) : (
+                                (() => {
+                                    const levelMax = adventurerStatBounds?.levelMax ?? DEFAULT_LEVEL_MAX;
+                                    const levelDisplay = filters.levelMax || String(levelMax);
+                                    return (
+                                        <div className="flex gap-2 items-center">
+                                            <input type="number" min="1" max={levelMax} value={filters.levelMin} onChange={(e) => updateFilter("levelMin", String(e.target.value))} placeholder="Min" className={compact ? "w-12 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-1.5 py-1 text-[10px] font-orbitron uppercase text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" : "w-14 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-xs font-orbitron uppercase text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"} />
+                                            <input type="range" min="1" max={levelMax} value={filters.levelMax !== "" ? filters.levelMax : String(levelMax)} onChange={(e) => updateFilter("levelMax", String(e.target.value))} className="flex-1 h-2 rounded-full appearance-none bg-[rgb(50,255,52)]/20 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[rgb(50,255,52)]" />
+                                            <span className={compact ? "w-6 text-right text-[9px] font-mono text-[rgb(186,255,188)]/70" : "w-7 text-right text-[10px] font-mono text-[rgb(186,255,188)]/70"}>{levelDisplay}</span>
+                                        </div>
+                                    );
+                                })()
+                            )}
                         </div>
 
                         {/* Beast-specific: Power Range */}
                         {isBeastsCollection && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                            <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                <label className={`${labelClass} flex items-center gap-1.5`}>
                                     Power Range
                                     <InfoTooltip content="Overall beast combat power (1-550). Combines attack, defense, and special abilities. Higher power = more valuable and effective in battles." />
                                 </label>
@@ -257,7 +294,7 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                         value={filters.powerMin}
                                         onChange={(e) => updateFilter("powerMin", e.target.value)}
                                         placeholder="Min"
-                                        className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"}
                                     />
                                     <input
                                         type="number"
@@ -267,7 +304,7 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                         value={filters.powerMax}
                                         onChange={(e) => updateFilter("powerMax", e.target.value)}
                                         placeholder="Max"
-                                        className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                        className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"}
                                     />
                                 </div>
                             </div>
@@ -275,40 +312,59 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
 
                         {/* Beast-specific: Rank Range */}
                         {isBeastsCollection && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
+                            <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                <label className={`${labelClass} flex items-center gap-1.5`}>
                                     Rank Range
                                     <InfoTooltip content="Beast leaderboard ranking (1-1165). Lower rank = more prestigious. Rank 1 is the top beast. Affects Summit rewards eligibility." />
                                 </label>
                                 <div className="flex gap-2">
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="1165"
-                                        value={filters.rankMin}
-                                        onChange={(e) => updateFilter("rankMin", e.target.value)}
-                                        placeholder="Min"
-                                        className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                    />
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="1165"
-                                        value={filters.rankMax}
-                                        onChange={(e) => updateFilter("rankMax", e.target.value)}
-                                        placeholder="Max"
-                                        className="flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 hover:border-[rgb(50,255,52)]/60 placeholder:text-[rgb(186,255,188)]/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                    />
+                                    <input type="number" min="1" max="1165" value={filters.rankMin} onChange={(e) => updateFilter("rankMin", e.target.value)} placeholder="Min" className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"} />
+                                    <input type="number" min="1" max="1165" value={filters.rankMax} onChange={(e) => updateFilter("rankMax", e.target.value)} placeholder="Max" className={compact ? "flex-1 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" : "flex-1 rounded-xl border border-[rgb(50,255,52)]/40 bg-black/60 px-3 py-2 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"} />
                                 </div>
                             </div>
                         )}
 
+                        {/* Adventurer: Health + stats (min input + max slider; max from displayed NFTs) */}
+                        {!isBeastsCollection && (
+                            <>
+                                <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                    <label className={labelClass}>Health</label>
+                                    <div className="flex gap-2 items-center">
+                                        {(() => {
+                                            const healthMax = adventurerStatBounds?.healthMax ?? DEFAULT_HEALTH_MAX;
+                                            return (
+                                                <>
+                                                    <input type="number" min="0" max={healthMax} value={filters.healthMin} onChange={(e) => updateFilter("healthMin", String(e.target.value))} placeholder="Min" className={compact ? "w-12 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-1.5 py-1 text-[10px] font-orbitron text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" : "w-14 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-xs font-orbitron text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"} />
+                                                    <input type="range" min="0" max={healthMax} value={filters.healthMax !== "" ? filters.healthMax : String(healthMax)} onChange={(e) => updateFilter("healthMax", String(e.target.value))} className="flex-1 h-2 rounded-full appearance-none bg-[rgb(50,255,52)]/20 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[rgb(50,255,52)]" />
+                                                    <span className={compact ? "w-6 text-right text-[9px] font-mono text-[rgb(186,255,188)]/70" : "w-7 text-right text-[10px] font-mono text-[rgb(186,255,188)]/70"}>{filters.healthMax !== "" ? filters.healthMax : healthMax}</span>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                                {(["Strength", "Dexterity", "Vitality", "Intelligence", "Wisdom", "Charisma"] as const).map((label) => {
+                                    const key = label.toLowerCase() as "strength" | "dexterity" | "vitality" | "intelligence" | "wisdom" | "charisma";
+                                    const minKey = `${key}Min` as keyof FilterState;
+                                    const maxKey = `${key}Max` as keyof FilterState;
+                                    const statMax = adventurerStatBounds ? (adventurerStatBounds[`${key}Max` as keyof AdventurerStatBounds] as number) : DEFAULT_STAT_MAX;
+                                    return (
+                                        <div key={label} className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                            <label className={labelClass}>{label}</label>
+                                            <div className="flex gap-2 items-center">
+                                                <input type="number" min="0" max={statMax} value={(filters[minKey] as string) || ""} onChange={(e) => updateFilter(minKey, String(e.target.value))} placeholder="Min" className={compact ? "w-12 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-1.5 py-1 text-[10px] font-orbitron text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none" : "w-14 rounded-lg border border-[rgb(50,255,52)]/40 bg-black/60 px-2 py-1.5 text-xs font-orbitron text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"} />
+                                                <input type="range" min="0" max={statMax} value={(filters[maxKey] as string) !== "" ? (filters[maxKey] as string) : String(statMax)} onChange={(e) => updateFilter(maxKey, String(e.target.value))} className="flex-1 h-2 rounded-full appearance-none bg-[rgb(50,255,52)]/20 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[rgb(50,255,52)]" />
+                                                <span className={compact ? "w-6 text-right text-[9px] font-mono text-[rgb(186,255,188)]/70" : "w-7 text-right text-[10px] font-mono text-[rgb(186,255,188)]/70"}>{(filters[maxKey] as string) !== "" ? (filters[maxKey] as string) : statMax}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
+                        )}
+
                         {/* Beast-specific: Shiny */}
                         {isBeastsCollection && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                    Shiny
-                                </label>
+                            <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                <label className={labelClass}>Shiny</label>
                                 <CustomDropdown
                                     id="filter-shiny"
                                     value={filters.shiny}
@@ -318,17 +374,15 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                         { value: "true", label: "True" },
                                         { value: "false", label: "False" },
                                     ]}
-                                    variant="default"
+                                    variant={compact ? "compact" : "default"}
                                 />
                             </div>
                         )}
 
                         {/* Beast-specific: Animated */}
                         {isBeastsCollection && (
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                    Animated
-                                </label>
+                            <div className={compact ? "flex flex-col gap-1" : "flex flex-col gap-2"}>
+                                <label className={labelClass}>Animated</label>
                                 <CustomDropdown
                                     id="filter-animated"
                                     value={filters.animated}
@@ -338,64 +392,11 @@ export default function Filters({ token, filters, onFiltersChange, summitListedC
                                         { value: "true", label: "True" },
                                         { value: "false", label: "False" },
                                     ]}
-                                    variant="default"
+                                    variant={compact ? "compact" : "default"}
                                 />
                             </div>
                         )}
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 flex items-center gap-1.5">
-                                <svg className="w-3 h-3 text-orange-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                                </svg>
-                                Sort by Time
-                            </label>
-                            <CustomDropdown
-                                id="filter-time-sort"
-                                value={filters.timeSort}
-                                onChange={(value) => updateFilter("timeSort", value)}
-                                options={[
-                                    { value: "ending-soon", label: "Ending Soon (Recommended)" },
-                                    { value: "newest", label: "Newest First" },
-                                    { value: "", label: "None" },
-                                ]}
-                                variant="default"
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                Sort by Price
-                            </label>
-                            <CustomDropdown
-                                id="filter-price-sort"
-                                value={filters.priceSort}
-                                onChange={(value) => updateFilter("priceSort", value)}
-                                options={[
-                                    { value: "", label: "None" },
-                                    { value: "low-high", label: "Low to High" },
-                                    { value: "high-low", label: "High to Low" },
-                                ]}
-                                variant="default"
-                            />
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-                                Sort by Token ID
-                            </label>
-                            <CustomDropdown
-                                id="filter-token-id-sort"
-                                value={filters.tokenIdSort}
-                                onChange={(value) => updateFilter("tokenIdSort", value)}
-                                options={[
-                                    { value: "", label: "None" },
-                                    { value: "low-high", label: "Low to High" },
-                                    { value: "high-low", label: "High to Low" },
-                                ]}
-                                variant="default"
-                            />
-                        </div>
                     </div>
                 </div>
             )}

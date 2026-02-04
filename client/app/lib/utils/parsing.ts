@@ -103,13 +103,13 @@ export function parseTimestamp(timestamp: string | number | null | undefined): n
 }
 
 /**
- * Parses a token amount from hex or decimal string format.
- * Optionally divides by a decimal factor (e.g., 1e6 for USDC, 1e18 for ETH).
+ * Parses a token amount from hex or decimal string format (raw token units).
+ * When decimals > 0, uses BigInt for precision so 18-decimal amounts (STRK, ETH) don't lose precision.
  * Returns 0 for invalid/missing values.
  *
- * @param amount - The amount value to parse
+ * @param amount - The amount value (raw units, e.g. from GraphQL starting_price/current_bid)
  * @param decimals - Number of decimals to divide by (default: 0, no division)
- * @returns The parsed amount, optionally adjusted for decimals
+ * @returns The human-readable amount
  */
 export function parseAmount(
   amount: string | number | null | undefined,
@@ -119,35 +119,51 @@ export function parseAmount(
     return 0;
   }
 
-  let parsed: number;
-
   if (typeof amount === 'number') {
-    parsed = amount;
-  } else if (typeof amount === 'string') {
-    const trimmed = amount.trim();
-    if (!trimmed) {
-      return 0;
-    }
+    if (isNaN(amount)) return 0;
+    if (decimals > 0) return amount / Math.pow(10, decimals);
+    return amount;
+  }
 
-    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
-      parsed = parseInt(trimmed, 16);
-    } else {
-      parsed = parseFloat(trimmed);
-    }
-  } else {
+  if (typeof amount !== 'string') {
     return 0;
   }
 
-  if (isNaN(parsed)) {
+  const trimmed = amount.trim();
+  if (!trimmed) {
     return 0;
   }
 
-  // Apply decimal adjustment if specified
+  // Use BigInt for raw token amounts when applying decimals to avoid precision loss (e.g. 18-decimal STRK)
   if (decimals > 0) {
-    return parsed / Math.pow(10, decimals);
+    try {
+      const raw = trimmed.startsWith('0x') || trimmed.startsWith('0X')
+        ? BigInt(trimmed)
+        : BigInt(trimmed);
+      const divisor = BigInt(10 ** decimals);
+      // Only treat as human-readable when value is a small integer (e.g. API returns "10" = 10 tokens).
+      // Larger values (e.g. 10000000 for 10 Lords with 6 decimals) must be divided.
+      const SMALL_HUMAN_THRESHOLD = 10000n;
+      if (raw <= SMALL_HUMAN_THRESHOLD) {
+        return Number(raw);
+      }
+      const whole = raw / divisor;
+      const remainder = raw % divisor;
+      const remainderNum = Number(remainder) / Math.pow(10, decimals);
+      return Number(whole) + remainderNum;
+    } catch {
+      // Fallback for non-integer strings (e.g. already human "1.5") – treat as human-readable, no division
+      const parsed = parseFloat(trimmed);
+      return isNaN(parsed) ? 0 : parsed;
+    }
   }
 
-  return parsed;
+  if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+    const parsed = parseInt(trimmed, 16);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  const parsed = parseFloat(trimmed);
+  return isNaN(parsed) ? 0 : parsed;
 }
 
 /**

@@ -1,23 +1,50 @@
+/**
+ * Canonical decimal string for a token ID. Use for consistent storage/lookup (e.g. attributes by tokenId).
+ * Handles number, short hex, long 0x-padded hex; uses BigInt so large IDs don't lose precision.
+ */
+export function toDecimalTokenId(tokenId: string | number | null | undefined): string {
+  if (tokenId === null || tokenId === undefined) return '';
+  if (typeof tokenId === 'number') return String(tokenId);
+  const s = String(tokenId).trim();
+  if (!s) return '';
+  if (s.length >= 2 && (s[0] === '0' && (s[1] === 'x' || s[1] === 'X'))) {
+    try {
+      return BigInt(s).toString(10);
+    } catch {
+      return s;
+    }
+  }
+  return s;
+}
+
 export function normalizeTokenId(tokenId: string | number | null | undefined): string {
   if (tokenId === null || tokenId === undefined) return '';
   
-  const tokenIdStr = String(tokenId);
+  const tokenIdStr = String(tokenId).trim();
   if (!tokenIdStr) return '';
   
+  const hasHexPrefix = tokenIdStr.length >= 2 && tokenIdStr[0] === '0' && (tokenIdStr[1] === 'x' || tokenIdStr[1] === 'X');
   let hexPart: string;
-  if (tokenIdStr.length >= 2 && tokenIdStr[0] === '0' && (tokenIdStr[1] === 'x' || tokenIdStr[1] === 'X')) {
+
+  if (hasHexPrefix) {
+    // Already hex: use as-is (don't treat "0x3039" as decimal 3039)
     hexPart = tokenIdStr.slice(2);
+    try {
+      hexPart = BigInt(tokenIdStr).toString(16);
+    } catch {
+      hexPart = tokenIdStr.slice(2);
+    }
   } else {
     hexPart = tokenIdStr;
+    if (/^\d+$/.test(hexPart)) {
+      const num = parseInt(hexPart, 10);
+      hexPart = num.toString(16);
+    }
   }
   
-  if (/^\d+$/.test(hexPart)) {
-    const num = parseInt(hexPart, 10);
-    hexPart = num.toString(16);
-  }
-  
-  const padded = hexPart.toLowerCase().padStart(64, '0');
-  return `0x${padded}`;
+  const padded = hexPart.toLowerCase().replace(/^0+/, '') || '0';
+  const padded64 = padded.padStart(64, '0');
+  return `0x${padded64}`;
 }
 
 export function normalizeContractAddress(address: string | null | undefined): string {

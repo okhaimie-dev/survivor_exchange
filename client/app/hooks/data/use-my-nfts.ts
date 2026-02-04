@@ -21,7 +21,7 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
   // Use provided collection address or default to BEASTS
   const collectionAddress = options?.collectionAddress || BEASTS_NFT_CONTRACT_ADDRESS;
 
-  const { data, loading, error } = useQuery<MyNFTsResponse>(MY_NFTS_QUERY, {
+  const { data, loading, error, refetch } = useQuery<MyNFTsResponse>(MY_NFTS_QUERY, {
     variables: { accountAddress: targetAddress },
     skip: !targetAddress,
     // No polling - user NFTs don't change frequently, and each response is ~16MB
@@ -56,6 +56,7 @@ export function useMyNFTs(options?: UseMyNFTsOptions) {
     loading,
     error: error ? new Error(error.message) : null,
     address: targetAddress,
+    refetch,
   };
 }
 

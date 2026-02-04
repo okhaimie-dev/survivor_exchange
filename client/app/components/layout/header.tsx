@@ -1,6 +1,7 @@
 import { ControllerConnector } from "@cartridge/connector";
 import { useAccount, useDisconnect, useConnect } from "@starknet-react/core";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useWalletModal } from "../../providers/wallet-modal-provider";
 import { truncateAddress } from "../../lib/utils/formatters";
@@ -52,14 +53,14 @@ import BridgeModal from "../bridge/bridge-modal";
             const fetchUsername = async (attemptsRemaining: number) => {
                 if (isCancelled) return;
 
-                if (!controller.isReady()) {
-                    if (attemptsRemaining > 0) {
-                        retryHandle = setTimeout(() => fetchUsername(attemptsRemaining - 1), 500);
-                    }
-                    return;
-                }
-
                 try {
+                    if (!controller.isReady()) {
+                        if (attemptsRemaining > 0) {
+                            retryHandle = setTimeout(() => fetchUsername(attemptsRemaining - 1), 500);
+                        }
+                        return;
+                    }
+
                     const name = await controller.username();
                     if (isCancelled) return;
 
@@ -117,8 +118,16 @@ import BridgeModal from "../bridge/bridge-modal";
             <BridgeModal isOpen={isBridgeModalOpen} onClose={() => setIsBridgeModalOpen(false)} />
             <div className="w-full min-h-14 bg-black flex flex-row items-center justify-center px-3 md:px-3.5 py-3">
                 <div className="w-full flex flex-row items-center justify-between gap-2">
-                    <div className="flex-shrink-0">
+                    <div className="flex flex-row items-center gap-2 md:gap-3 flex-shrink-0 min-w-0">
                         <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} className="w-10 h-10 md:w-12 md:h-12" />
+                        <div className="flex flex-col items-start gap-0.5 min-w-0">
+                            <h1 className="text-sm sm:text-base font-bold font-orbitron text-white truncate">Survivor Exchange</h1>
+                            <p className="text-[10px] sm:text-xs text-left text-[rgb(186,255,188)]/80 truncate max-w-[180px] sm:max-w-none">
+                                Buy, sell, and auction{" "}
+                                <Link href="https://lootsurvivor.io/" target="_blank" className="font-medium text-[rgb(50,255,52)] hover:underline">Loot Survivor</Link>
+                                {" "}assets.
+                            </p>
+                        </div>
                     </div>
                     <div className="flex-shrink min-w-0 flex items-center gap-3">
                         {/* Bridge Button - Desktop */}

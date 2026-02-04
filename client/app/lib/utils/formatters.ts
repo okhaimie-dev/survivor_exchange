@@ -237,3 +237,41 @@ export function formatTokenAmount(value: number | string | null | undefined, dec
   return symbol ? `${sign}${formatted} ${symbol}` : `${sign}${formatted}`;
 }
 
+/** Display symbol for reserve price: USD/USDC uses "$", others use token symbol. */
+function reservePriceSymbol(symbol: string | undefined): string {
+  return symbol === "USDC" || !symbol ? "$" : symbol;
+}
+
+/** Formatted amount only (no currency); "—" if invalid. */
+function reservePriceAmount(value: number | string | null | undefined): string {
+  const formatted = formatUSDSmart(value);
+  if (formatted === "—") return "—";
+  return formatted.replace(/\$/, "").trim();
+}
+
+/**
+ * Parts for reserve price: symbol + amount (e.g. $ 5.00, STRK 5.00).
+ * Use with ReservePriceDisplay so symbol can be rendered before amount.
+ */
+export function getReservePriceParts(
+  value: number | string | null | undefined,
+  symbol: string | undefined
+): { symbol: string; amount: string } {
+  return {
+    symbol: reservePriceSymbol(symbol),
+    amount: reservePriceAmount(value),
+  };
+}
+
+/**
+ * Format reserve price as single string: symbol + " " + amount (e.g. $ 5.00, STRK 5.00).
+ */
+export function formatReservePrice(
+  value: number | string | null | undefined,
+  symbol: string | undefined
+): string {
+  const { symbol: s, amount } = getReservePriceParts(value, symbol);
+  if (amount === "—") return "—";
+  return `${s} ${amount}`;
+}
+

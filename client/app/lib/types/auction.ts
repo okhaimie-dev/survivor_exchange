@@ -12,6 +12,16 @@ export interface AuctionItemNode {
   node: AuctionItem;
 }
 
+export interface AuctionWithNFTs extends Auction {
+  nfts: import("./nft").FormattedNFT[];
+  bids?: Bid[];
+  offers?: Offer[];
+  executedAt?: string;
+}
+
+/** Listing source: Survivor Exchange (auctions) vs Eternum (fixed-price, redirect to Empire). */
+export type ListingSource = "survivor_exchange" | "eternum";
+
 export interface Auction {
   auction_id: string;
   current_bid: string;
@@ -23,6 +33,8 @@ export interface Auction {
   seller: string;
   starting_price: string;
   status: string;
+  /** When set to "eternum", buy/bid in modals redirects to Empire. */
+  source?: ListingSource;
 }
 
 export interface Bid {
@@ -109,6 +121,9 @@ export interface Collection {
   sellerFull: string;
   highestBidderFull: string;
   executedAt?: string;
+  /** Token the reserve is denominated in (e.g. USDC, STRK) */
+  reserveTokenSymbol?: string;
+  reserveTokenAddress?: string;
 }
 
 /**

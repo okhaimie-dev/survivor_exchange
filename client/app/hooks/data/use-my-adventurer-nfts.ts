@@ -2,7 +2,6 @@ import { useAccount } from '@starknet-react/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { FormattedNFT } from '../../lib/types';
 import { normalizeContractAddress } from '../../lib/utils/normalization';
-import { DEFAULT_POLL_INTERVAL } from '../../lib/constants';
 
 interface UseMyAdventurerNFTsOptions {
   address?: string;
@@ -48,15 +47,9 @@ export function useMyAdventurerNFTs(options?: UseMyAdventurerNFTsOptions) {
     }
   }, [targetAddress]);
 
-  // Initial fetch
+  // Initial fetch only; no auto-refresh (user refreshes via button)
   useEffect(() => {
     fetchAdventurerNFTs();
-  }, [fetchAdventurerNFTs]);
-
-  // Polling
-  useEffect(() => {
-    const interval = setInterval(fetchAdventurerNFTs, DEFAULT_POLL_INTERVAL);
-    return () => clearInterval(interval);
   }, [fetchAdventurerNFTs]);
 
   return {

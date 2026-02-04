@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { clsx } from "../lib/utils";
+import Navigation from "./layout/navigation";
 import Auction from "./auction";
-import Bids from "./bids";
+import Buy from "./buy";
 import MyListings from "./my-listings";
 import type { FormattedNFT, AuctionItem } from "../lib/types";
 import { type AuctionWithNFTs, type FormattedListing } from "../hooks";
@@ -20,10 +20,14 @@ interface BidAuctionMyListingsProps {
     totalPages: number;
     setCurrentPage: (page: number) => void;
     getAuctionItems: (auctionId: string) => AuctionItem[];
+    refetchAuctions?: () => Promise<unknown>;
     listings: FormattedListing[];
     listingsLoading: boolean;
     listingsError: Error | null;
+    refetchListings?: () => Promise<unknown>;
     token: string | null;
+    /** When set, Sell tab loads NFTs/listings for this address (e.g. from ?wallet=0x...). */
+    walletOverride?: string;
 }
 
 export default function BidAuctionMyListingsRent({ 
@@ -38,29 +42,25 @@ export default function BidAuctionMyListingsRent({
     totalPages,
     setCurrentPage,
     getAuctionItems,
+    refetchAuctions,
     listings,
     listingsLoading,
     listingsError,
-    token
+    refetchListings,
+    token,
+    walletOverride
 }: BidAuctionMyListingsProps) {
-    const [activeTab, setActiveTab] = useState<"bid" | "auction" | "my-listings">("bid");
+    const [activeTab, setActiveTab] = useState<"buy" | "sell" | "my-listings">("buy");
     return (
-        <div className="flex flex-col items-center justify-center gap-4 w-full space-y-4 xl:max-w-6xl px-4 md:px-6">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between w-full md:w-fit border border-[rgb(50,255,52)]/20 rounded-xl overflow-hidden">
-                <div className={clsx("hover:cursor-pointer hover:text-[rgb(50,255,52)] hover:font-bold md:border-r border-[rgb(50,255,52)]/20 text-center md:w-[350px] py-2.5 px-4 text-xs sm:text-sm md:text-base", activeTab === "bid" ? "text-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 md:rounded-l-xl font-bold" : "")} onClick={() => setActiveTab("bid")}>
-                    Bid on a collection of monsters
-                </div>
-                <div className={clsx("hover:cursor-pointer hover:text-[rgb(50,255,52)] hover:font-bold border-y md:border-x md:border-y-0 border-[rgb(50,255,52)]/20 text-center md:w-[400px] py-2.5 px-4 text-xs sm:text-sm md:text-base", activeTab === "auction" ? "text-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 font-bold" : "")} onClick={() => setActiveTab("auction")}>
-                    Auction your collection of monsters
-                </div>
-                <div className={clsx("hover:cursor-pointer hover:text-[rgb(50,255,52)] hover:font-bold md:border-l border-[rgb(50,255,52)]/20 text-center md:w-[200px] py-2.5 px-4 text-xs sm:text-sm md:text-base", activeTab === "my-listings" ? "text-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 md:rounded-r-xl font-bold" : "")} onClick={() => setActiveTab("my-listings")}>
-                    My Listings
-                </div>
+        <div className="flex flex-1 flex-col w-full max-w-6xl mx-auto px-4 md:px-6 min-w-0">
+            <div className="flex flex-col items-center justify-center shrink-0 pt-4 md:pt-6 mb-6">
+                <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
             </div>
-            <div className="w-full h-full">
-                {activeTab === "bid" && (
-                    <Bids
-                        key="bid-tab"
+            {/* Render all tabs so they stay mounted and cached; hide inactive to avoid refetch on navigation */}
+            <div className="w-full min-h-[70vh] flex-1 min-w-0 flex flex-col">
+                <div className={activeTab !== "buy" ? "hidden" : "contents"} aria-hidden={activeTab !== "buy"}>
+                    <Buy
+                        key="buy-tab"
                         auctions={allAuctions || auctions}
                         loading={auctionsLoading}
                         error={auctionsError}
@@ -68,20 +68,25 @@ export default function BidAuctionMyListingsRent({
                         totalPages={totalPages}
                         setCurrentPage={setCurrentPage}
                         getAuctionItems={getAuctionItems}
-                        token={token}
+                        onRefresh={refetchAuctions}
                     />
-                )}
-                {activeTab === "auction" && (
-                    <Auction key="auction-tab" />
-                )}
-                {activeTab === "my-listings" && (
-                    <MyListings
-                        key="my-listings-tab"
-                        listings={listings}
-                        loading={listingsLoading}
-                        error={listingsError}
-                    />
-                )}
+                </div>
+                <div className={activeTab !== "sell" ? "hidden" : "contents"} aria-hidden={activeTab !== "sell"}>
+                    <Auction key="sell-tab" walletAddress={walletOverride} />
+                </div>
+                <div className={activeTab !== "my-listings" ? "hidden" : "contents"} aria-hidden={activeTab !== "my-listings"}>
+                    <div className="w-full min-w-0 flex flex-col items-start">
+                        <MyListings
+                            key="my-listings-tab"
+                            listings={listings}
+                            loading={listingsLoading}
+                            error={listingsError}
+                            getAuctionItems={getAuctionItems}
+                            nfts={nfts}
+                            onRefresh={refetchListings}
+                        />
+                    </div>
+                </div>
             </div>
         </div>
     )

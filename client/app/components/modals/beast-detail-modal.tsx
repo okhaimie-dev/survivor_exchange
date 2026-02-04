@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import type { ShareResult, ShareCardConfig } from "../../lib/types/beast-profile";
-import { IMAGE_BASE_URL } from "../../lib/constants";
+import { IMAGE_BASE_URL, EMPIRE_TRADE_BEASTS_URL } from "../../lib/constants";
+import type { ListingSource } from "../../lib/types";
 import { BeastProfileCard, BeastShareCard } from "../cards";
-import { AddressDisplay, InfoTooltip, CustomDropdown, CountdownTimer, type DropdownOption } from "../ui";
+import { AddressDisplay, InfoTooltip, CustomDropdown, CountdownTimer, ReservePriceDisplay, type DropdownOption } from "../ui";
 import { useBeastOwner } from "../../hooks";
 import { shareToTwitter, copyBeastLink, copyAuctionLink } from "../../lib/utils/share-utils";
 import { extractBeastStats, generateBeastProfile } from "../../lib/utils/tagline-generator";
@@ -120,9 +121,9 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
     requestAnimationFrame(animate);
   }, [isVisible, combatRating]);
 
-  // SVG arc calculations
-  const size = 180;
-  const strokeWidth = 12;
+  // SVG arc calculations (~70% of original for compact modal)
+  const size = 126;
+  const strokeWidth = 8;
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * Math.PI; // Half circle
   const animatedPercent = (animatedRating / maxRating) * 100;
@@ -135,14 +136,14 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
   ];
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex flex-col items-center gap-2">
       {/* Main Gauge */}
       <div
         className="relative cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <svg width={size} height={size / 2 + 30} viewBox={`0 0 ${size} ${size / 2 + 30}`}>
+        <svg width={size} height={size / 2 + 21} viewBox={`0 0 ${size} ${size / 2 + 21}`}>
           {/* Background arc */}
           <path
             d={`M ${strokeWidth / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - strokeWidth / 2} ${size / 2}`}
@@ -170,34 +171,34 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
           {/* Tick marks */}
           {[0, 25, 50, 75, 100].map((tick, i) => {
             const angle = Math.PI - (tick / 100) * Math.PI;
-            const x1 = size / 2 + (radius - 20) * Math.cos(angle);
-            const y1 = size / 2 - (radius - 20) * Math.sin(angle);
-            const x2 = size / 2 + (radius - 12) * Math.cos(angle);
-            const y2 = size / 2 - (radius - 12) * Math.sin(angle);
+            const x1 = size / 2 + (radius - 14) * Math.cos(angle);
+            const y1 = size / 2 - (radius - 14) * Math.sin(angle);
+            const x2 = size / 2 + (radius - 8) * Math.cos(angle);
+            const y2 = size / 2 - (radius - 8) * Math.sin(angle);
             return (
               <line
                 key={i}
                 x1={x1} y1={y1} x2={x2} y2={y2}
                 stroke="rgba(186, 255, 188, 0.3)"
-                strokeWidth={2}
+                strokeWidth={1.5}
               />
             );
           })}
         </svg>
 
         {/* Center content */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingTop: '10px' }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center" style={{ paddingTop: '6px' }}>
           <span
-            className="text-4xl font-bold font-orbitron"
-            style={{ color: color.main, textShadow: `0 0 20px ${color.glow}` }}
+            className="text-2xl font-bold font-orbitron"
+            style={{ color: color.main, textShadow: `0 0 12px ${color.glow}` }}
           >
             {animatedRating}
           </span>
-          <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
+          <span className="text-[8px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
             Combat Power
           </span>
           <span
-            className="text-xs font-orbitron uppercase tracking-wider mt-1 px-2 py-0.5 rounded"
+            className="text-[10px] font-orbitron uppercase tracking-wider mt-0.5 px-1.5 py-0.5 rounded"
             style={{
               color: color.main,
               backgroundColor: `${color.main}20`,
@@ -231,7 +232,7 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
       </div>
 
       {/* Stat breakdown */}
-      <div className="flex gap-4">
+      <div className="flex gap-2">
         {stats.map((stat) => (
           <div
             key={stat.key}
@@ -240,35 +241,35 @@ function CombatRatingGauge({ power, health, level, tier, type, rank, isVisible }
             onMouseLeave={() => setHoveredStat(null)}
           >
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-lg border-2 transition-all"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 transition-all"
               style={{
                 borderColor: hoveredStat === stat.key ? stat.color : 'rgba(50, 255, 52, 0.3)',
                 backgroundColor: hoveredStat === stat.key ? `${stat.color}20` : 'rgba(50, 255, 52, 0.05)',
-                boxShadow: hoveredStat === stat.key ? `0 0 15px ${stat.color}50` : 'none',
+                boxShadow: hoveredStat === stat.key ? `0 0 10px ${stat.color}50` : 'none',
               }}
             >
-              <span className="text-base">{stat.icon}</span>
+              <span className="text-sm">{stat.icon}</span>
             </div>
             <span
-              className="text-sm font-bold mt-1"
+              className="text-xs font-bold mt-0.5"
               style={{ color: stat.color }}
             >
               {stat.value}
             </span>
-            <span className="text-[9px] text-[rgb(186,255,188)]/50 uppercase">{stat.label}</span>
+            <span className="text-[8px] text-[rgb(186,255,188)]/50 uppercase">{stat.label}</span>
           </div>
         ))}
       </div>
 
       {/* Tier & Type badges */}
-      <div className="flex gap-2 mt-1">
-        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(255,215,0)]/10 text-[rgb(255,215,0)] border border-[rgb(255,215,0)]/30">
+      <div className="flex gap-1.5 mt-0.5">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-orbitron uppercase tracking-wider bg-[rgb(255,215,0)]/10 text-[rgb(255,215,0)] border border-[rgb(255,215,0)]/30">
           Tier {tierNum}
         </span>
-        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/30">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-orbitron uppercase tracking-wider bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/30">
           {type}
         </span>
-        <span className="px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider bg-[rgb(186,85,255)]/10 text-[rgb(186,85,255)] border border-[rgb(186,85,255)]/30">
+        <span className="px-2 py-0.5 rounded-full text-[10px] font-orbitron uppercase tracking-wider bg-[rgb(186,85,255)]/10 text-[rgb(186,85,255)] border border-[rgb(186,85,255)]/30">
           #{rankNum}
         </span>
       </div>
@@ -522,10 +523,12 @@ function useTilt(intensity: number = 15, enabled: boolean = true) {
 
 /** Auction data for bid/offer functionality */
 interface AuctionBidData {
-  startingPrice: number; // In USDC (already divided by 1e6)
-  highestBid?: number; // In USDC (already divided by 1e6)
+  startingPrice: number; // Human-readable (already divided by token decimals)
+  highestBid?: number;
   status: string;
   endTime: string;
+  reserveTokenSymbol?: string;
+  reserveTokenAddress?: string;
   isUserSeller: boolean;
 }
 
@@ -569,6 +572,10 @@ interface BeastDetailModalProps {
   onOpenWallet?: () => void;
   /** Summit beasts in this auction (for displaying badge) */
   summitBeasts?: SummitBeastMatch[];
+  /** When provided, renders direct sell form instead of Add/Remove for auction */
+  sellFormContent?: React.ReactNode;
+  /** When "eternum", show "Buy on Realms" redirect instead of bid/offer UI */
+  listingSource?: ListingSource;
 }
 
 // Helper to format Unix timestamps to readable dates
@@ -603,6 +610,8 @@ export default function BeastDetailModal({
   onMakeOffer,
   onOpenWallet,
   summitBeasts = [],
+  sellFormContent,
+  listingSource,
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -792,6 +801,7 @@ export default function BeastDetailModal({
 
   if (!isOpen || !currentNft) return null;
 
+  const isPack = nfts.length > 1;
   const imageSrc = currentNft.metadata?.image
     ? currentNft.metadata.image
     : currentNft.imagePath
@@ -820,10 +830,10 @@ export default function BeastDetailModal({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between px-4 md:px-6 py-3 md:py-4 border-b border-[rgb(50,255,52)]/30 gap-2 md:gap-0">
+        <div className={`flex flex-col md:flex-row md:items-center md:justify-between border-b border-[rgb(50,255,52)]/30 gap-2 md:gap-0 ${isPack ? "px-3 md:px-4 py-2 md:py-2.5" : "px-3 md:px-4 py-2 md:py-3"}`}>
           {/* Title row - with close button on mobile */}
           <div className="flex items-center justify-between md:justify-start">
-            <h2 className="text-base md:text-xl font-orbitron uppercase tracking-wider text-white truncate max-w-[200px] md:max-w-none">
+            <h2 className="text-sm md:text-lg font-orbitron uppercase tracking-wider text-white truncate max-w-[200px] md:max-w-none">
               {currentNft.metadataName || `Beast #${currentNft.tokenId}`}
             </h2>
             {/* Close button - mobile only position */}
@@ -853,9 +863,9 @@ export default function BeastDetailModal({
                   onClick={handlePrev}
                   disabled={currentIndex === 0}
                   title="Previous beast (← arrow key)"
-                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 20 20" fill="none">
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M12.5 15L7.5 10L12.5 5"
                       stroke="currentColor"
@@ -867,7 +877,7 @@ export default function BeastDetailModal({
                 </button>
                 {/* Counter with swipe hint on mobile */}
                 <div className="flex flex-col items-center">
-                  <span className="text-xs md:text-sm text-white font-orbitron bg-[rgb(50,255,52)]/10 px-2 md:px-3 py-1 rounded-full border border-[rgb(50,255,52)]/30 whitespace-nowrap">
+                  <span className="text-[10px] md:text-xs text-white font-orbitron bg-[rgb(50,255,52)]/10 px-2 py-0.5 rounded-full border border-[rgb(50,255,52)]/30 whitespace-nowrap">
                     {currentIndex + 1} OF {nfts.length}
                   </span>
                   {/* Mobile swipe hint */}
@@ -880,9 +890,9 @@ export default function BeastDetailModal({
                   onClick={handleNext}
                   disabled={currentIndex === nfts.length - 1}
                   title="Next beast (→ arrow key)"
-                  className="w-8 h-8 md:w-10 md:h-10 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                  className="w-7 h-7 md:w-8 md:h-8 flex items-center justify-center rounded-full border-2 border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/30 hover:border-[rgb(50,255,52)] disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 20 20" fill="none">
+                  <svg className="w-3.5 h-3.5 md:w-4 md:h-4" viewBox="0 0 20 20" fill="none">
                     <path
                       d="M7.5 15L12.5 10L7.5 5"
                       stroke="currentColor"
@@ -897,7 +907,7 @@ export default function BeastDetailModal({
             {/* Close button - desktop only position */}
             <button
               onClick={onClose}
-              className="hidden md:flex w-8 h-8 items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all"
+              className="hidden md:flex w-7 h-7 items-center justify-center rounded-lg border border-[rgb(50,255,52)]/40 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition-all"
             >
               <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
                 <path
@@ -912,20 +922,20 @@ export default function BeastDetailModal({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex flex-col md:flex-row gap-6 p-6 flex-1 overflow-y-auto">
-          {/* Beast Image with 3D Tilt Effect and Flip */}
-          <div className="flex-shrink-0 flex flex-col items-center justify-start gap-2">
+        {/* Content - items-center centers image column vertically on row layout */}
+        <div className={`flex flex-col md:flex-row md:items-center flex-1 overflow-y-auto min-h-0 ${isPack ? "gap-3 p-3 md:p-4" : "gap-4 p-4 md:p-5"}`}>
+          {/* Beast Image with 3D Tilt Effect and Flip - centered vertically */}
+          <div className="flex-shrink-0 flex flex-col items-center justify-center gap-2">
             <div
               ref={tiltRef}
-              className="relative rounded-xl cursor-pointer border-2 border-[rgb(50,255,52)]/40 beast-card-glow"
+              className="relative rounded-xl cursor-pointer beast-card-glow"
               style={{
                 ...tiltStyle,
                 transformStyle: "preserve-3d",
                 WebkitTransformStyle: "preserve-3d",
                 perspective: "1000px",
                 WebkitPerspective: "1000px",
-                width: "280px",
+                width: isPack ? "160px" : "220px",
               }}
               onClick={createParticles}
               onDoubleClick={() => setIsFlipped(!isFlipped)}
@@ -933,7 +943,7 @@ export default function BeastDetailModal({
               {/* Flip card inner container */}
               <div className={`flip-card-inner ${isFlipped ? "flipped" : ""}`}>
                 {/* Front face - Beast Image */}
-                <div className="flip-card-front rounded-xl overflow-hidden">
+                <div className="flip-card-front rounded-xl">
                   {/* Click particles layer */}
                   <ParticleLayer />
                   {/* Holographic glare overlay */}
@@ -961,8 +971,8 @@ export default function BeastDetailModal({
                     <Image
                       src={imageSrc}
                       alt={currentNft.metadataName || `NFT ${currentNft.tokenId}`}
-                      width={280}
-                      height={400}
+                      width={isPack ? 160 : 220}
+                      height={isPack ? 228 : 314}
                       className="w-full h-auto beast-idle-animation"
                       unoptimized
                     />
@@ -970,7 +980,7 @@ export default function BeastDetailModal({
                 </div>
 
                 {/* Back face - Beast Profile */}
-                <div className="flip-card-back rounded-xl overflow-hidden bg-gradient-to-br from-black via-[rgb(10,30,10)] to-black border-2 border-[rgb(50,255,52)]/40">
+                <div className="flip-card-back rounded-xl overflow-hidden bg-gradient-to-br from-black via-[rgb(10,30,10)] to-black">
                   {/* Decorative corner elements */}
                   <div className="absolute top-3 left-3 w-8 h-8 border-t-2 border-l-2 border-[rgb(50,255,52)]/50 z-10" />
                   <div className="absolute top-3 right-3 w-8 h-8 border-t-2 border-r-2 border-[rgb(50,255,52)]/50 z-10" />
@@ -992,7 +1002,22 @@ export default function BeastDetailModal({
               </div>
             </div>
 
-            {/* Flip button and icon actions */}
+            {/* Animated tag - centered below image when beast has Animated attribute */}
+            {currentNft.attributes?.some(
+              (attr) =>
+                attr.trait_type === "Animated" &&
+                (attr.value === "true" || attr.value === 1 || Number(attr.value) > 0)
+            ) && (
+              <div className="flex justify-center w-full mt-2.5">
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-orbitron font-bold uppercase tracking-wider bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40">
+                  Animated
+                </span>
+              </div>
+            )}
+
+            {/* Flip button and icon actions - hide in pack mode to keep modal compact */}
+            {!isPack && (
+            <>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsFlipped(!isFlipped)}
@@ -1081,17 +1106,20 @@ export default function BeastDetailModal({
             )}
 
             <span className="text-[10px] text-[rgb(186,255,188)]/40">or double-click card</span>
+            </>
+            )}
+
           </div>
 
           {/* Stats */}
-          <div className="flex-1 min-w-0 flex flex-col gap-4">
+          <div className={`flex-1 min-w-0 flex flex-col min-h-0 ${isPack ? "gap-2" : "gap-3"}`}>
             {/* Beast Name & Owner */}
-            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
+            <div className={`flex flex-col md:flex-row md:items-start md:justify-between ${isPack ? "gap-1" : "gap-1.5"}`}>
               <div className="text-center md:text-left">
-                <p className="text-2xl font-orbitron text-[rgb(50,255,52)]">
+                <p className={`font-orbitron text-[rgb(50,255,52)] ${isPack ? "text-lg" : "text-xl"}`}>
                   {currentNft.beastName || "Unknown Beast"}
                 </p>
-                <p className="text-sm text-[rgb(186,255,188)]/70">
+                <p className={`text-[rgb(186,255,188)]/70 ${isPack ? "text-xs" : "text-sm"}`}>
                   Token ID: {(() => {
                     const tokenId = currentNft.tokenId;
                     if (tokenId.startsWith("0x") || tokenId.startsWith("0X")) {
@@ -1103,7 +1131,7 @@ export default function BeastDetailModal({
               </div>
               {/* Owner display */}
               <div className="flex justify-center md:justify-end">
-                <span className="text-xs font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5">
+                <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 px-2 py-1 rounded-md border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5">
                   Owned by{" "}
                   <a
                     href={beastOwner ? `https://voyager.online/contract/${beastOwner}` : "#"}
@@ -1135,9 +1163,9 @@ export default function BeastDetailModal({
               isVisible={isOpen}
             />
 
-            {/* Special Badges - Shiny, Animated, Genesis */}
+            {/* Special Badges - Shiny, Genesis (Animated shown below image) */}
             {currentNft.attributes && currentNft.attributes.length > 0 && (() => {
-              const specialAttrs = ["Shiny", "Animated", "Genesis"];
+              const specialAttrs = ["Shiny", "Genesis"];
               const activeBadges = currentNft.attributes.filter(
                 (attr) =>
                   specialAttrs.includes(attr.trait_type) &&
@@ -1147,11 +1175,11 @@ export default function BeastDetailModal({
               if (activeBadges.length === 0) return null;
 
               return (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {activeBadges.map((attr) => (
                     <span
                       key={attr.trait_type}
-                      className={`px-3 py-1 rounded-full text-xs font-orbitron uppercase tracking-wider ${
+                      className={`px-2 py-0.5 rounded-full text-[10px] font-orbitron uppercase tracking-wider ${
                         attr.trait_type === "Shiny"
                           ? "bg-[rgb(255,215,0)]/20 text-[rgb(255,215,0)] border border-[rgb(255,215,0)]/40"
                           : attr.trait_type === "Animated"
@@ -1177,8 +1205,8 @@ export default function BeastDetailModal({
               if (!summitMatch) return null;
 
               return (
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1.5 rounded-full bg-[rgb(255,215,0)]/20 border border-[rgb(255,215,0)]/40 text-[rgb(255,215,0)] font-orbitron uppercase tracking-wider text-xs flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2 py-1 rounded-full bg-[rgb(255,215,0)]/20 border border-[rgb(255,215,0)]/40 text-[rgb(255,215,0)] font-orbitron uppercase tracking-wider text-[10px] flex items-center gap-1">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                     </svg>
@@ -1193,11 +1221,11 @@ export default function BeastDetailModal({
 
             {/* Additional Attributes */}
             {currentNft.attributes && currentNft.attributes.length > 0 && (
-              <div className="mt-2">
-                <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50 mb-2">
+              <div className="mt-1.5">
+                <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50 mb-1.5">
                   Attributes
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {currentNft.attributes
                     .filter((attr) => {
                       // Exclude stats already shown, special badges, and false boolean values
@@ -1224,7 +1252,7 @@ export default function BeastDetailModal({
                       return (
                         <div
                           key={attr.trait_type}
-                          className="px-3 py-1.5 rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 text-xs"
+                          className="px-2 py-1 rounded-md border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 text-[10px]"
                         >
                           <span className="text-[rgb(186,255,188)]/50">{attr.trait_type}:</span>{" "}
                           <span className="text-white">{displayValue}</span>
@@ -1235,13 +1263,17 @@ export default function BeastDetailModal({
               </div>
             )}
 
-            {/* Select for Auction Button */}
-            {onSelect && (
-              <div className="mt-4 pt-4 border-t border-[rgb(50,255,52)]/20">
+            {/* Direct sell form (Sell tab) or Select for Auction (legacy) */}
+            {sellFormContent ? (
+              <div className="mt-3 pt-3 border-t border-[rgb(50,255,52)]/20">
+                {sellFormContent}
+              </div>
+            ) : onSelect ? (
+              <div className="mt-3 pt-3 border-t border-[rgb(50,255,52)]/20">
                 <button
                   type="button"
                   onClick={() => onSelect(currentNft.tokenId)}
-                  className={`w-full inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-orbitron uppercase tracking-[0.14em] transition ${
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-xs font-orbitron uppercase tracking-[0.12em] transition ${
                     isSelected
                       ? "border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
                       : "border border-[rgb(50,255,52)]/60 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20"
@@ -1266,49 +1298,68 @@ export default function BeastDetailModal({
                   )}
                 </button>
               </div>
-            )}
+            ) : null}
 
-            {/* Bid/Offer Section - Only show in auction context with active auction */}
-            {auctionId && auctionBidData && bidState && parseInt(auctionBidData.status) === 2 && (
-              <div className="mt-4 pt-4 border-t border-[rgb(50,255,52)]/20 sticky bottom-0 bg-black/95 pb-2 -mb-6 md:-mb-4 backdrop-blur-sm z-10">
+            {/* Bid/Offer Section - Only show in auction context with active auction or Eternum listing */}
+            {auctionId && auctionBidData && (listingSource === "eternum" || (bidState && parseInt(auctionBidData.status) === 2)) && (
+              <div className={`border-t border-[rgb(50,255,52)]/20 sticky bottom-0 bg-black/95 backdrop-blur-sm z-10 ${isPack ? "mt-2 pt-2 pb-2 -mb-4 md:-mb-3" : "mt-3 pt-3 pb-2 -mb-4 md:-mb-3"}`}>
+                {listingSource === "eternum" ? (
+                  <div className="flex flex-col gap-3 pt-2">
+                    <p className="text-xs font-orbitron text-[rgb(186,255,188)]/90">This beast is listed on Realms.</p>
+                    <a
+                      href={EMPIRE_TRADE_BEASTS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-10 text-xs font-orbitron uppercase tracking-[0.12em] bg-[rgb(50,255,52)] text-black font-bold hover:bg-[rgb(40,220,42)] transition"
+                    >
+                      Buy on Realms
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  </div>
+                ) : bidState ? (
+                  <>
                 {/* Price info */}
-                <div className="flex flex-wrap gap-3 mb-4">
-                  <div className="flex-1 min-w-[100px] rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 px-3 py-2">
-                    <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50">
-                      Reserve
+                <div className={`flex flex-wrap gap-2 ${isPack ? "mb-2" : "mb-3"}`}>
+                  <div className={`flex-1 min-w-[80px] rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 ${isPack ? "px-2 py-1.5" : "px-3 py-2"}`}>
+                    <p className={`font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/50 ${isPack ? "text-[9px]" : "text-[10px]"}`}>
+                      Reserve price
                     </p>
-                    <p className="text-sm font-orbitron text-white">
-                      {formatUSDSmart(auctionBidData.startingPrice)}
+                    <p className={`font-orbitron text-white ${isPack ? "text-xs" : "text-sm"}`}>
+                      <ReservePriceDisplay value={auctionBidData.startingPrice} symbol={auctionBidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
                     </p>
                   </div>
-                  <div className={`flex-1 min-w-[100px] rounded-lg border px-3 py-2 ${
+                  <div className={`flex-1 min-w-[80px] rounded-lg border ${isPack ? "px-2 py-1.5" : "px-3 py-2"} ${
                     auctionBidData.highestBid && auctionBidData.highestBid > 0
                       ? "border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10"
                       : "border-white/20 bg-white/5"
                   }`}>
-                    <p className={`text-[10px] font-orbitron uppercase tracking-wider ${
+                    <p className={`font-orbitron uppercase tracking-wider ${
                       auctionBidData.highestBid && auctionBidData.highestBid > 0
                         ? "text-[rgb(50,255,52)]"
                         : "text-[rgb(186,255,188)]/50"
-                    }`}>
+                    } ${isPack ? "text-[9px]" : "text-[10px]"}`}>
                       Highest Bid
                     </p>
-                    <p className={`text-sm font-orbitron ${
+                    <p className={`font-orbitron ${
                       auctionBidData.highestBid && auctionBidData.highestBid > 0
                         ? "text-[rgb(50,255,52)]"
                         : "text-white/50"
-                    }`}>
-                      {auctionBidData.highestBid && auctionBidData.highestBid > 0
-                        ? formatUSDSmart(auctionBidData.highestBid)
-                        : "Be first!"}
+                    } ${isPack ? "text-xs" : "text-sm"}`}>
+                      {auctionBidData.highestBid && auctionBidData.highestBid > 0 ? (
+                        <ReservePriceDisplay value={auctionBidData.highestBid} symbol={auctionBidData.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                      ) : "Be first!"}
                     </p>
                   </div>
                   {/* Countdown timer */}
-                  <div className="flex-1 min-w-[100px] rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2">
-                    <p className="text-[10px] font-orbitron uppercase tracking-wider text-orange-400/70">
+                  <div className={`flex-1 min-w-[80px] rounded-lg border border-orange-500/30 bg-orange-500/10 ${isPack ? "px-2 py-1.5" : "px-3 py-2"}`}>
+                    <p className={`font-orbitron uppercase tracking-wider text-orange-400/70 ${isPack ? "text-[9px]" : "text-[10px]"}`}>
                       Ends In
                     </p>
-                    <p className="text-sm font-orbitron text-orange-400">
+                    <p className={`font-orbitron text-orange-400 ${isPack ? "text-xs" : "text-sm"}`}>
                       <CountdownTimer
                         endTime={auctionBidData.endTime}
                         status={auctionBidData.status}
@@ -1320,43 +1371,44 @@ export default function BeastDetailModal({
                 {/* Bid input and quick bid buttons */}
                 {!auctionBidData.isUserSeller && (
                   <>
-                    {/* Token selector */}
-                    {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
-                      <div className="flex flex-col gap-2 mb-3">
+                    {/* Pay With + Your Bid on one line */}
+                    <div className={`flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end ${isPack ? "mb-2" : "mb-3"}`}>
+                      {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
+                        <div className="flex flex-col gap-2 flex-shrink-0 sm:min-w-[140px]">
+                          <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
+                            Pay With
+                          </label>
+                          <CustomDropdown
+                            id="modal-payment-token"
+                            value={bidState.paymentToken}
+                            onChange={onPaymentTokenChange}
+                            options={tokenOptions}
+                            variant="green"
+                            className="w-full"
+                          />
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-2 flex-1 min-w-0">
                         <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
-                          Pay With
+                          Your Bid ({bidState.tokenSymbol || "USDC"})
                         </label>
-                        <CustomDropdown
-                          id="modal-payment-token"
-                          value={bidState.paymentToken}
-                          onChange={onPaymentTokenChange}
-                          options={tokenOptions}
-                          variant="green"
-                          className="w-full"
+                        <input
+                          type="number"
+                          inputMode="decimal"
+                          step="0.01"
+                          min="0"
+                          placeholder="Enter amount..."
+                          value={bidState.bidAmount}
+                          onChange={(e) => onBidAmountChange?.(e.target.value)}
+                          className="w-full rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-3 py-2 text-sm font-orbitron text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         />
-                        {bidState.insufficientFundsError && (
-                          <p className="text-xs text-red-400">
-                            {bidState.insufficientFundsError}
-                          </p>
-                        )}
                       </div>
-                    )}
-
-                    <div className="flex flex-col gap-2 mb-3">
-                      <label className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70">
-                        Your Bid ({bidState.tokenSymbol || "USDC"})
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.01"
-                        min="0"
-                        placeholder="Enter amount..."
-                        value={bidState.bidAmount}
-                        onChange={(e) => onBidAmountChange?.(e.target.value)}
-                        className="w-full rounded-lg border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-3 py-2 text-sm font-orbitron text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                      />
                     </div>
+                    {bidState.insufficientFundsError && (
+                      <p className="text-xs text-red-400 mb-2">
+                        {bidState.insufficientFundsError}
+                      </p>
+                    )}
 
                     {/* Quick bid buttons */}
                     {(() => {
@@ -1369,7 +1421,7 @@ export default function BeastDetailModal({
                       const highBid = basePrice * 2;
 
                       return (
-                        <div className="flex flex-wrap gap-1.5 mb-4">
+                        <div className={`flex flex-wrap gap-1.5 ${isPack ? "mb-2" : "mb-3"}`}>
                           <button
                             type="button"
                             onClick={() => onBidAmountChange?.(minBid.toFixed(2))}
@@ -1470,6 +1522,8 @@ export default function BeastDetailModal({
                     </p>
                   </div>
                 )}
+                  </>
+                ) : null}
               </div>
             )}
           </div>

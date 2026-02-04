@@ -5,6 +5,14 @@ export const BEASTS_GRAPHQL_ENDPOINT =
 
 export const IMAGE_BASE_URL = "https://api.cartridge.gg/x/lax/torii";
 
+/** Eternum marketplace (fixed-price orders); same Adventurers/Beasts collections. */
+export const ETERNUM_MARKETPLACE_GRAPHQL =
+  "https://api.cartridge.gg/x/eternum-marketplace-mainnet19/torii/graphql";
+
+/** Empire trade pages: redirect Eternum listings to buy there. */
+export const EMPIRE_TRADE_ADVENTURERS_URL = "https://empire.realms.world/trade/adventurers";
+export const EMPIRE_TRADE_BEASTS_URL = "https://empire.realms.world/trade/beasts";
+
 export const MAINNET_RPC_URL = "https://api.cartridge.gg/x/starknet/mainnet";
 export const SEPOLIA_RPC_URL = "https://api.cartridge.gg/x/starknet/sepolia";
 
@@ -48,6 +56,12 @@ export const COLLECTIONS: Record<CollectionType, CollectionConfig> = {
 export const DEFAULT_COLLECTION: CollectionType = "beasts";
 
 export const DEFAULT_PAGE_SIZE = 12;
+
+/** Grid page size: only this many NFT cards render at once. Stat bounds are computed from this grid; filters apply to full list. */
+export const GRID_PAGE_SIZE = 50;
+
+/** Max token IDs sent to adventurer-stat-bounds API (matches grid page; bounds are computed from current grid only). */
+export const STAT_BOUNDS_MAX_TOKENS = 50;
 
 // Maximum NFTs that can be selected for auction (contract limit)
 // TODO: Increase to 200 when contract is upgraded
@@ -121,7 +135,7 @@ export const SUPPORTED_TOKENS: TokenInfo[] = [
     address: LORDS_ADDRESS,
     symbol: "LORDS",
     name: "Lords",
-    decimals: 18,
+    decimals: 6, // contract uses 6 decimals for Lords amounts
   },
   {
     address: SURVIVOR_ADDRESS_MAINNET,

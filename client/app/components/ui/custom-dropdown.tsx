@@ -15,7 +15,7 @@ interface CustomDropdownProps {
   value: string;
   onChange: (value: string) => void;
   className?: string;
-  variant?: "default" | "green";
+  variant?: "default" | "green" | "bar" | "compact";
   placeholder?: string;
   id?: string;
 }
@@ -118,12 +118,18 @@ export default function CustomDropdown({
   const baseButtonClasses =
     variant === "green"
       ? "rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/5 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 cursor-pointer"
-      : "rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 cursor-pointer";
+      : variant === "bar"
+        ? "inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 cursor-pointer min-w-0 w-auto"
+        : variant === "compact"
+          ? "rounded-lg border border-white/12 bg-black/60 px-2.5 py-1.5 text-[11px] font-orbitron uppercase tracking-wider text-white outline-none transition focus:border-[rgb(50,255,52)] cursor-pointer"
+          : "rounded-xl border border-white/12 bg-black/60 px-4 py-2.5 text-sm font-orbitron uppercase tracking-widest text-white outline-none transition focus:border-[rgb(50,255,52)] focus:ring-2 focus:ring-[rgb(50,255,52)]/35 cursor-pointer";
 
   const baseOptionClasses =
     variant === "green"
       ? "px-4 py-3 text-sm font-orbitron uppercase tracking-widest text-white hover:bg-[rgb(50,255,52)]/20 transition cursor-pointer"
-      : "px-4 py-3 text-sm font-orbitron uppercase tracking-widest text-white hover:bg-[rgb(50,255,52)]/20 transition cursor-pointer";
+      : variant === "compact"
+        ? "px-2.5 py-2 text-[11px] font-orbitron uppercase tracking-wider text-white hover:bg-[rgb(50,255,52)]/20 transition cursor-pointer"
+        : "px-4 py-3 text-sm font-orbitron uppercase tracking-widest text-white hover:bg-[rgb(50,255,52)]/20 transition cursor-pointer";
 
   const dropdownMenu = isOpen && mounted && position && (
     <div
@@ -180,13 +186,13 @@ export default function CustomDropdown({
   );
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${variant === "bar" ? "inline-block" : ""} ${className}`}>
       <button
         ref={buttonRef}
         id={id}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between ${baseButtonClasses} ${isOpen ? "border-[rgb(50,255,52)] ring-2 ring-[rgb(50,255,52)]/35" : ""}`}
+        className={`${variant === "bar" ? "w-auto" : "w-full"} flex items-center justify-between ${baseButtonClasses} ${isOpen ? "border-[rgb(50,255,52)] ring-2 ring-[rgb(50,255,52)]/35" : ""}`}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
       >

@@ -2,6 +2,7 @@ import { useConnect } from "@starknet-react/core";
 import { ControllerConnector } from "@cartridge/connector";
 import { useMemo } from "react";
 import Image from "next/image";
+import { useToast } from "../../providers/toast-provider";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -10,6 +11,7 @@ interface WalletConnectModalProps {
 
 export default function WalletConnectModal({ isOpen, onClose }: WalletConnectModalProps) {
   const { connect, connectors } = useConnect();
+  const toast = useToast();
 
   const controller = useMemo(() => {
     try {
@@ -28,12 +30,16 @@ export default function WalletConnectModal({ isOpen, onClose }: WalletConnectMod
 
   const handleWalletConnect = async (connector: typeof readyConnector | typeof braavosConnector | typeof cartridgeConnector) => {
     if (!connector) return;
-    
+
     try {
       await connect({ connector });
       onClose();
     } catch (error) {
       console.error("Failed to connect wallet:", error);
+      const msg = connector === cartridgeConnector
+        ? "Open the Cartridge extension and unlock your keychain, then try again."
+        : "Please try again or use another wallet.";
+      toast.error("Connection failed", msg);
     }
   };
 

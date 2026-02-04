@@ -1,5 +1,8 @@
 certificates
 certs
+.certificates
 node_modules
 .next
 .env.*
+# Dev/debug scripts (not needed for deployment)
+scripts/
