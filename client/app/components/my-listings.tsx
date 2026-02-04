@@ -21,6 +21,7 @@ import {
 import {
   formatUSDSmart,
   truncateAuctionName,
+  parseStatus,
 } from "../lib/utils";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
 import { isAuctionExpired } from "../lib/utils/auction-status";
@@ -64,7 +65,13 @@ const formatTimeAgo = (timestamp: string): string => {
 };
 
 const getStatusStyle = (status: string): string => {
-  const statusNum = parseInt(status);
+  const statusNum = parseStatus(status);
+  if (statusNum < 0) {
+    if (status === "pending" || status === "queued") {
+      return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    return "bg-white/10 text-white border border-white/20";
+  }
 
   if (statusNum === 0) {
     return "bg-white/10 text-white/50 border border-white/20";
@@ -85,14 +92,12 @@ const getStatusStyle = (status: string): string => {
     return "bg-red-400/10 text-red-300 border border-red-300/30";
   }
 
-  if (status === "pending" || status === "queued") {
-    return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
-  }
   return "bg-white/10 text-white border border-white/20";
 };
 
 const getStatusLabel = (status: string): string => {
-  const statusNum = parseInt(status);
+  const statusNum = parseStatus(status);
+  if (statusNum < 0) return status;
 
   if (statusNum === 0) return "None";
   if (statusNum === 1) return "Draft";
@@ -340,7 +345,7 @@ export default function MyListings({
   );
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
   const [listingsSort, setListingsSort] = useState<string>("time-newest");
-  const [listingsFilter, setListingsFilter] = useState<"all" | "active" | "inactive">("all");
+  const [listingsFilter, setListingsFilter] = useState<"all" | "active" | "settled" | "cancelled">("all");
   const [adventurerModalOpen, setAdventurerModalOpen] = useState(false);
   const [adventurerModalNfts, setAdventurerModalNfts] = useState<FormattedNFT[]>([]);
   const [adventurerModalIndex, setAdventurerModalIndex] = useState(0);
@@ -430,8 +435,10 @@ export default function MyListings({
 
   const filteredListings = useMemo(() => {
     if (listingsFilter === "all") return listings;
-    if (listingsFilter === "active") return listings.filter((l) => String(l.status) === "2");
-    return listings.filter((l) => String(l.status) !== "2");
+    if (listingsFilter === "active") return listings.filter((l) => parseStatus(l.status) === 2);
+    if (listingsFilter === "settled") return listings.filter((l) => parseStatus(l.status) === 4);
+    if (listingsFilter === "cancelled") return listings.filter((l) => parseStatus(l.status) === 5);
+    return listings;
   }, [listings, listingsFilter]);
 
   const sortedListings = useMemo(() => {
@@ -462,8 +469,8 @@ export default function MyListings({
       return a;
     };
     if (listingsFilter === "all") {
-      const active = filteredListings.filter((l) => String(l.status) === "2");
-      const inactive = filteredListings.filter((l) => String(l.status) !== "2");
+      const active = filteredListings.filter((l) => parseStatus(l.status) === 2);
+      const inactive = filteredListings.filter((l) => parseStatus(l.status) !== 2);
       return [...sortBySelected(active), ...sortBySelected(inactive)];
     }
     return sortBySelected([...filteredListings]);
@@ -554,6 +561,12 @@ export default function MyListings({
       if (!listing) {
         console.error("Listing not found");
         return;
+      }
+      if (parseStatus(listing.status) === 4 || settleTxnHashes[auctionId]) {
+        return; // Already settled, do nothing
+      }
+      if (parseStatus(listing.status) === 5) {
+        return; // Cancelled auctions cannot be settled
       }
 
       // If there's no current bid, just settle without swap
@@ -755,7 +768,7 @@ export default function MyListings({
         setIsSettling(null);
       }
     },
-    [account, address, listings, provider, toast],
+    [account, address, listings, provider, toast, settleTxnHashes],
   );
 
   const handleAcceptOffer = useCallback(
@@ -905,14 +918,25 @@ export default function MyListings({
             </button>
             <button
               type="button"
-              onClick={() => setListingsFilter("inactive")}
+              onClick={() => setListingsFilter("settled")}
               className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition border-l border-blue-400/30 ${
-                listingsFilter === "inactive"
+                listingsFilter === "settled"
                   ? "bg-blue-400/20 text-blue-300 border-blue-400/50 ring-1 ring-blue-400/40"
                   : "text-white/70 hover:text-blue-300 hover:bg-blue-400/10"
               }`}
             >
               Settled
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingsFilter("cancelled")}
+              className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition border-l border-red-400/30 ${
+                listingsFilter === "cancelled"
+                  ? "bg-red-400/20 text-red-300 border-red-400/50 ring-1 ring-red-400/40"
+                  : "text-white/70 hover:text-red-300 hover:bg-red-400/10"
+              }`}
+            >
+              Canceled
             </button>
           </div>
           <CustomDropdown
@@ -1027,27 +1051,43 @@ export default function MyListings({
                   disabled={
                     !account ||
                     isEndingAuction === listing.auctionId ||
-                    Number(listing.status) !== 2 ||
+                    parseStatus(listing.status) !== 2 ||
                     isAuctionExpired(listing.endTime, listing.status) ||
-                    Number(listing.status) === 3
+                    parseStatus(listing.status) === 3
                   }
                   className="rounded border border-red-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-red-400 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isEndingAuction === listing.auctionId ? "…" : "End"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleSettleAuction(listing.auctionId)}
-                  disabled={
-                    !account ||
-                    isSettling === listing.auctionId ||
-                    !isAuctionExpired(listing.endTime, listing.status) ||
-                    Number(listing.status) === 4
-                  }
-                  className="rounded border border-orange-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-orange-400 hover:bg-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSettling === listing.auctionId ? "…" : "Settle"}
-                </button>
+                {parseStatus(listing.status) === 4 || settleTxnHashes[listing.auctionId] ? (
+                  <span
+                    className="rounded border border-orange-500/30 px-2 py-1 text-[10px] font-orbitron uppercase text-orange-400/70 cursor-default"
+                    aria-hidden
+                  >
+                    Settled
+                  </span>
+                ) : parseStatus(listing.status) === 5 ? (
+                  <span
+                    className="rounded border border-red-500/30 px-2 py-1 text-[10px] font-orbitron uppercase text-red-400/70 cursor-default"
+                    aria-hidden
+                  >
+                    Canceled
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSettleAuction(listing.auctionId)}
+                    disabled={
+                      !account ||
+                      isSettling === listing.auctionId ||
+                      !isAuctionExpired(listing.endTime, listing.status) ||
+                      parseStatus(listing.status) === 5
+                    }
+                    className="rounded border border-orange-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-orange-400 hover:bg-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSettling === listing.auctionId ? "…" : "Settle"}
+                  </button>
+                )}
               </div>
             </div>
 
