@@ -122,14 +122,14 @@ import BridgeModal from "../bridge/bridge-modal";
                         <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} className="w-10 h-10 md:w-12 md:h-12" />
                         <div className="flex flex-col items-start gap-0.5 min-w-0">
                             <h1 className="text-sm sm:text-base font-bold font-orbitron text-white truncate">Survivor Exchange</h1>
-                            <p className="text-[10px] sm:text-xs text-left text-[rgb(186,255,188)] truncate max-w-[180px] sm:max-w-none">
+                            <p className="hidden sm:block text-[10px] sm:text-xs text-left text-[rgb(186,255,188)] truncate max-w-[180px] sm:max-w-none">
                                 Buy, sell, and auction{" "}
                                 <Link href="https://lootsurvivor.io/" target="_blank" className="font-medium text-[rgb(50,255,52)] hover:underline">Loot Survivor</Link>
                                 {" "}assets.
                             </p>
                         </div>
                     </div>
-                    <div className="flex-shrink min-w-0 flex items-center gap-3">
+                    <div className="flex-shrink min-w-0 flex items-center gap-2 sm:gap-3">
                         {/* Bridge Button - Desktop */}
                         <button
                             onClick={() => setIsBridgeModalOpen(true)}
@@ -226,26 +226,44 @@ import BridgeModal from "../bridge/bridge-modal";
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={handleConnect}
-                                    className="group relative flex items-center gap-2.5 px-5 py-2.5 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/30 hover:scale-105 transition-all cursor-pointer animate-subtle-pulse"
-                                >
-                                    {/* Glow effect - pointer-events-none ensures clicks pass through */}
-                                    <div className="absolute inset-0 rounded-lg bg-[rgb(50,255,52)]/20 blur-md opacity-50 group-hover:opacity-80 transition-opacity pointer-events-none" />
-                                    {/* Wallet icon */}
-                                    <svg
-                                        className="relative w-4 h-4 md:w-5 md:h-5 text-[rgb(50,255,52)]"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        viewBox="0 0 24 24"
+                                <>
+                                    {/* Connect Wallet - Desktop */}
+                                    <button
+                                        onClick={handleConnect}
+                                        className="group relative hidden sm:flex items-center gap-2.5 px-5 py-2.5 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/30 hover:scale-105 transition-all cursor-pointer animate-subtle-pulse"
                                     >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
-                                    </svg>
-                                    <span className="relative font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-sm md:text-base font-semibold">
-                                        Connect Wallet
-                                    </span>
-                                </button>
+                                        <div className="absolute inset-0 rounded-lg bg-[rgb(50,255,52)]/20 blur-md opacity-50 group-hover:opacity-80 transition-opacity pointer-events-none" />
+                                        <svg
+                                            className="relative w-4 h-4 md:w-5 md:h-5 text-[rgb(50,255,52)]"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                                        </svg>
+                                        <span className="relative font-orbitron uppercase tracking-wide text-[rgb(50,255,52)] text-sm md:text-base font-semibold">
+                                            Connect Wallet
+                                        </span>
+                                    </button>
+                                    {/* Connect Wallet - Mobile (icon only) */}
+                                    <button
+                                        onClick={handleConnect}
+                                        className="group relative flex sm:hidden items-center justify-center w-10 h-10 rounded-lg border-2 border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/10 hover:bg-[rgb(50,255,52)]/30 transition-all cursor-pointer animate-subtle-pulse"
+                                        title="Connect Wallet"
+                                    >
+                                        <div className="absolute inset-0 rounded-lg bg-[rgb(50,255,52)]/20 blur-md opacity-50 group-hover:opacity-80 transition-opacity pointer-events-none" />
+                                        <svg
+                                            className="relative w-5 h-5 text-[rgb(50,255,52)]"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v3" />
+                                        </svg>
+                                    </button>
+                                </>
                             )
                         }
                     </div>

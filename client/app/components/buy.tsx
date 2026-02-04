@@ -985,7 +985,7 @@ export default function Buy({
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div key={`${filteredNFTs.length}-${gridCurrentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+          <div key={`${filteredNFTs.length}-${gridCurrentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
               const key = itemKey(nft);
               if (nft.isPack && nft.packNfts?.length) {
@@ -1043,14 +1043,22 @@ export default function Buy({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 min-h-[70vh]">
-      {/* Top row: COLLECTION label on left, Action bar on right */}
-      <div className="flex items-center justify-between gap-6">
-        <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
+      {/* Mobile: Collection selector + action bar stacked; Desktop: COLLECTION label + action bar in row */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
+        {/* Mobile collection selector */}
+        <div className="md:hidden">
+          <CollectionSelector
+            selectedCollection={selectedCollection}
+            onCollectionChange={setSelectedCollection}
+          />
+        </div>
+        {/* Desktop: just the label (selector is in sidebar) */}
+        <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
           Collection
         </span>
         {!effectiveLoading && !error && filteredNFTs.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center justify-end">
+          <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
             <button
               type="button"
               onClick={selectAll}
@@ -1117,9 +1125,64 @@ export default function Buy({
           </div>
         )}
       </div>
-      {/* Main content row: Sidebar filters + Cards grid */}
-      <div className="flex gap-6 min-h-[60vh] min-w-0 items-start">
-        <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+      {/* Main content row: Sidebar filters (desktop) + Cards grid */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
+        {/* Mobile: quick filters inline */}
+        <div className="flex md:hidden flex-wrap gap-2 items-center">
+          {selectedCollection === "adventurers" && (
+            <>
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={showOnlyAlive}
+                  onChange={(e) => setShowOnlyAlive(e.target.checked)}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Alive only
+                </span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={filters.battleFilter === "out"}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, battleFilter: e.target.checked ? "out" : "" }))}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Not in battle
+                </span>
+              </label>
+            </>
+          )}
+          {selectedCollection === "beasts" && (
+            <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+              <input
+                type="checkbox"
+                checked={excludeExpired}
+                onChange={(e) => setExcludeExpired(e.target.checked)}
+                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+              />
+              <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                Exclude expired
+              </span>
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[10px] font-orbitron uppercase tracking-[0.12em] text-[rgb(50,255,52)]"
+          >
+            Filters
+            {Object.values(filters).filter((v) => v !== "").length > 0 && (
+              <span className="rounded-full bg-[rgb(50,255,52)] min-w-[14px] px-1 py-0.5 text-[9px] text-black font-bold">
+                {Object.values(filters).filter((v) => v !== "").length}
+              </span>
+            )}
+          </button>
+        </div>
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
           <CollectionSelector
             selectedCollection={selectedCollection}
             onCollectionChange={setSelectedCollection}

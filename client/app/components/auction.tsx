@@ -1241,7 +1241,7 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
 
     const gridKey = `${filteredNFTs.length}-${currentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`;
     const renderGrid = () => (
-        <div key={gridKey} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+        <div key={gridKey} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
                 const CardComponent = selectedCollection === "beasts" ? MonsterCard : AdventurerCard;
                 // Use exact same "is listed" check as Exclude listed filter: dec, norm, and raw tokenId (as string)
@@ -1413,9 +1413,69 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
     );
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 min-h-[70vh]">
-            <div className="flex gap-6 min-h-[60vh] min-w-0">
-                <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
+            {/* Mobile: Collection selector at top */}
+            <div className="md:hidden">
+                <CollectionSelector
+                    selectedCollection={selectedCollection}
+                    onCollectionChange={setSelectedCollection}
+                />
+            </div>
+            {/* Mobile: inline filters */}
+            <div className="flex md:hidden flex-wrap gap-2 items-center">
+                {selectedCollection === "adventurers" && (
+                    <>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={showOnlyAlive}
+                                onChange={(e) => setShowOnlyAlive(e.target.checked)}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Alive only
+                            </span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={filters.battleFilter === "out"}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, battleFilter: e.target.checked ? "out" : "" }))}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Not in battle
+                            </span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={excludeListed}
+                                onChange={(e) => setExcludeListed(e.target.checked)}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Not listed
+                            </span>
+                        </label>
+                    </>
+                )}
+                <button
+                    type="button"
+                    onClick={() => setFiltersOpen((v) => !v)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[10px] font-orbitron uppercase tracking-[0.12em] text-[rgb(50,255,52)]"
+                >
+                    Filters
+                    {Object.values(filters).filter((v) => v !== "").length > 0 && (
+                        <span className="rounded-full bg-[rgb(50,255,52)] min-w-[14px] px-1 py-0.5 text-[9px] text-black font-bold">
+                            {Object.values(filters).filter((v) => v !== "").length}
+                        </span>
+                    )}
+                </button>
+            </div>
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0">
+                {/* Desktop sidebar */}
+                <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
                     <CollectionSelector
                         selectedCollection={selectedCollection}
                         onCollectionChange={setSelectedCollection}
