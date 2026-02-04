@@ -122,7 +122,7 @@ import BridgeModal from "../bridge/bridge-modal";
                         <Image src="/logo.png" alt="logo" width={50} height={50} draggable={false} className="w-10 h-10 md:w-12 md:h-12" />
                         <div className="flex flex-col items-start gap-0.5 min-w-0">
                             <h1 className="text-sm sm:text-base font-bold font-orbitron text-white truncate">Survivor Exchange</h1>
-                            <p className="text-[10px] sm:text-xs text-left text-[rgb(186,255,188)]/80 truncate max-w-[180px] sm:max-w-none">
+                            <p className="text-[10px] sm:text-xs text-left text-[rgb(186,255,188)] truncate max-w-[180px] sm:max-w-none">
                                 Buy, sell, and auction{" "}
                                 <Link href="https://lootsurvivor.io/" target="_blank" className="font-medium text-[rgb(50,255,52)] hover:underline">Loot Survivor</Link>
                                 {" "}assets.

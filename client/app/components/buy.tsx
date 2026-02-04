@@ -984,71 +984,6 @@ export default function Buy({
 
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="flex flex-wrap gap-2 mb-4 items-center shrink-0">
-          <button
-            type="button"
-            onClick={selectAll}
-            className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
-          >
-            Select All ({Math.min(filteredNFTs.length, MAX_AUCTION_NFT_SELECTION)} max)
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={selectedKeys.length === 0}
-            className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
-              selectedKeys.length > 0
-                ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
-                : "border-white/20 text-white/30"
-            }`}
-          >
-            Clear
-          </button>
-          <CustomDropdown
-            id="sort-buy"
-            value={sortDropdownValue}
-            onChange={setSortFromDropdown}
-            options={
-              selectedCollection === "beasts"
-                ? [
-                    { value: "price-high-low", label: "Price ↓" },
-                    { value: "price-low-high", label: "Price ↑" },
-                    { value: "time-ending-soon", label: "Ending soon" },
-                    { value: "time-newest", label: "Newest" },
-                    { value: "level-low-high", label: "Level ↑" },
-                    { value: "level-high-low", label: "Level ↓" },
-                    { value: "tier-low-high", label: "Tier ↑" },
-                    { value: "tier-high-low", label: "Tier ↓" },
-                    { value: "power-low-high", label: "Power ↑" },
-                    { value: "power-high-low", label: "Power ↓" },
-                    { value: "tokenId-low-high", label: "Token ID ↑" },
-                    { value: "tokenId-high-low", label: "Token ID ↓" },
-                  ]
-                : [
-                    { value: "price-high-low", label: "Price ↓" },
-                    { value: "price-low-high", label: "Price ↑" },
-                    { value: "time-ending-soon", label: "Ending soon" },
-                    { value: "time-newest", label: "Newest" },
-                    { value: "level-low-high", label: "Level ↑" },
-                    { value: "level-high-low", label: "Level ↓" },
-                    { value: "score-low-high", label: "Score ↑" },
-                    { value: "score-high-low", label: "Score ↓" },
-                    { value: "tokenId-low-high", label: "Token ID ↑" },
-                    { value: "tokenId-high-low", label: "Token ID ↓" },
-                  ]
-            }
-            variant="bar"
-          />
-          {selectedKeys.length > 0 && (
-            <button
-              type="button"
-              onClick={openBulkBuyModal}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 px-5 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/30 hover:cursor-pointer"
-            >
-              Buy {selectedKeys.length} {selectedCollection === "adventurers" ? "Adventurers" : "Beasts"}
-            </button>
-          )}
-        </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div key={`${filteredNFTs.length}-${gridCurrentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
@@ -1108,12 +1043,87 @@ export default function Buy({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 min-h-[70vh]">
-      <div className="flex gap-6 min-h-[60vh] min-w-0">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 min-h-[70vh]">
+      {/* Top row: COLLECTION label on left, Action bar on right */}
+      <div className="flex items-center justify-between gap-6">
+        <span className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
+          Collection
+        </span>
+        {!effectiveLoading && !error && filteredNFTs.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center justify-end">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+              Select All ({Math.min(filteredNFTs.length, MAX_AUCTION_NFT_SELECTION)} max)
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedKeys.length === 0}
+              className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
+                selectedKeys.length > 0
+                  ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
+                  : "border-white/20 text-white/30"
+              }`}
+            >
+              Clear
+            </button>
+            <CustomDropdown
+              id="sort-buy"
+              value={sortDropdownValue}
+              onChange={setSortFromDropdown}
+              options={
+                selectedCollection === "beasts"
+                  ? [
+                      { value: "price-high-low", label: "Price ↓" },
+                      { value: "price-low-high", label: "Price ↑" },
+                      { value: "time-ending-soon", label: "Ending soon" },
+                      { value: "time-newest", label: "Newest" },
+                      { value: "level-low-high", label: "Level ↑" },
+                      { value: "level-high-low", label: "Level ↓" },
+                      { value: "tier-low-high", label: "Tier ↑" },
+                      { value: "tier-high-low", label: "Tier ↓" },
+                      { value: "power-low-high", label: "Power ↑" },
+                      { value: "power-high-low", label: "Power ↓" },
+                      { value: "tokenId-low-high", label: "Token ID ↑" },
+                      { value: "tokenId-high-low", label: "Token ID ↓" },
+                    ]
+                  : [
+                      { value: "price-high-low", label: "Price ↓" },
+                      { value: "price-low-high", label: "Price ↑" },
+                      { value: "time-ending-soon", label: "Ending soon" },
+                      { value: "time-newest", label: "Newest" },
+                      { value: "level-low-high", label: "Level ↑" },
+                      { value: "level-high-low", label: "Level ↓" },
+                      { value: "score-low-high", label: "Score ↑" },
+                      { value: "score-high-low", label: "Score ↓" },
+                      { value: "tokenId-low-high", label: "Token ID ↑" },
+                      { value: "tokenId-high-low", label: "Token ID ↓" },
+                    ]
+              }
+              variant="bar"
+            />
+            {selectedKeys.length > 0 && (
+              <button
+                type="button"
+                onClick={openBulkBuyModal}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 px-5 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/30 hover:cursor-pointer"
+              >
+                Buy {selectedKeys.length} {selectedCollection === "adventurers" ? "Adventurers" : "Beasts"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {/* Main content row: Sidebar filters + Cards grid */}
+      <div className="flex gap-6 min-h-[60vh] min-w-0 items-start">
         <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
           <CollectionSelector
             selectedCollection={selectedCollection}
             onCollectionChange={setSelectedCollection}
+            hideLabel
           />
           {selectedCollection === "adventurers" && (
             <div className="flex flex-col gap-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-2" role="group" aria-label="Adventurer filters">
@@ -1216,7 +1226,9 @@ export default function Buy({
             compact
           />
         </aside>
-        <div className="min-w-0 flex-1 flex flex-col min-h-0">{renderContent()}</div>
+        <div className="min-w-0 flex-1 flex flex-col min-h-0">
+          {renderContent()}
+        </div>
       </div>
 
       {selectedCollection === "beasts" ? (
