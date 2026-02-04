@@ -12,7 +12,7 @@ import { AuctionTimeline } from "./bid-components";
 import { useWalletModal } from "../providers/wallet-modal-provider";
 import { useToast } from "../providers/toast-provider";
 import type { AuctionItem, FormattedNFT, Collection, UserOffer } from "../lib/types";
-import { AuctionWithNFTs, useBeastSkullRewards, useSummitLeaderboard, findMatchingSummitBeast, type SummitBeast } from "../hooks";
+import { AuctionWithNFTs, useBeastSkullRewards, useSummitLeaderboard, findMatchingSummitBeast, type SummitBeast, usePaymaster } from "../hooks";
 import { uint256 } from "starknet";
 import {
   formatUSD,
@@ -67,7 +67,8 @@ export default function Bids({
   const provider = useProvider();
   const { openWalletModal } = useWalletModal();
   const router = useRouter();
-const toast = useToast();
+  const toast = useToast();
+  const { executeWithPaymaster } = usePaymaster();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txnHash, setTxnHash] = useState<string | undefined>();
   const [insufficientFundsError, setInsufficientFundsError] = useState<
@@ -1257,7 +1258,7 @@ const toast = useToast();
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setTxnHash(response.transaction_hash);
       setBidAmountToken("");
       toast.success("Bid placed", "Your bid has been submitted successfully");
@@ -1286,6 +1287,7 @@ const toast = useToast();
     isValidPrice,
     selectedCollection,
     toast,
+    executeWithPaymaster,
   ]);
 
   const handleMakeOffer = useCallback(async () => {
@@ -1554,7 +1556,7 @@ const toast = useToast();
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setOfferTxnHash(response.transaction_hash);
       setBidAmountToken("");
       toast.success("Offer submitted", "Your offer has been sent to the seller");
@@ -1581,6 +1583,7 @@ const toast = useToast();
     tokenPrice,
     isValidPrice,
     toast,
+    executeWithPaymaster,
   ]);
 
   const handleWithdrawOffer = useCallback(async () => {
@@ -1602,7 +1605,7 @@ const toast = useToast();
         },
       ];
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setWithdrawOfferTxnHash(response.transaction_hash);
       toast.success("Offer withdrawn", "Your offer has been cancelled");
     } catch (error) {
@@ -1612,7 +1615,7 @@ const toast = useToast();
     } finally {
       setIsWithdrawingOffer(false);
     }
-  }, [account, selectedCollectionId, userOffer, toast]);
+  }, [account, selectedCollectionId, userOffer, toast, executeWithPaymaster]);
 
   // isAuctionExpired is now imported from ../lib/utils
 
@@ -1653,11 +1656,11 @@ const toast = useToast();
 
         const auctionId = parseInt(selectedCollectionId, 10);
 
-        const response = await account.execute({
+        const response = await executeWithPaymaster(account, [{
           contractAddress: AUCTION_CONTRACT_ADDRESS,
           entrypoint: "settle_auction",
           calldata: [auctionId.toString()],
-        });
+        }]);
 
         setSettleTxnHash(response.transaction_hash);
         toast.success("Auction settled", "NFTs have been returned");
@@ -1808,7 +1811,7 @@ const toast = useToast();
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setSettleTxnHash(response.transaction_hash);
       toast.success("Auction settled", "Transaction submitted successfully");
 
@@ -1841,6 +1844,7 @@ const toast = useToast();
     paginatedFilteredAuctions,
     provider,
     toast,
+    executeWithPaymaster,
   ]);
 
   const updateSelection = useCallback((collection: Collection | undefined) => {
