@@ -106,7 +106,8 @@ export function useMarketplaceListings(collection: CollectionType) {
     refresh: refreshListings,
   } = useMarketplaceCollectionListings({
     collection: collectionAddress,
-    limit: 100,
+    limit: 1000,
+    verifyOwnership: false,
   });
 
   // Extract token IDs from listings for metadata fetch
