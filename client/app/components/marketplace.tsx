@@ -100,7 +100,7 @@ function sortListings(items: MarketplaceListing[], priceSort: string): Marketpla
 export default function Marketplace() {
   const { address, account } = useAccount();
   const { openWalletModal } = useWalletModal();
-  const selectedCollection: CollectionType = "beasts";
+  const [selectedCollection, setSelectedCollection] = useState<CollectionType>("beasts");
   const [currentPage, setCurrentPage] = useState(1);
 
   const { listings, loading, error, refresh } = useMarketplaceListings(selectedCollection);
@@ -366,6 +366,28 @@ export default function Marketplace() {
             collection={selectedCollection}
             compact
           />
+        </div>
+        {/* Collection toggle */}
+        <div className="flex gap-1 rounded-full border border-[rgb(50,255,52)]/20 bg-black/50 p-0.5">
+          {(["beasts", "adventurers"] as const).map((col) => (
+            <button
+              key={col}
+              type="button"
+              onClick={() => {
+                if (col !== selectedCollection) {
+                  setSelectedCollection(col);
+                  resetAll();
+                }
+              }}
+              className={`rounded-full px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] transition hover:cursor-pointer ${
+                selectedCollection === col
+                  ? "bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40"
+                  : "text-white/50 hover:text-white/70 border border-transparent"
+              }`}
+            >
+              {col}
+            </button>
+          ))}
         </div>
         {/* Sweep + Clear + Refresh */}
         {!loading && !error && listings.length > 0 && (
