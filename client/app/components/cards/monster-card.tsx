@@ -21,6 +21,8 @@ type MonsterCardProps = {
   priceLabel?: "Buy" | "Price";
   /** When true, auction is expired; show "Price" (no buy button) and red Expired tag. */
   expired?: boolean;
+  /** Callback to open fixed-price listing modal. */
+  onListClick?: () => void;
 };
 
 export default function MonsterCard({
@@ -36,6 +38,7 @@ export default function MonsterCard({
   priority: _priority,
   priceLabel = "Price",
   expired,
+  onListClick,
 }: MonsterCardProps) {
   const getAttribute = (traitType: string) => {
     const attr = nft.attributes.find((a) => a.trait_type === traitType);
@@ -190,6 +193,22 @@ export default function MonsterCard({
       )}
 
       {/* Price - fixed height; when expired or priceLabel=Price show static, else Buy button */}
+      {/* List for Sale button: shown when not auction-listed and callback provided */}
+      {price === undefined && !listed && onListClick && (
+        <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex items-center justify-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onListClick();
+            }}
+            className="rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition"
+          >
+            List for Sale
+          </button>
+        </div>
+      )}
+
       {price !== undefined && (() => {
         const { symbol: priceSymbol, amount: priceAmount } = getReservePriceParts(price, reserveTokenSymbol);
         return (

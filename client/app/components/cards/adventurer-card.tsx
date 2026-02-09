@@ -24,6 +24,8 @@ type AdventurerCardProps = {
   priority?: boolean;
   /** When listed: "Buy" = clickable label that opens buy modal (Buy tab); "Price" = static label (Sell tab, My Listings). */
   priceLabel?: "Buy" | "Price";
+  /** Callback to open fixed-price listing modal. */
+  onListClick?: () => void;
 };
 
 interface MetadataAttribute {
@@ -46,6 +48,7 @@ export default function AdventurerCard({
   inBattle,
   priority,
   priceLabel = "Buy",
+  onListClick,
 }: AdventurerCardProps) {
   const [imageError, setImageError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -405,17 +408,44 @@ export default function AdventurerCard({
             </button>
           );
         })() : onInfoClick ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onInfoClick();
-            }}
-            className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron uppercase text-xs tracking-wider"
-            title="List for auction"
-          >
-            Sell
-          </button>
+          <div className="flex items-center justify-center gap-2 w-full h-full px-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onInfoClick();
+              }}
+              className="flex-1 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 py-1.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition"
+              title="Create timed auction"
+            >
+              Auction
+            </button>
+            {!listed && onListClick && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onListClick();
+                }}
+                className="flex-1 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 py-1.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition"
+              >
+                List
+              </button>
+            )}
+          </div>
+        ) : onListClick && !listed ? (
+          <div className="flex items-center justify-center w-full h-full">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onListClick();
+              }}
+              className="rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition"
+            >
+              List for Sale
+            </button>
+          </div>
         ) : null}
       </div>
     </article>

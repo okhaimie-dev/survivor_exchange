@@ -5,7 +5,7 @@ import { MonsterCard, AdventurerCard } from "./cards";
 import { CollectionSelector, Pagination, CustomDropdown } from "./ui";
 import { Filters, type FilterState } from "./filters";
 import { AuctionSkeleton } from "./skeletons";
-import { BeastDetailModal, AdventurerDetailModal } from "./modals";
+import { BeastDetailModal, AdventurerDetailModal, ListForSaleModal } from "./modals";
 import type { FormattedNFT } from "../lib/types";
 import { useToast } from "../providers/toast-provider";
 import { useAdventurerAttributesOptional } from "../providers/adventurer-attributes-provider";
@@ -21,6 +21,7 @@ function isListedToken(listedTokenIds: Set<string>, nftTokenId: string): boolean
     return listedTokenIds.has(raw) || listedTokenIds.has(normalized) || listedTokenIds.has(decimal);
 }
 import { useSummitLeaderboard, findMatchingSummitBeast, useMyNFTs, useMyAdventurerNFTs, useMyListings } from "../hooks";
+import { useMarketplaceListings } from "../hooks/data/use-marketplace-listings";
 import { useQuery, useApolloClient } from "@apollo/client/react";
 import { AUCTIONS_QUERY, AUCTION_ITEMS_BY_ID_QUERY } from "../lib/queries";
 import type { AuctionsResponse } from "../lib/types";
@@ -91,6 +92,26 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
             return next;
         });
     });
+
+    // Fixed-price listing modal state
+    const [listModalNft, setListModalNft] = useState<FormattedNFT | null>(null);
+    const handleListClick = useCallback((nft: FormattedNFT) => setListModalNft(nft), []);
+
+    // Marketplace listings for current collection (used to hide "List" button on already-listed NFTs)
+    const { listings: marketplaceListings } = useMarketplaceListings(selectedCollection);
+    const marketplaceListedTokenIds = useMemo(() => {
+        if (!dataAddress || !marketplaceListings.length) return new Set<string>();
+        const normalizedAddr = normalizeContractAddress(dataAddress).toLowerCase();
+        const ids = new Set<string>();
+        for (const listing of marketplaceListings) {
+            if (normalizeContractAddress(listing.owner).toLowerCase() === normalizedAddr) {
+                ids.add(listing.tokenId);
+                ids.add(normalizeTokenId(listing.tokenId));
+                ids.add(toDecimalTokenId(listing.tokenId));
+            }
+        }
+        return ids;
+    }, [dataAddress, marketplaceListings]);
 
     const dateToLocalDateTimeString = (date: Date): string => {
         const year = date.getFullYear();
@@ -1257,6 +1278,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                 const isExpired = listed && endTimeSec > 0 && endTimeSec <= Math.floor(Date.now() / 1000);
                 // Show Listed tag when token is in listedTokenIds (same check as Exclude listed filter). Hide tag only when auction end time has passed.
                 const showListedTag = listed && !isExpired;
+                const isMarketplaceListed =
+                    marketplaceListedTokenIds.has(dec) ||
+                    marketplaceListedTokenIds.has(norm) ||
+                    marketplaceListedTokenIds.has(rawId);
                 const reserve = listed
                     ? reserveByTokenId[nft.tokenId] ?? reserveByTokenId[normalizeTokenId(nft.tokenId)] ?? reserveByTokenId[toDecimalTokenId(nft.tokenId)]
                     : undefined;
@@ -1273,6 +1298,11 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                         price={reserve?.price}
                         reserveTokenSymbol={reserve?.symbol}
                         {...(selectedCollection === "adventurers" ? { priceLabel: "Price" as const } : {})}
+                        onListClick={
+                            canCreateAuction && !showListedTag && !isMarketplaceListed
+                                ? () => handleListClick(nft)
+                                : undefined
+                        }
                     />
                 );
             })}
@@ -1631,6 +1661,17 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Fixed-price listing modal */}
+            {listModalNft && (
+                <ListForSaleModal
+                    isOpen={!!listModalNft}
+                    onClose={() => setListModalNft(null)}
+                    nft={listModalNft}
+                    collectionAddress={collectionConfig.contractAddress}
+                    collectionType={selectedCollection}
+                />
             )}
         </div>
     );
