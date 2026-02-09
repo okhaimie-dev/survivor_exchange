@@ -17,7 +17,7 @@ const MAX_SWEEP = 30;
 const EMPTY_FILTERS: FilterState = {
   id: "", search: "", beast: "", type: "", tier: "",
   levelMin: "", levelMax: "", powerMin: "", powerMax: "", rankMin: "", rankMax: "",
-  shiny: "", animated: "", priceSort: "", tokenIdSort: "", levelSort: "", scoreSort: "",
+  shiny: "", animated: "", priceSort: "low-high", tokenIdSort: "", levelSort: "", scoreSort: "",
   tierSort: "", powerSort: "", summitTop15: "", timeSort: "",
   healthMin: "", healthMax: "", strengthMin: "", strengthMax: "", dexterityMin: "", dexterityMax: "",
   vitalityMin: "", vitalityMax: "", intelligenceMin: "", intelligenceMax: "", wisdomMin: "", wisdomMax: "",
@@ -370,6 +370,18 @@ export default function Marketplace() {
         {/* Sweep + Clear + Refresh */}
         {!loading && !error && listings.length > 0 && (
           <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end md:ml-auto">
+            {/* Price sort toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                const next = filters.priceSort === "low-high" ? "high-low" : "low-high";
+                handleFiltersChange({ priceSort: next });
+              }}
+              className="inline-flex items-center justify-center gap-1 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+              <span>Price</span>
+              <span className="text-sm leading-none">{filters.priceSort === "high-low" ? "↑" : "↓"}</span>
+            </button>
             {/* Sweep toggle */}
             <button
               type="button"
