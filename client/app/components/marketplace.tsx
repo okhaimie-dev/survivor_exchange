@@ -111,6 +111,7 @@ export default function Marketplace() {
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [sweepOpen, setSweepOpen] = useState(false);
   const [sweepCount, setSweepCount] = useState(0);
+  const [sweepCurrency, setSweepCurrency] = useState<string | null>(null);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
@@ -124,6 +125,7 @@ export default function Marketplace() {
     setFilters(EMPTY_FILTERS);
     setSweepOpen(false);
     setSweepCount(0);
+    setSweepCurrency(null);
   }, []);
 
   const handleFiltersChange = useCallback((updates: FilterState | Partial<FilterState>) => {
@@ -158,17 +160,48 @@ export default function Marketplace() {
     setSweepCount(0);
   }, []);
 
-  // Apply filters + sort
-  const filteredListings = useMemo(() => {
-    const filtered = listings.filter((l) => filterMarketplaceListing(l, filters));
-    return sortListings(filtered, filters.priceSort);
+  // Base filtered listings (before sort / currency scope)
+  const baseFilteredListings = useMemo(() => {
+    return listings.filter((l) => filterMarketplaceListing(l, filters));
   }, [listings, filters]);
 
-  // Cheapest-first sorted list for sweep (always price ascending regardless of filter sort)
+  // Available currencies from filtered listings (for sweep currency picker)
+  const currencyGroups = useMemo(() => {
+    const groups = new Map<string, { count: number; floor: number }>();
+    for (const l of baseFilteredListings) {
+      const prev = groups.get(l.currencySymbol);
+      if (!prev) {
+        groups.set(l.currencySymbol, { count: 1, floor: l.price });
+      } else {
+        groups.set(l.currencySymbol, {
+          count: prev.count + 1,
+          floor: Math.min(prev.floor, l.price),
+        });
+      }
+    }
+    return groups;
+  }, [baseFilteredListings]);
+
+  // Apply sort — when sweep is active, show sweep-currency items first by price
+  const filteredListings = useMemo(() => {
+    if (sweepOpen && sweepCurrency) {
+      return [...baseFilteredListings].sort((a, b) => {
+        const aCurr = a.currencySymbol === sweepCurrency ? 0 : 1;
+        const bCurr = b.currencySymbol === sweepCurrency ? 0 : 1;
+        if (aCurr !== bCurr) return aCurr - bCurr;
+        return a.price - b.price;
+      });
+    }
+    return sortListings(baseFilteredListings, filters.priceSort);
+  }, [baseFilteredListings, filters.priceSort, sweepOpen, sweepCurrency]);
+
+  // Cheapest-first for sweep — scoped to selected currency
   const cheapestListings = useMemo(() => {
-    const filtered = listings.filter((l) => filterMarketplaceListing(l, filters));
-    return [...filtered].sort((a, b) => a.price - b.price);
-  }, [listings, filters]);
+    const scoped = sweepCurrency
+      ? baseFilteredListings.filter((l) => l.currencySymbol === sweepCurrency)
+      : baseFilteredListings;
+    return [...scoped].sort((a, b) => a.price - b.price);
+  }, [baseFilteredListings, sweepCurrency]);
 
   // Floor price = cheapest filtered listing
   const floorPrice = useMemo(() => {
@@ -198,6 +231,19 @@ export default function Marketplace() {
     }
     return totals;
   }, [cheapestListings, sweepCount]);
+
+  // Auto-correct sweepCurrency if it becomes unavailable after filter change
+  useEffect(() => {
+    if (sweepOpen && sweepCurrency && !currencyGroups.has(sweepCurrency)) {
+      let maxSym = "";
+      let maxCount = 0;
+      for (const [sym, { count }] of currencyGroups) {
+        if (count > maxCount) { maxSym = sym; maxCount = count; }
+      }
+      setSweepCurrency(maxSym || null);
+      setSweepCount(0);
+    }
+  }, [sweepOpen, sweepCurrency, currencyGroups]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -328,8 +374,21 @@ export default function Marketplace() {
             <button
               type="button"
               onClick={() => {
-                setSweepOpen((prev) => !prev);
-                if (sweepOpen) { setSweepCount(0); setSelectedKeys([]); }
+                if (sweepOpen) {
+                  setSweepOpen(false);
+                  setSweepCount(0);
+                  setSelectedKeys([]);
+                  setSweepCurrency(null);
+                } else {
+                  // Default to the currency with the most listings
+                  let maxSym = "";
+                  let maxCount = 0;
+                  for (const [sym, { count }] of currencyGroups) {
+                    if (count > maxCount) { maxSym = sym; maxCount = count; }
+                  }
+                  setSweepCurrency(maxSym || null);
+                  setSweepOpen(true);
+                }
               }}
               className={`inline-flex items-center justify-center gap-1.5 rounded-full border px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] transition hover:cursor-pointer ${
                 sweepOpen
@@ -401,6 +460,13 @@ export default function Marketplace() {
           totals={sweepTotals}
           onSweep={handleBulkBuy}
           isBuying={isBuying}
+          currencies={currencyGroups}
+          selectedCurrency={sweepCurrency}
+          onCurrencyChange={(currency: string) => {
+            setSweepCurrency(currency);
+            setSweepCount(0);
+            setSelectedKeys([]);
+          }}
         />
       )}
 
@@ -469,6 +535,9 @@ function SweepPanel({
   totals,
   onSweep,
   isBuying,
+  currencies,
+  selectedCurrency,
+  onCurrencyChange,
 }: {
   sweepCount: number;
   sweepMax: number;
@@ -476,6 +545,9 @@ function SweepPanel({
   totals: Map<string, number>;
   onSweep: () => void;
   isBuying: boolean;
+  currencies: Map<string, { count: number; floor: number }>;
+  selectedCurrency: string | null;
+  onCurrencyChange: (currency: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -493,6 +565,26 @@ function SweepPanel({
 
   return (
     <div className="rounded-xl border border-[rgb(50,255,52)]/30 bg-black/70 backdrop-blur-sm p-4 sm:p-5">
+      {/* Currency selector chips */}
+      {currencies.size > 1 && (
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {Array.from(currencies.entries()).map(([symbol, { count }]) => (
+            <button
+              key={symbol}
+              type="button"
+              onClick={() => onCurrencyChange(symbol)}
+              className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-orbitron uppercase tracking-wider transition hover:cursor-pointer ${
+                selectedCurrency === symbol
+                  ? "border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
+                  : "border-white/20 text-white/50 hover:border-white/40 hover:text-white/70"
+              }`}
+            >
+              {symbol}
+              <span className="text-[9px] opacity-60">({count})</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
         {/* Slider + count */}
         <div className="flex-1 flex flex-col gap-2">

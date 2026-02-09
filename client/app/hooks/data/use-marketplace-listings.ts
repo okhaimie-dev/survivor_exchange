@@ -165,10 +165,19 @@ export function useMarketplaceListings(collection: CollectionType) {
     return map;
   }, [tokensResult]);
 
-  // Merge listings with token data
+  // Merge listings with token data — only include active, non-expired orders
   const mergedListings = useMemo((): MarketplaceListing[] => {
     if (!listings || listings.length === 0) return [];
-    return listings.map((order) => {
+    const now = Math.floor(Date.now() / 1000);
+    return listings
+    .filter((order) => {
+      // Only include active ("Placed") listings
+      if (order.status?.value !== "Placed") return false;
+      // Filter out expired listings (0 = no expiration)
+      if (order.expiration > 0 && order.expiration < now) return false;
+      return true;
+    })
+    .map((order) => {
       const tokenIdStr = String(order.tokenId);
       const tokenData = tokenDataMap.get(tokenIdStr);
       const { symbol, decimals } = getCurrencyInfo(order.currency);
