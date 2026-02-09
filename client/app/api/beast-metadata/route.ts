@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BEASTS_GRAPHQL_ENDPOINT, ETERNUM_MARKETPLACE_GRAPHQL } from "../../lib/constants";
+import { BEASTS_GRAPHQL_ENDPOINT } from "../../lib/constants";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../../lib/utils/normalization";
 import { formatNFTs } from "../../lib/utils/nft-formatters";
 import type { ERC721Token, FormattedNFT } from "../../lib/types";
@@ -78,14 +78,6 @@ export async function POST(request: NextRequest) {
         data = await fetchTokenById(BEASTS_GRAPHQL_ENDPOINT, id);
         tokenMetadata = data?.data?.token?.tokenMetadata;
         if (tokenMetadata?.tokenId) break;
-      }
-
-      if (!tokenMetadata?.tokenId && ETERNUM_MARKETPLACE_GRAPHQL) {
-        for (const id of idCandidates) {
-          data = await fetchTokenById(ETERNUM_MARKETPLACE_GRAPHQL, id);
-          tokenMetadata = data?.data?.token?.tokenMetadata;
-          if (tokenMetadata?.tokenId) break;
-        }
       }
 
       if (!tokenMetadata?.tokenId) {

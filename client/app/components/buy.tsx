@@ -9,7 +9,7 @@ import { BidsSkeleton } from "./skeletons";
 import { BeastDetailModal, AdventurerDetailModal } from "./modals";
 import type { FormattedNFT, AuctionItem, Collection } from "../lib/types";
 import { AuctionWithNFTs, useBidActions } from "../hooks";
-import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress, LORDS_ADDRESS } from "../lib/constants";
+import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress } from "../lib/constants";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
 import { formatUSD, parseAmount, parseHexOrDecimal } from "../lib/utils";
 import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatBounds, type AdventurerStatBounds } from "../lib/filter-utils";
@@ -45,8 +45,6 @@ interface NFTWithAuction extends FormattedNFT {
   packNfts?: FormattedNFT[];
   reserveTokenSymbol?: string;
   reserveTokenAddress?: string;
-  /** Listing source for modal (e.g. eternum → "Buy on Realms") */
-  listingSource?: "survivor_exchange" | "eternum";
 }
 
 export default function Buy({
@@ -75,7 +73,7 @@ export default function Buy({
   const [isLoadingGameOver, setIsLoadingGameOver] = useState(false);
   const gameOverFetchRef = useRef(0);
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
-  // Eternum beasts: fetch metadata by contract+tokenId so grid shows attributes/image
+  // Beasts: fetch metadata by contract+tokenId for items missing attributes/image
   const [beastMetadataByKey, setBeastMetadataByKey] = useState<Record<string, FormattedNFT | null>>({});
   // Shared adventurer attributes (batch + card fetches) so grid filtering sees Level, Health, stats. Fallback to local state when provider is missing (e.g. SSR).
   const adventurerAttrs = useAdventurerAttributesOptional();
@@ -180,23 +178,17 @@ export default function Buy({
       if (selectedCollection === "adventurers" && !isAdventurerAuction) continue;
       if (selectedCollection === "beasts" && !isBeastAuction) continue;
 
-      const isEternum = auction.source === "eternum";
       const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
       const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-      let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-      // Eternum returns LORDS prices in 18-decimal raw; override to 18 so display is correct (app constants use 6 for other contexts)
-      if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
-        reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
-      }
-      const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
+      const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+      const decimals = reserveToken?.decimals ?? 6;
       const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
       const startingPrice = parseAmount(startingPriceRaw, decimals);
       const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
       const highestBid = rawBid != null && rawBid > 0 ? rawBid : undefined;
       const price = (highestBid != null && highestBid > 0) ? highestBid : startingPrice;
-      const reserveTokenSymbol = isEternum ? (reserveToken?.symbol ?? "Amount") : "USDC";
+      const reserveTokenSymbol = "USDC";
       const reserveTokenAddress = reserveToken?.address;
-      const listingSource = (auction as { source?: "survivor_exchange" | "eternum" }).source ?? "survivor_exchange";
 
       // If pack (multiple items), show one card per auction with superposition
       if (items.length > 1) {
@@ -223,7 +215,6 @@ export default function Buy({
             packNfts: packNftsList,
             reserveTokenSymbol,
             reserveTokenAddress,
-            listingSource,
           });
         }
       } else if (items.length === 1) {
@@ -232,25 +223,9 @@ export default function Buy({
         const nft = auction.nfts?.find(n =>
           normalizeTokenId(n.tokenId) === normalizeTokenId(item.token_id)
         );
-        // Eternum listings have auction.nfts = []; build synthetic NFT from item so the card shows
-        const syntheticNft: FormattedNFT | null =
-          auction.source === "eternum" && !nft
-            ? {
-                metadataName: "",
-                metadataDescription: "",
-                contractAddress: normalizeContractAddress(item.contract_address || ""),
-                imagePath: "",
-                metadata: null,
-                attributes: [],
-                name: "",
-                symbol: "",
-                tokenId: normalizeTokenId(item.token_id),
-              }
-            : null;
-        const displayNft = nft ?? syntheticNft;
-        if (displayNft) {
+        if (nft) {
           nfts.push({
-            ...displayNft,
+            ...nft,
             auctionId: auctionIdStr,
             auctionName: auction.name,
             price,
@@ -261,7 +236,6 @@ export default function Buy({
             isPack: false,
             reserveTokenSymbol,
             reserveTokenAddress,
-            listingSource,
           });
         }
       }
@@ -270,17 +244,24 @@ export default function Buy({
     return nfts;
   }, [auctions, getAuctionItems, selectedCollection]);
 
-  // Eternum beasts: items that need metadata (empty attributes = synthetic from Eternum)
+  // Beasts: items that need metadata (empty attributes) — includes pack NFTs
   const beastMetadataItemsToFetch = useMemo(() => {
     if (selectedCollection !== "beasts") return [];
+    const seen = new Set<string>();
     const items: Array<{ contractAddress: string; tokenId: string }> = [];
+    const maybeAdd = (contractAddress: string, tokenId: string, attrs?: unknown[]) => {
+      if (!contractAddress || !tokenId || attrs?.length) return;
+      const key = `${normalizeContractAddress(contractAddress)}:${normalizeTokenId(tokenId)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push({ contractAddress: normalizeContractAddress(contractAddress), tokenId });
+    };
     for (const nft of allNFTsWithAuction) {
-      const hasNoMetadata = !nft.attributes?.length && nft.contractAddress && nft.tokenId;
-      if (hasNoMetadata) {
-        items.push({
-          contractAddress: normalizeContractAddress(nft.contractAddress),
-          tokenId: nft.tokenId,
-        });
+      maybeAdd(nft.contractAddress, nft.tokenId, nft.attributes);
+      if (nft.isPack && nft.packNfts?.length) {
+        for (const p of nft.packNfts) {
+          maybeAdd(p.contractAddress, p.tokenId, p.attributes);
+        }
       }
     }
     return items;
@@ -471,7 +452,7 @@ export default function Buy({
   }, [selectedCollection]);
 
   // Merge fetched attributes into NFT list so filterNFT (Level, Health, stats) sees them.
-  // Adventurers: API-fetched attributes. Beasts: Eternum listings get metadata from beast-metadata API (contract+tokenId).
+  // Adventurers: API-fetched attributes. Beasts: metadata from beast-metadata API (contract+tokenId).
   const nftsWithAttributes = useMemo(() => {
     if (selectedCollection === "adventurers") {
       return allNFTsWithAuction.map((nft) => {
@@ -489,8 +470,17 @@ export default function Buy({
       return allNFTsWithAuction.map((nft) => {
         const key = `${normalizeContractAddress(nft.contractAddress)}:${normalizeTokenId(nft.tokenId)}`;
         const meta = beastMetadataByKey[key];
-        if (meta) return { ...nft, ...meta };
-        return nft;
+        const enriched = meta ? { ...nft, ...meta } : nft;
+        // Also enrich pack NFTs so detail modal shows proper metadata
+        if (enriched.isPack && enriched.packNfts?.length) {
+          const enrichedPack = enriched.packNfts.map((p: FormattedNFT) => {
+            const pk = `${normalizeContractAddress(p.contractAddress)}:${normalizeTokenId(p.tokenId)}`;
+            const pm = beastMetadataByKey[pk];
+            return pm ? { ...p, ...pm } : p;
+          });
+          return { ...enriched, packNfts: enrichedPack };
+        }
+        return enriched;
       });
     }
     return allNFTsWithAuction;
@@ -724,14 +714,10 @@ export default function Buy({
     if (!modalAuctionId) return undefined;
     const auction = auctions.find((a) => String(a.auction_id) === modalAuctionId);
     if (!auction) return undefined;
-    const isEternum = auction.source === "eternum";
     const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
     const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-    let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-    if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
-      reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
-    }
-    const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
+    const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+    const decimals = reserveToken?.decimals ?? 6;
     const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
     const startingPrice = parseAmount(startingPriceRaw, decimals);
     const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
@@ -1302,7 +1288,6 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
-          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? {
             startingPrice: currentModalNft.startingPrice,
             highestBid: currentModalNft.highestBid,
@@ -1341,7 +1326,6 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
-          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? (() => {
             const auction = auctions.find((a) => String(a.auction_id) === currentModalNft.auctionId);
             return {
