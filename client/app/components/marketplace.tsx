@@ -170,34 +170,19 @@ function ListingCard({
     listing.name ||
     (listing.metadata?.name ? String(listing.metadata.name) : `#${listing.tokenId}`);
 
-  // Extract attributes from metadata
-  const getAttribute = (key: string): string | undefined => {
-    if (!listing.metadata) return undefined;
-    const attrs = listing.metadata.attributes;
-    if (Array.isArray(attrs)) {
-      const attr = (attrs as Array<{ trait_type?: string; value?: unknown }>).find(
-        (a) => a?.trait_type?.toLowerCase() === key.toLowerCase(),
-      );
-      if (attr && attr.value !== undefined) return String(attr.value);
-    }
-    const val = listing.metadata[key] ?? listing.metadata[key.toLowerCase()];
-    if (val !== undefined && val !== null) return String(val);
-    return undefined;
-  };
-
   return (
     <article
-      className="group relative flex h-full w-full min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer hover:bg-black/80"
+      className="group relative flex h-full w-full flex-col overflow-hidden rounded-xl border border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 bg-black/70 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer hover:bg-black/80"
     >
       {/* Image */}
-      <div className="flex flex-col items-center gap-2 text-white flex-1">
-        <div className="relative flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-lg overflow-hidden">
+      <div className="flex items-center justify-center p-3 pb-0">
+        <div className="relative w-full aspect-square flex items-center justify-center rounded-lg overflow-hidden">
           {!imageError ? (
             <Image
               src={listing.image}
               alt={displayName}
-              width={96}
-              height={96}
+              width={200}
+              height={200}
               draggable={false}
               className="h-full w-full object-contain"
               unoptimized
@@ -220,70 +205,40 @@ function ListingCard({
             </svg>
           )}
         </div>
-        <h3 className="text-sm font-orbitron uppercase tracking-wide leading-tight text-center line-clamp-1 text-white">
-          {isBeasts ? displayName : `#${listing.tokenId}`}
-        </h3>
-        {isBeasts && (
-          <div className="grid grid-cols-2 gap-1 w-full mt-1">
-            {getAttribute("Type") && (
-              <div className="flex flex-col items-center rounded-md bg-white/5 px-1.5 py-1">
-                <span className="text-[7px] uppercase text-[rgb(186,255,188)]/50">Type</span>
-                <span className="text-[10px] font-medium text-white">{getAttribute("Type")}</span>
-              </div>
-            )}
-            {getAttribute("Tier") && (
-              <div className="flex flex-col items-center rounded-md bg-white/5 px-1.5 py-1">
-                <span className="text-[7px] uppercase text-[rgb(186,255,188)]/50">Tier</span>
-                <span className="text-[10px] font-medium text-white">{getAttribute("Tier")}</span>
-              </div>
-            )}
-            {getAttribute("Level") && (
-              <div className="flex flex-col items-center rounded-md bg-white/5 px-1.5 py-1">
-                <span className="text-[7px] uppercase text-[rgb(186,255,188)]/50">Level</span>
-                <span className="text-[10px] font-medium text-white">{getAttribute("Level")}</span>
-              </div>
-            )}
-            {getAttribute("Power") && (
-              <div className="flex flex-col items-center rounded-md bg-white/5 px-1.5 py-1">
-                <span className="text-[7px] uppercase text-[rgb(186,255,188)]/50">Power</span>
-                <span className="text-[10px] font-medium text-white">{getAttribute("Power")}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* Seller */}
-      <div className="text-center">
-        <span className="text-[9px] text-[rgb(186,255,188)]/40">
-          Seller: {listing.owner.slice(0, 6)}...{listing.owner.slice(-4)}
-        </span>
+      {/* Info */}
+      <div className="flex flex-col gap-1 px-3 py-2">
+        <h3 className="text-xs font-orbitron uppercase tracking-wide leading-tight text-center line-clamp-1 text-white">
+          {isBeasts ? displayName : `#${listing.tokenId}`}
+        </h3>
+        <p className="text-[9px] text-center text-[rgb(186,255,188)]/40">
+          {listing.owner.slice(0, 6)}...{listing.owner.slice(-4)}
+        </p>
       </div>
 
       {/* Buy button with price */}
-      <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onBuy();
-          }}
-          disabled={isBuying}
-          className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Buy this NFT"
-        >
-          <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
-            {isBuying ? "Buying..." : "Buy"}
-          </span>
-          <span className="text-sm font-orbitron font-bold whitespace-nowrap">
-            <ReservePriceDisplay
-              value={listing.price}
-              symbol={listing.currencySymbol}
-              symbolClassName="text-[0.9em] opacity-90"
-            />
-          </span>
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onBuy();
+        }}
+        disabled={isBuying}
+        className="mt-auto flex flex-col items-center justify-center w-full px-3 py-2.5 border-t border-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Buy this NFT"
+      >
+        <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
+          {isBuying ? "Buying..." : "Buy"}
+        </span>
+        <span className="text-xs font-orbitron font-bold truncate max-w-full">
+          <ReservePriceDisplay
+            value={listing.price}
+            symbol={listing.currencySymbol}
+            symbolClassName="text-[0.9em] opacity-90"
+          />
+        </span>
+      </button>
     </article>
   );
 }

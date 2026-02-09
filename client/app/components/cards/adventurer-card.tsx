@@ -379,7 +379,7 @@ export default function AdventurerCard({
           priceLabel === "Price" ? (
             <div className="flex flex-col items-center justify-center">
               <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Price</span>
-              <span className="text-sm font-orbitron font-bold text-[rgb(50,255,52)] whitespace-nowrap">
+              <span className="text-sm font-orbitron font-bold text-[rgb(50,255,52)] truncate max-w-full">
                 <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
               </span>
             </div>
@@ -394,7 +394,7 @@ export default function AdventurerCard({
               title="Open buy modal"
             >
               <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
-              <span className="text-sm font-orbitron font-bold whitespace-nowrap">
+              <span className="text-sm font-orbitron font-bold truncate max-w-full">
                 <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
               </span>
             </button>
