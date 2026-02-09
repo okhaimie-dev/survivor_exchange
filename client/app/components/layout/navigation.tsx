@@ -27,7 +27,7 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
           activeTab === "buy" ? activeHighlight : "text-white/70 font-normal"
         )}
       >
-        Buy
+        Auction
       </button>
       <button
         type="button"

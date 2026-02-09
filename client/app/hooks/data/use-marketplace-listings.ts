@@ -110,12 +110,14 @@ export function useMarketplaceListings(collection: CollectionType) {
     verifyOwnership: false,
   });
 
-  // Extract token IDs from listings for metadata fetch
+  // Extract token IDs from listings for metadata fetch (SDK expects padded hex format)
   const tokenIds = useMemo(() => {
     if (!listings || listings.length === 0) return [] as string[];
     const ids = new Set<string>();
     for (const order of listings) {
-      ids.add(String(order.tokenId));
+      // Convert decimal tokenId to padded hex for the SDK
+      const hex = addAddressPadding(`0x${BigInt(order.tokenId).toString(16)}`);
+      ids.add(hex);
     }
     return Array.from(ids);
   }, [listings]);

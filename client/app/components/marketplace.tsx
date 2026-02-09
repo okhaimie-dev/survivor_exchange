@@ -4,13 +4,116 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { useAccount } from "@starknet-react/core";
 import { CollectionSelector, Pagination, ReservePriceDisplay } from "./ui";
+import { Filters, type FilterState } from "./filters";
 import { BidsSkeleton } from "./skeletons";
 import { useMarketplaceListings, type MarketplaceListing } from "../hooks/data/use-marketplace-listings";
 import { useMarketplaceBuy, type MarketplaceBuyParams } from "../hooks/auction/use-marketplace-buy";
 import { useWalletModal } from "../providers/wallet-modal-provider";
 import { type CollectionType, GRID_PAGE_SIZE } from "../lib/constants";
+import { getReservePriceParts } from "../lib/utils";
 
 const MAX_CART_SELECTION = 20;
+
+const EMPTY_FILTERS: FilterState = {
+  id: "", search: "", beast: "", type: "", tier: "",
+  levelMin: "", levelMax: "", powerMin: "", powerMax: "", rankMin: "", rankMax: "",
+  shiny: "", animated: "", priceSort: "", tokenIdSort: "", levelSort: "", scoreSort: "",
+  tierSort: "", powerSort: "", summitTop15: "", timeSort: "",
+  healthMin: "", healthMax: "", strengthMin: "", strengthMax: "", dexterityMin: "", dexterityMax: "",
+  vitalityMin: "", vitalityMax: "", intelligenceMin: "", intelligenceMax: "", wisdomMin: "", wisdomMax: "",
+  charismaMin: "", charismaMax: "", battleFilter: "",
+};
+
+/** Extract a trait value from metadata attributes array */
+function getAttr(metadata: Record<string, unknown> | null, traitType: string): string | undefined {
+  if (!metadata) return undefined;
+  const attrs = metadata.attributes;
+  if (!Array.isArray(attrs)) return undefined;
+  const attr = attrs.find(
+    (a: Record<string, unknown>) => String(a.trait_type ?? "").toLowerCase() === traitType.toLowerCase(),
+  );
+  return attr ? String((attr as Record<string, unknown>).value) : undefined;
+}
+
+/** Apply FilterState to a MarketplaceListing using its metadata attributes */
+function filterMarketplaceListing(listing: MarketplaceListing, filters: FilterState): boolean {
+  // Search
+  if (filters.search) {
+    const q = filters.search.toLowerCase();
+    const name = (listing.name || "").toLowerCase();
+    const tokenId = String(listing.tokenId);
+    const owner = listing.owner.toLowerCase();
+    let matches = name.includes(q) || tokenId.includes(q) || owner.includes(q);
+    if (!matches && listing.metadata) {
+      const attrs = listing.metadata.attributes;
+      if (Array.isArray(attrs)) {
+        matches = attrs.some(
+          (attr: Record<string, unknown>) => String(attr.value ?? "").toLowerCase().includes(q),
+        );
+      }
+    }
+    if (!matches) return false;
+  }
+
+  // Beast dropdown
+  if (filters.beast) {
+    const beast = getAttr(listing.metadata, "Beast");
+    if (!beast || beast.toLowerCase() !== filters.beast.toLowerCase()) return false;
+  }
+
+  // Type dropdown
+  if (filters.type) {
+    const type = getAttr(listing.metadata, "Type");
+    if (!type || type.toLowerCase() !== filters.type.toLowerCase()) return false;
+  }
+
+  // Tier dropdown
+  if (filters.tier) {
+    const tier = getAttr(listing.metadata, "Tier");
+    if (!tier || tier !== filters.tier) return false;
+  }
+
+  // Level range
+  const level = Number(getAttr(listing.metadata, "Level") ?? 0);
+  if (filters.levelMin && level < Number(filters.levelMin)) return false;
+  if (filters.levelMax && level > Number(filters.levelMax)) return false;
+
+  // Power range
+  const power = Number(getAttr(listing.metadata, "Power") ?? 0);
+  if (filters.powerMin && power < Number(filters.powerMin)) return false;
+  if (filters.powerMax && power > Number(filters.powerMax)) return false;
+
+  // Rank range
+  const rank = Number(getAttr(listing.metadata, "Rank") ?? 0);
+  if (filters.rankMin && rank < Number(filters.rankMin)) return false;
+  if (filters.rankMax && rank > Number(filters.rankMax)) return false;
+
+  // Shiny
+  if (filters.shiny) {
+    const shiny = getAttr(listing.metadata, "Shiny");
+    const isShiny = shiny === "1" || shiny === "true";
+    if (filters.shiny === "true" && !isShiny) return false;
+    if (filters.shiny === "false" && isShiny) return false;
+  }
+
+  // Animated
+  if (filters.animated) {
+    const animated = getAttr(listing.metadata, "Animated");
+    const isAnimated = animated === "1" || animated === "true";
+    if (filters.animated === "true" && !isAnimated) return false;
+    if (filters.animated === "false" && isAnimated) return false;
+  }
+
+  return true;
+}
+
+/** Sort listings by price (uses priceSort from FilterState) */
+function sortListings(items: MarketplaceListing[], priceSort: string): MarketplaceListing[] {
+  if (!priceSort) return items;
+  const sorted = [...items];
+  sorted.sort((a, b) => priceSort === "low-high" ? a.price - b.price : b.price - a.price);
+  return sorted;
+}
 
 export default function Marketplace() {
   const { address, account } = useAccount();
@@ -22,6 +125,8 @@ export default function Marketplace() {
   const { buyListing, bulkBuyListings, isBuying } = useMarketplaceBuy();
 
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(true);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
@@ -37,6 +142,17 @@ export default function Marketplace() {
     setSelectedCollection(collection);
     setCurrentPage(1);
     setSelectedKeys([]);
+    setFilters(EMPTY_FILTERS);
+  }, []);
+
+  const handleFiltersChange = useCallback((updates: FilterState | Partial<FilterState>) => {
+    const u = updates as Record<string, unknown>;
+    if (u && typeof u === "object" && "search" in u && "beast" in u && "type" in u) {
+      // Full state replacement (e.g. clear all)
+      setFilters(updates as FilterState);
+    } else {
+      setFilters((prev) => ({ ...prev, ...updates }));
+    }
   }, []);
 
   // Clear selection when listings change (e.g. after refresh)
@@ -59,24 +175,35 @@ export default function Marketplace() {
     );
   }, []);
 
-  const selectAll = useCallback(() => {
-    const keys = listings.slice(0, MAX_CART_SELECTION).map((l) => String(l.orderId));
-    setSelectedKeys(keys);
-  }, [listings]);
-
   const clearSelection = useCallback(() => {
     setSelectedKeys([]);
   }, []);
 
+  // Apply filters + sort
+  const filteredListings = useMemo(() => {
+    const filtered = listings.filter((l) => filterMarketplaceListing(l, filters));
+    return sortListings(filtered, filters.priceSort);
+  }, [listings, filters]);
+
+  const selectAll = useCallback(() => {
+    const keys = filteredListings.slice(0, MAX_CART_SELECTION).map((l) => String(l.orderId));
+    setSelectedKeys(keys);
+  }, [filteredListings]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(listings.length / GRID_PAGE_SIZE)),
-    [listings.length],
+    () => Math.max(1, Math.ceil(filteredListings.length / GRID_PAGE_SIZE)),
+    [filteredListings.length],
   );
 
   const visibleListings = useMemo(() => {
     const start = (currentPage - 1) * GRID_PAGE_SIZE;
-    return listings.slice(start, start + GRID_PAGE_SIZE);
-  }, [listings, currentPage]);
+    return filteredListings.slice(start, start + GRID_PAGE_SIZE);
+  }, [filteredListings, currentPage]);
 
   const handleBuy = useCallback(
     async (listing: MarketplaceListing) => {
@@ -150,6 +277,14 @@ export default function Marketplace() {
       );
     }
 
+    if (filteredListings.length === 0) {
+      return (
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
+          <p className="text-[rgb(186,255,188)]/70">No listings match your filters. Try adjusting or clearing filters.</p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -181,16 +316,22 @@ export default function Marketplace() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
-      {/* Mobile: collection selector + toolbar stacked; Desktop: label + toolbar in row */}
+      {/* Mobile: collection selector + filters stacked; Desktop: label + toolbar in row */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-        {/* Mobile collection selector */}
-        <div className="md:hidden">
+        {/* Mobile collection selector + filters */}
+        <div className="md:hidden flex flex-col gap-2">
           <CollectionSelector
             selectedCollection={selectedCollection}
             onCollectionChange={handleCollectionChange}
           />
+          <Filters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            collection={selectedCollection}
+            compact
+          />
         </div>
-        {/* Desktop: just the label (selector is in sidebar) */}
+        {/* Desktop: just the label (selector + filters are in sidebar) */}
         <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
           Collection
         </span>
@@ -257,6 +398,14 @@ export default function Marketplace() {
             selectedCollection={selectedCollection}
             onCollectionChange={handleCollectionChange}
           />
+          <Filters
+            filters={filters}
+            onFiltersChange={handleFiltersChange}
+            collection={selectedCollection}
+            isExpanded={filtersOpen}
+            onToggleExpanded={setFiltersOpen}
+            compact
+          />
           <div className="mt-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-3">
             <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 mb-1">
               Arcade Orderbook
@@ -321,9 +470,22 @@ function ListingCard({
   const [imageError, setImageError] = useState(false);
   const isBeasts = listing.collectionType === "beasts";
 
-  const displayName =
-    listing.name ||
-    (listing.metadata?.name ? String(listing.metadata.name) : `#${listing.tokenId}`);
+  // Resolve display name: prefer beast name from attributes, then metadata name, then tokenId
+  const displayName = useMemo(() => {
+    if (listing.metadata) {
+      const attrs = listing.metadata.attributes;
+      if (Array.isArray(attrs)) {
+        const beastAttr = attrs.find(
+          (a: Record<string, unknown>) =>
+            String(a.trait_type ?? "").toLowerCase() === "beast",
+        );
+        if (beastAttr) return String(beastAttr.value);
+      }
+    }
+    if (listing.name && !listing.name.startsWith("#")) return listing.name;
+    if (listing.metadata?.name) return String(listing.metadata.name);
+    return `#${listing.tokenId}`;
+  }, [listing]);
 
   return (
     <article
@@ -400,7 +562,7 @@ function ListingCard({
         </p>
       </div>
 
-      {/* Buy button with price */}
+      {/* Buy button with price — matches auction card layout */}
       <button
         type="button"
         onClick={(e) => {
@@ -408,18 +570,17 @@ function ListingCard({
           onBuy();
         }}
         disabled={isBuying}
-        className="mt-auto flex flex-col items-center justify-center w-full px-2 sm:px-3 py-2 sm:py-2.5 border-t border-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col items-center justify-center w-full rounded-b-xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed px-2"
         title="Buy this NFT"
       >
-        <span className="text-[9px] sm:text-[10px] uppercase text-[rgb(186,255,188)]/70">
+        <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
           {isBuying ? "Buying..." : "Buy"}
         </span>
-        <span className="text-[10px] sm:text-xs font-orbitron font-bold truncate max-w-full">
-          <ReservePriceDisplay
-            value={listing.price}
-            symbol={listing.currencySymbol}
-            symbolClassName="text-[0.9em] opacity-90"
-          />
+        <span className="text-sm sm:text-base font-orbitron font-bold">
+          {getReservePriceParts(listing.price, listing.currencySymbol).amount}
+        </span>
+        <span className="text-[9px] uppercase text-[rgb(186,255,188)]/50">
+          {getReservePriceParts(listing.price, listing.currencySymbol).symbol}
         </span>
       </button>
     </article>
