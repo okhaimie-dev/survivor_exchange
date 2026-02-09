@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAccount } from "@starknet-react/core";
-import { CollectionSelector, Pagination, ReservePriceDisplay } from "./ui";
+import { Pagination, ReservePriceDisplay } from "./ui";
 import { Filters, type FilterState } from "./filters";
 import { BidsSkeleton } from "./skeletons";
 import { useMarketplaceListings, type MarketplaceListing } from "../hooks/data/use-marketplace-listings";
@@ -100,7 +100,7 @@ function sortListings(items: MarketplaceListing[], priceSort: string): Marketpla
 export default function Marketplace() {
   const { address, account } = useAccount();
   const { openWalletModal } = useWalletModal();
-  const [selectedCollection, setSelectedCollection] = useState<CollectionType>("beasts");
+  const selectedCollection: CollectionType = "beasts";
   const [currentPage, setCurrentPage] = useState(1);
 
   const { listings, loading, error, refresh } = useMarketplaceListings(selectedCollection);
@@ -118,8 +118,7 @@ export default function Marketplace() {
     try { await refresh(); } finally { setIsRefreshing(false); }
   }, [refresh]);
 
-  const handleCollectionChange = useCallback((collection: CollectionType) => {
-    setSelectedCollection(collection);
+  const resetAll = useCallback(() => {
     setCurrentPage(1);
     setSelectedKeys([]);
     setFilters(EMPTY_FILTERS);
@@ -313,12 +312,8 @@ export default function Marketplace() {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
       {/* Top toolbar row */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-        {/* Mobile: collection selector + filters */}
+        {/* Mobile: filters */}
         <div className="md:hidden flex flex-col gap-2">
-          <CollectionSelector
-            selectedCollection={selectedCollection}
-            onCollectionChange={handleCollectionChange}
-          />
           <Filters
             filters={filters}
             onFiltersChange={handleFiltersChange}
@@ -326,12 +321,9 @@ export default function Marketplace() {
             compact
           />
         </div>
-        <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
-          Collection
-        </span>
         {/* Sweep + Clear + Refresh */}
         {!loading && !error && listings.length > 0 && (
-          <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
+          <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end md:ml-auto">
             {/* Sweep toggle */}
             <button
               type="button"
@@ -416,10 +408,6 @@ export default function Marketplace() {
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
         {/* Desktop sidebar */}
         <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
-          <CollectionSelector
-            selectedCollection={selectedCollection}
-            onCollectionChange={handleCollectionChange}
-          />
           <Filters
             filters={filters}
             onFiltersChange={handleFiltersChange}
