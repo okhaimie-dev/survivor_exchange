@@ -54,7 +54,7 @@ export interface MarketplaceListing {
   name: string;
 }
 
-function getCurrencyInfo(currencyAddress: string) {
+export function getCurrencyInfo(currencyAddress: string) {
   const normalized = normalizeContractAddress(currencyAddress).toLowerCase();
   const token = SUPPORTED_TOKENS.find(
     (t) => normalizeContractAddress(t.address).toLowerCase() === normalized,
@@ -66,7 +66,7 @@ function getCurrencyInfo(currencyAddress: string) {
 }
 
 /** Build the beast image URL from the pg-mainnet-10 Torii project */
-function getBeastImageUrl(tokenId: string): string {
+export function getBeastImageUrl(tokenId: string): string {
   const paddedContract = addAddressPadding(BEASTS_NFT_CONTRACT_ADDRESS);
   const paddedTokenId = addAddressPadding(`0x${BigInt(tokenId).toString(16)}`);
   return `${BEASTS_TORII_BASE_URL}/static/${paddedContract}/${paddedTokenId}/image`;

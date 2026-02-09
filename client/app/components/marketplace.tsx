@@ -6,11 +6,24 @@ import { useAccount } from "@starknet-react/core";
 import { Pagination, ReservePriceDisplay } from "./ui";
 import { Filters, type FilterState } from "./filters";
 import { BidsSkeleton } from "./skeletons";
+import { MarketplaceStats } from "./marketplace-stats";
+import { MarketplaceActivity } from "./marketplace-activity";
 import { useMarketplaceListings, type MarketplaceListing } from "../hooks/data/use-marketplace-listings";
+import { useMarketplaceActivity } from "../hooks/data/use-marketplace-activity";
 import { useMarketplaceBuy, type MarketplaceBuyParams } from "../hooks/auction/use-marketplace-buy";
 import { useWalletModal } from "../providers/wallet-modal-provider";
-import { type CollectionType, GRID_PAGE_SIZE } from "../lib/constants";
+import {
+  type CollectionType,
+  GRID_PAGE_SIZE,
+  BEASTS_NFT_CONTRACT_ADDRESS,
+  ADVENTURER_NFT_CONTRACT_ADDRESS,
+} from "../lib/constants";
 import { getReservePriceParts } from "../lib/utils";
+
+const COLLECTION_ADDRESSES: Record<CollectionType, string> = {
+  beasts: BEASTS_NFT_CONTRACT_ADDRESS,
+  adventurers: ADVENTURER_NFT_CONTRACT_ADDRESS,
+};
 
 const MAX_SWEEP = 30;
 
@@ -103,7 +116,10 @@ export default function Marketplace() {
   const [selectedCollection, setSelectedCollection] = useState<CollectionType>("beasts");
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [subTab, setSubTab] = useState<"listings" | "activity">("listings");
+
   const { listings, loading, error, refresh } = useMarketplaceListings(selectedCollection);
+  const { activities, loading: activityLoading } = useMarketplaceActivity(COLLECTION_ADDRESSES[selectedCollection]);
   const { buyListing, bulkBuyListings, isBuying } = useMarketplaceBuy();
 
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -126,6 +142,7 @@ export default function Marketplace() {
     setSweepOpen(false);
     setSweepCount(0);
     setSweepCurrency(null);
+    setSubTab("listings");
   }, []);
 
   const handleFiltersChange = useCallback((updates: FilterState | Partial<FilterState>) => {
@@ -485,48 +502,83 @@ export default function Marketplace() {
         )}
       </div>
 
-      {/* Sweep panel — inline collapsible bar */}
-      {sweepOpen && sweepMax > 0 && (
-        <SweepPanel
-          sweepCount={sweepCount}
-          sweepMax={sweepMax}
-          onSweepCountChange={setSweepCount}
-          totals={sweepTotals}
-          onSweep={handleBulkBuy}
-          isBuying={isBuying}
-          currencies={currencyGroups}
-          selectedCurrency={sweepCurrency}
-          onCurrencyChange={(currency: string) => {
-            setSweepCurrency(currency);
-            setSweepCount(0);
-            setSelectedKeys([]);
-          }}
-        />
+      {/* Stats bar */}
+      {!loading && !error && listings.length > 0 && (
+        <MarketplaceStats listings={listings} userAddress={address} />
       )}
 
-      {/* Main content row: Sidebar (desktop) + Cards grid */}
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
-        {/* Desktop sidebar */}
-        <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
-          <Filters
-            filters={filters}
-            onFiltersChange={handleFiltersChange}
-            collection={selectedCollection}
-            isExpanded={filtersOpen}
-            onToggleExpanded={setFiltersOpen}
-            compact
-          />
-          <div className="mt-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-3">
-            <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 mb-1">
-              Arcade Orderbook
-            </p>
-            <p className="text-[10px] text-[rgb(186,255,188)]/40 leading-relaxed">
-              Fixed-price listings from the shared Arcade marketplace. Listings here are also visible on Beast Dex and Cartridge Arcade.
-            </p>
+      {/* Sub-tabs: Listings | Activity */}
+      {!loading && !error && listings.length > 0 && (
+        <div className="flex gap-1 rounded-full border border-[rgb(50,255,52)]/20 bg-black/50 p-0.5 self-start">
+          {(["listings", "activity"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setSubTab(tab)}
+              className={`rounded-full px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] transition hover:cursor-pointer ${
+                subTab === tab
+                  ? "bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40"
+                  : "text-white/50 hover:text-white/70 border border-transparent"
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {subTab === "listings" ? (
+        <>
+          {/* Sweep panel — inline collapsible bar */}
+          {sweepOpen && sweepMax > 0 && (
+            <SweepPanel
+              sweepCount={sweepCount}
+              sweepMax={sweepMax}
+              onSweepCountChange={setSweepCount}
+              totals={sweepTotals}
+              onSweep={handleBulkBuy}
+              isBuying={isBuying}
+              currencies={currencyGroups}
+              selectedCurrency={sweepCurrency}
+              onCurrencyChange={(currency: string) => {
+                setSweepCurrency(currency);
+                setSweepCount(0);
+                setSelectedKeys([]);
+              }}
+            />
+          )}
+
+          {/* Main content row: Sidebar (desktop) + Cards grid */}
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
+            {/* Desktop sidebar */}
+            <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+              <Filters
+                filters={filters}
+                onFiltersChange={handleFiltersChange}
+                collection={selectedCollection}
+                isExpanded={filtersOpen}
+                onToggleExpanded={setFiltersOpen}
+                compact
+              />
+              <div className="mt-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-3">
+                <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 mb-1">
+                  Arcade Orderbook
+                </p>
+                <p className="text-[10px] text-[rgb(186,255,188)]/40 leading-relaxed">
+                  Fixed-price listings from the shared Arcade marketplace. Listings here are also visible on Beast Dex and Cartridge Arcade.
+                </p>
+              </div>
+            </aside>
+            <div className="min-w-0 flex-1 flex flex-col min-h-0">{renderContent()}</div>
           </div>
-        </aside>
-        <div className="min-w-0 flex-1 flex flex-col min-h-0">{renderContent()}</div>
-      </div>
+        </>
+      ) : (
+        <MarketplaceActivity
+          activities={activities}
+          loading={activityLoading}
+          collectionType={selectedCollection}
+        />
+      )}
 
       {/* Fixed buy button — bottom-right (only when manually selecting, not during sweep) */}
       {selectedKeys.length > 0 && !sweepOpen && (
