@@ -7,6 +7,7 @@ import type { CollectionType } from "../lib/constants";
 import { getBeastImageUrl } from "../hooks/data/use-marketplace-listings";
 import { getAdventurerImageUrl } from "../lib/utils/nft-formatters";
 import { formatRelativeTime, getReservePriceParts } from "../lib/utils";
+import AddressDisplay from "./ui/address-display";
 
 type ActivityFilter = "all" | "sale" | "listing";
 
@@ -14,12 +15,6 @@ interface MarketplaceActivityProps {
   activities: ActivityItem[];
   loading: boolean;
   collectionType: CollectionType;
-}
-
-function truncateAddr(addr: string): string {
-  if (!addr) return "";
-  if (addr.length <= 10) return addr;
-  return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 }
 
 function TokenImage({
@@ -186,11 +181,13 @@ export function MarketplaceActivity({
                           {priceParts.symbol}
                         </span>
                       </td>
-                      <td className="py-2.5 pr-3 text-[10px] text-[rgb(186,255,188)]/50 font-mono">
-                        {truncateAddr(item.seller)}
+                      <td className="py-2.5 pr-3 text-[10px] text-[rgb(186,255,188)]/50">
+                        <AddressDisplay address={item.seller} className="text-[10px] text-[rgb(186,255,188)]/50" />
                       </td>
-                      <td className="py-2.5 text-[10px] text-[rgb(186,255,188)]/50 font-mono">
-                        {item.buyer ? truncateAddr(item.buyer) : "--"}
+                      <td className="py-2.5 text-[10px] text-[rgb(186,255,188)]/50">
+                        {item.buyer ? (
+                          <AddressDisplay address={item.buyer} className="text-[10px] text-[rgb(186,255,188)]/50" />
+                        ) : "--"}
                       </td>
                     </tr>
                   );

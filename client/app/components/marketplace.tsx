@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAccount } from "@starknet-react/core";
 import { Pagination, ReservePriceDisplay } from "./ui";
+import AddressDisplay from "./ui/address-display";
 import { Filters, type FilterState } from "./filters";
 import { BidsSkeleton } from "./skeletons";
 import { MarketplaceStats } from "./marketplace-stats";
@@ -854,7 +855,7 @@ function ListingCard({
           {isBeasts ? displayName : `#${listing.tokenId}`}
         </h3>
         <p className="text-[8px] sm:text-[9px] text-center text-[rgb(186,255,188)]/40">
-          {listing.owner.slice(0, 6)}...{listing.owner.slice(-4)}
+          <AddressDisplay address={listing.owner} className="text-[8px] sm:text-[9px] text-[rgb(186,255,188)]/40" />
         </p>
       </div>
 
