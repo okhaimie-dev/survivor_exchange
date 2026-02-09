@@ -17,8 +17,7 @@ import {
   normalizeTokenId,
   normalizeContractAddress,
 } from "../../lib/utils/normalization";
-import { DEFAULT_PAGE_SIZE } from "../../lib/constants";
-import { useEternumListings } from "./use-eternum-listings";
+import { DEFAULT_PAGE_SIZE, VAULT_CONTRACT_ADDRESS } from "../../lib/constants";
 
 export type { AuctionWithNFTs };
 
@@ -30,16 +29,13 @@ export function useAuctions() {
   const [auctionsWithNFTs, setAuctionsWithNFTs] = useState<AuctionWithNFTs[]>(
     [],
   );
-  const [eternumAuctionsWithNFTs, setEternumAuctionsWithNFTs] = useState<AuctionWithNFTs[]>([]);
   const [isProcessingNFTs, setIsProcessingNFTs] = useState(false);
-  const [isProcessingEternumNFTs, setIsProcessingEternumNFTs] = useState(false);
   const hasInitialData = useRef(false);
   const isFetchingNFTs = useRef(false);
   const apolloClient = useApolloClient();
-  const { eternumAuctions, eternumItemsByAuction, loading: eternumLoading } = useEternumListings();
 
   const { data, loading, error, refetch } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
     errorPolicy: "all",
     notifyOnNetworkStatusChange: false,
   });
@@ -145,8 +141,8 @@ export function useAuctions() {
   }, [allOffers]);
 
   const allMergedAuctions = useMemo(() => {
-    return [...auctionsWithNFTs, ...eternumAuctionsWithNFTs];
-  }, [auctionsWithNFTs, eternumAuctionsWithNFTs]);
+    return auctionsWithNFTs;
+  }, [auctionsWithNFTs]);
 
   const paginatedAuctions = useMemo(() => {
     const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
@@ -159,20 +155,23 @@ export function useAuctions() {
 
   const getAuctionItems = useMemo(() => {
     return (auctionId: string): AuctionItem[] => {
-      return itemsByAuction.get(auctionId) ?? eternumItemsByAuction.get(auctionId) ?? [];
+      return itemsByAuction.get(auctionId) ?? [];
     };
-  }, [itemsByAuction, eternumItemsByAuction]);
+  }, [itemsByAuction]);
 
-  // Fetch all NFTs for a single seller (beasts + adventurers) - cache per seller, used for both collections
+  // Fetch all NFTs for a single address (beasts + adventurers) - cache per address, used for both collections
+  // skipCache: bypass module-level cache (used for vault whose contents change as auctions start/end)
   const fetchSellerNFTs = useCallback(
-    async (seller: string): Promise<FormattedNFT[]> => {
-      const cached = sellerNFTCache.get(seller);
-      if (cached) return cached;
+    async (seller: string, skipCache = false): Promise<FormattedNFT[]> => {
+      if (!skipCache) {
+        const cached = sellerNFTCache.get(seller);
+        if (cached) return cached;
+      }
 
       const { data: response } = await apolloClient.query<MyNFTsResponse>({
         query: MY_NFTS_QUERY,
         variables: { accountAddress: seller },
-        fetchPolicy: "cache-first",
+        fetchPolicy: skipCache ? "network-only" : "cache-first",
       });
 
       const rawNFTs: ERC721Token[] = (
@@ -231,8 +230,11 @@ export function useAuctions() {
       const auctionsWithNFTsData: AuctionWithNFTs[] = [];
       const uniqueSellers = [...auctionsBySeller.keys()];
       const sellerNFTsMap = new Map<string, FormattedNFT[]>();
-      const fetchResults = await Promise.all(
-        uniqueSellers.map(async (seller) => {
+
+      // Fetch seller NFTs + vault NFTs in parallel; active auction NFTs live in the vault
+      const vaultAddr = normalizeContractAddress(VAULT_CONTRACT_ADDRESS);
+      const fetchResults = await Promise.all([
+        ...uniqueSellers.map(async (seller) => {
           try {
             const nfts = await fetchSellerNFTs(seller);
             return { seller, nfts };
@@ -240,10 +242,19 @@ export function useAuctions() {
             return { seller, nfts: [] as FormattedNFT[] };
           }
         }),
-      );
+        (async () => {
+          try {
+            const nfts = await fetchSellerNFTs(vaultAddr, true);
+            return { seller: vaultAddr, nfts };
+          } catch {
+            return { seller: vaultAddr, nfts: [] as FormattedNFT[] };
+          }
+        })(),
+      ]);
       for (const { seller, nfts } of fetchResults) {
         sellerNFTsMap.set(seller, nfts);
       }
+      const vaultNFTs = sellerNFTsMap.get(vaultAddr) ?? [];
 
       for (const [seller, sellerAuctions] of auctionsBySeller) {
         const allSellerNFTs = sellerNFTsMap.get(seller) ?? [];
@@ -255,17 +266,44 @@ export function useAuctions() {
             items.length > 0 && items[0].contract_address
               ? normalizeContractAddress(items[0].contract_address).toLowerCase()
               : "";
+
+          // Merge seller NFTs + vault NFTs (active auctions have NFTs in the vault)
+          const combinedNFTs = [...allSellerNFTs, ...vaultNFTs];
           const nftsForContract = itemContract
-            ? allSellerNFTs.filter(
+            ? combinedNFTs.filter(
                 (nft) =>
                   normalizeContractAddress(nft.contractAddress || "").toLowerCase() === itemContract,
               )
-            : allSellerNFTs;
+            : combinedNFTs;
           const matchedNFTs = nftsForContract.filter((nft) =>
             items.some(
               (item) => nft.tokenId === normalizeTokenId(item.token_id),
             ),
           );
+
+          // Create placeholder NFTs for items not found via tokenBalances
+          // (e.g. active auctions where NFTs are held in the vault contract).
+          // buy.tsx enrichment (beast-metadata / adventurer-attributes APIs) fills in real metadata.
+          const matchedTokenIds = new Set(matchedNFTs.map((n) => n.tokenId));
+          for (const item of items) {
+            const tid = normalizeTokenId(item.token_id);
+            if (!matchedTokenIds.has(tid)) {
+              matchedNFTs.push({
+                metadataName: "",
+                metadataDescription: "",
+                contractAddress: item.contract_address
+                  ? normalizeContractAddress(item.contract_address)
+                  : "",
+                imagePath: "",
+                metadata: null,
+                attributes: [],
+                name: "",
+                symbol: "",
+                tokenId: tid,
+              });
+            }
+          }
+
           const bids = bidsByAuction.get(auctionIdStr) || [];
           const offers = offersByAuction.get(auctionIdStr) || [];
           const executedAt =
@@ -316,92 +354,8 @@ export function useAuctions() {
     fetchSellerNFTs,
   ]);
 
-  // Enrich Eternum (Realms marketplace) auctions with NFTs via tokenBalances(owner); fetch all sellers in parallel
-  useEffect(() => {
-    if (eternumAuctions.length === 0) {
-      setEternumAuctionsWithNFTs([]);
-      setIsProcessingEternumNFTs(false);
-      return;
-    }
-    let cancelled = false;
-    setIsProcessingEternumNFTs(true);
-    (async () => {
-      const bySeller = new Map<string, typeof eternumAuctions>();
-      for (const auction of eternumAuctions) {
-        const seller = auction.seller ? normalizeContractAddress(auction.seller) : "";
-        if (!seller) continue;
-        const existing = bySeller.get(seller) || [];
-        existing.push(auction);
-        bySeller.set(seller, existing);
-      }
-      const uniqueSellers = [...bySeller.keys()];
-      const fetchResults = await Promise.all(
-        uniqueSellers.map(async (seller) => {
-          if (cancelled) return { seller, nfts: [] as FormattedNFT[] };
-          try {
-            const nfts = await fetchSellerNFTs(seller);
-            return { seller, nfts };
-          } catch {
-            return { seller, nfts: [] as FormattedNFT[] };
-          }
-        }),
-      );
-      const sellerNFTsMap = new Map<string, FormattedNFT[]>();
-      for (const { seller, nfts } of fetchResults) {
-        sellerNFTsMap.set(seller, nfts);
-      }
-      const enrichedById = new Map<string, AuctionWithNFTs>();
-      for (const [seller, sellerAuctions] of bySeller) {
-        if (cancelled) break;
-        const sellerNFTs = sellerNFTsMap.get(seller) ?? [];
-        for (const auction of sellerAuctions) {
-          const auctionIdStr = String(auction.auction_id);
-          const items = eternumItemsByAuction.get(auctionIdStr) || [];
-          const itemContract =
-            items.length > 0 && items[0].contract_address
-              ? normalizeContractAddress(items[0].contract_address).toLowerCase()
-              : "";
-          const nftsForContract = itemContract
-            ? sellerNFTs.filter(
-                (nft) =>
-                  normalizeContractAddress(nft.contractAddress || "").toLowerCase() === itemContract,
-              )
-            : sellerNFTs;
-          const matchedNFTs = nftsForContract.filter((nft) =>
-            items.some(
-              (item) => nft.tokenId === normalizeTokenId(item.token_id),
-            ),
-          );
-          enrichedById.set(auctionIdStr, {
-            ...auction,
-            nfts: matchedNFTs,
-            bids: [],
-            offers: [],
-          });
-        }
-      }
-      if (!cancelled) {
-        const result = eternumAuctions
-          .map((a) => enrichedById.get(String(a.auction_id)))
-          .filter((a): a is AuctionWithNFTs => a != null);
-        setEternumAuctionsWithNFTs(result);
-      }
-      if (!cancelled) setIsProcessingEternumNFTs(false);
-    })();
-    return () => {
-      cancelled = true;
-      setIsProcessingEternumNFTs(false);
-    };
-  }, [eternumAuctions, eternumItemsByAuction, fetchSellerNFTs]);
-
-  // Show loading while any source is still fetching or processing (single bar); avoid showing loading forever when both return empty
-  const isEternumEnriching =
-    eternumAuctions.length > 0 && eternumAuctionsWithNFTs.length === 0;
   const isLoading =
-    (!hasInitialData.current && (loading || isProcessingNFTs)) ||
-    eternumLoading ||
-    isProcessingEternumNFTs ||
-    isEternumEnriching;
+    !hasInitialData.current && (loading || isProcessingNFTs);
 
   return {
     auctions: paginatedAuctions,

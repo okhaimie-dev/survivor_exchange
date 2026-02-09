@@ -19,9 +19,6 @@ export interface AuctionWithNFTs extends Auction {
   executedAt?: string;
 }
 
-/** Listing source: Survivor Exchange (auctions) vs Eternum (fixed-price, redirect to Empire). */
-export type ListingSource = "survivor_exchange" | "eternum";
-
 export interface Auction {
   auction_id: string;
   current_bid: string;
@@ -33,8 +30,7 @@ export interface Auction {
   seller: string;
   starting_price: string;
   status: string;
-  /** When set to "eternum", buy/bid in modals redirects to Empire. */
-  source?: ListingSource;
+  source?: string;
 }
 
 export interface Bid {

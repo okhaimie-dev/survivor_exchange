@@ -5,14 +5,6 @@ export const BEASTS_GRAPHQL_ENDPOINT =
 
 export const IMAGE_BASE_URL = "https://api.cartridge.gg/x/lax/torii";
 
-/** Eternum marketplace (fixed-price orders); same Adventurers/Beasts collections. */
-export const ETERNUM_MARKETPLACE_GRAPHQL =
-  "https://api.cartridge.gg/x/eternum-marketplace-mainnet19/torii/graphql";
-
-/** Empire trade pages: redirect Eternum listings to buy there. */
-export const EMPIRE_TRADE_ADVENTURERS_URL = "https://empire.realms.world/trade/adventurers";
-export const EMPIRE_TRADE_BEASTS_URL = "https://empire.realms.world/trade/beasts";
-
 export const MAINNET_RPC_URL = "https://api.cartridge.gg/x/starknet/mainnet";
 export const SEPOLIA_RPC_URL = "https://api.cartridge.gg/x/starknet/sepolia";
 

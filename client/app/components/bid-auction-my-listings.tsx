@@ -5,6 +5,7 @@ import Navigation from "./layout/navigation";
 import Auction from "./auction";
 import Buy from "./buy";
 import MyListings from "./my-listings";
+import Marketplace from "./marketplace";
 import type { FormattedNFT, AuctionItem } from "../lib/types";
 import { type AuctionWithNFTs, type FormattedListing } from "../hooks";
 
@@ -30,9 +31,9 @@ interface BidAuctionMyListingsProps {
     walletOverride?: string;
 }
 
-export default function BidAuctionMyListingsRent({ 
-    nfts, 
-    loading, 
+export default function BidAuctionMyListingsRent({
+    nfts,
+    loading,
     error,
     auctions,
     allAuctions,
@@ -50,10 +51,10 @@ export default function BidAuctionMyListingsRent({
     token,
     walletOverride
 }: BidAuctionMyListingsProps) {
-    const [activeTab, setActiveTab] = useState<"buy" | "sell" | "my-listings">("buy");
+    const [activeTab, setActiveTab] = useState<"buy" | "sell" | "my-listings" | "marketplace">("buy");
     return (
         <div className="flex flex-1 flex-col w-full max-w-6xl mx-auto px-4 md:px-6 min-w-0">
-            <div className="flex flex-col items-center justify-center shrink-0 pt-4 md:pt-6 mb-6">
+            <div className="flex flex-col items-center justify-center shrink-0 pt-2 md:pt-3 mb-4">
                 <Navigation activeTab={activeTab} onTabChange={setActiveTab} />
             </div>
             {/* Render all tabs so they stay mounted and cached; hide inactive to avoid refetch on navigation */}
@@ -86,6 +87,9 @@ export default function BidAuctionMyListingsRent({
                             onRefresh={refetchListings}
                         />
                     </div>
+                </div>
+                <div className={activeTab !== "marketplace" ? "hidden" : "contents"} aria-hidden={activeTab !== "marketplace"}>
+                    <Marketplace key="marketplace-tab" />
                 </div>
             </div>
         </div>

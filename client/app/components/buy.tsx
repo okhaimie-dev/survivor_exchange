@@ -9,7 +9,7 @@ import { BidsSkeleton } from "./skeletons";
 import { BeastDetailModal, AdventurerDetailModal } from "./modals";
 import type { FormattedNFT, AuctionItem, Collection } from "../lib/types";
 import { AuctionWithNFTs, useBidActions } from "../hooks";
-import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress, LORDS_ADDRESS } from "../lib/constants";
+import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress } from "../lib/constants";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
 import { formatUSD, parseAmount, parseHexOrDecimal } from "../lib/utils";
 import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatBounds, type AdventurerStatBounds } from "../lib/filter-utils";
@@ -45,8 +45,6 @@ interface NFTWithAuction extends FormattedNFT {
   packNfts?: FormattedNFT[];
   reserveTokenSymbol?: string;
   reserveTokenAddress?: string;
-  /** Listing source for modal (e.g. eternum → "Buy on Realms") */
-  listingSource?: "survivor_exchange" | "eternum";
 }
 
 export default function Buy({
@@ -75,7 +73,7 @@ export default function Buy({
   const [isLoadingGameOver, setIsLoadingGameOver] = useState(false);
   const gameOverFetchRef = useRef(0);
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
-  // Eternum beasts: fetch metadata by contract+tokenId so grid shows attributes/image
+  // Beasts: fetch metadata by contract+tokenId for items missing attributes/image
   const [beastMetadataByKey, setBeastMetadataByKey] = useState<Record<string, FormattedNFT | null>>({});
   // Shared adventurer attributes (batch + card fetches) so grid filtering sees Level, Health, stats. Fallback to local state when provider is missing (e.g. SSR).
   const adventurerAttrs = useAdventurerAttributesOptional();
@@ -180,23 +178,17 @@ export default function Buy({
       if (selectedCollection === "adventurers" && !isAdventurerAuction) continue;
       if (selectedCollection === "beasts" && !isBeastAuction) continue;
 
-      const isEternum = auction.source === "eternum";
       const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
       const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-      let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-      // Eternum returns LORDS prices in 18-decimal raw; override to 18 so display is correct (app constants use 6 for other contexts)
-      if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
-        reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
-      }
-      const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
+      const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+      const decimals = reserveToken?.decimals ?? 6;
       const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
       const startingPrice = parseAmount(startingPriceRaw, decimals);
       const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
       const highestBid = rawBid != null && rawBid > 0 ? rawBid : undefined;
       const price = (highestBid != null && highestBid > 0) ? highestBid : startingPrice;
-      const reserveTokenSymbol = isEternum ? (reserveToken?.symbol ?? "Amount") : "USDC";
+      const reserveTokenSymbol = "USDC";
       const reserveTokenAddress = reserveToken?.address;
-      const listingSource = (auction as { source?: "survivor_exchange" | "eternum" }).source ?? "survivor_exchange";
 
       // If pack (multiple items), show one card per auction with superposition
       if (items.length > 1) {
@@ -223,7 +215,6 @@ export default function Buy({
             packNfts: packNftsList,
             reserveTokenSymbol,
             reserveTokenAddress,
-            listingSource,
           });
         }
       } else if (items.length === 1) {
@@ -232,25 +223,9 @@ export default function Buy({
         const nft = auction.nfts?.find(n =>
           normalizeTokenId(n.tokenId) === normalizeTokenId(item.token_id)
         );
-        // Eternum listings have auction.nfts = []; build synthetic NFT from item so the card shows
-        const syntheticNft: FormattedNFT | null =
-          auction.source === "eternum" && !nft
-            ? {
-                metadataName: "",
-                metadataDescription: "",
-                contractAddress: normalizeContractAddress(item.contract_address || ""),
-                imagePath: "",
-                metadata: null,
-                attributes: [],
-                name: "",
-                symbol: "",
-                tokenId: normalizeTokenId(item.token_id),
-              }
-            : null;
-        const displayNft = nft ?? syntheticNft;
-        if (displayNft) {
+        if (nft) {
           nfts.push({
-            ...displayNft,
+            ...nft,
             auctionId: auctionIdStr,
             auctionName: auction.name,
             price,
@@ -261,7 +236,6 @@ export default function Buy({
             isPack: false,
             reserveTokenSymbol,
             reserveTokenAddress,
-            listingSource,
           });
         }
       }
@@ -270,17 +244,24 @@ export default function Buy({
     return nfts;
   }, [auctions, getAuctionItems, selectedCollection]);
 
-  // Eternum beasts: items that need metadata (empty attributes = synthetic from Eternum)
+  // Beasts: items that need metadata (empty attributes) — includes pack NFTs
   const beastMetadataItemsToFetch = useMemo(() => {
     if (selectedCollection !== "beasts") return [];
+    const seen = new Set<string>();
     const items: Array<{ contractAddress: string; tokenId: string }> = [];
+    const maybeAdd = (contractAddress: string, tokenId: string, attrs?: unknown[]) => {
+      if (!contractAddress || !tokenId || attrs?.length) return;
+      const key = `${normalizeContractAddress(contractAddress)}:${normalizeTokenId(tokenId)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      items.push({ contractAddress: normalizeContractAddress(contractAddress), tokenId });
+    };
     for (const nft of allNFTsWithAuction) {
-      const hasNoMetadata = !nft.attributes?.length && nft.contractAddress && nft.tokenId;
-      if (hasNoMetadata) {
-        items.push({
-          contractAddress: normalizeContractAddress(nft.contractAddress),
-          tokenId: nft.tokenId,
-        });
+      maybeAdd(nft.contractAddress, nft.tokenId, nft.attributes);
+      if (nft.isPack && nft.packNfts?.length) {
+        for (const p of nft.packNfts) {
+          maybeAdd(p.contractAddress, p.tokenId, p.attributes);
+        }
       }
     }
     return items;
@@ -471,7 +452,7 @@ export default function Buy({
   }, [selectedCollection]);
 
   // Merge fetched attributes into NFT list so filterNFT (Level, Health, stats) sees them.
-  // Adventurers: API-fetched attributes. Beasts: Eternum listings get metadata from beast-metadata API (contract+tokenId).
+  // Adventurers: API-fetched attributes. Beasts: metadata from beast-metadata API (contract+tokenId).
   const nftsWithAttributes = useMemo(() => {
     if (selectedCollection === "adventurers") {
       return allNFTsWithAuction.map((nft) => {
@@ -489,8 +470,17 @@ export default function Buy({
       return allNFTsWithAuction.map((nft) => {
         const key = `${normalizeContractAddress(nft.contractAddress)}:${normalizeTokenId(nft.tokenId)}`;
         const meta = beastMetadataByKey[key];
-        if (meta) return { ...nft, ...meta };
-        return nft;
+        const enriched = meta ? { ...nft, ...meta } : nft;
+        // Also enrich pack NFTs so detail modal shows proper metadata
+        if (enriched.isPack && enriched.packNfts?.length) {
+          const enrichedPack = enriched.packNfts.map((p: FormattedNFT) => {
+            const pk = `${normalizeContractAddress(p.contractAddress)}:${normalizeTokenId(p.tokenId)}`;
+            const pm = beastMetadataByKey[pk];
+            return pm ? { ...p, ...pm } : p;
+          });
+          return { ...enriched, packNfts: enrichedPack };
+        }
+        return enriched;
       });
     }
     return allNFTsWithAuction;
@@ -724,14 +714,10 @@ export default function Buy({
     if (!modalAuctionId) return undefined;
     const auction = auctions.find((a) => String(a.auction_id) === modalAuctionId);
     if (!auction) return undefined;
-    const isEternum = auction.source === "eternum";
     const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
     const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-    let reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-    if (isEternum && feeToken && normalizeContractAddress(LORDS_ADDRESS).toLowerCase() === feeToken.toLowerCase()) {
-      reserveToken = { ...(reserveToken ?? { address: LORDS_ADDRESS, symbol: "LORDS", name: "Lords", decimals: 18 }), decimals: 18 };
-    }
-    const decimals = isEternum ? (reserveToken?.decimals ?? 18) : (reserveToken?.decimals ?? 6);
+    const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
+    const decimals = reserveToken?.decimals ?? 6;
     const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
     const startingPrice = parseAmount(startingPriceRaw, decimals);
     const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
@@ -984,73 +970,8 @@ export default function Buy({
 
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
-        <div className="flex flex-wrap gap-2 mb-4 items-center shrink-0">
-          <button
-            type="button"
-            onClick={selectAll}
-            className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
-          >
-            Select All ({Math.min(filteredNFTs.length, MAX_AUCTION_NFT_SELECTION)} max)
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={selectedKeys.length === 0}
-            className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
-              selectedKeys.length > 0
-                ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
-                : "border-white/20 text-white/30"
-            }`}
-          >
-            Clear
-          </button>
-          <CustomDropdown
-            id="sort-buy"
-            value={sortDropdownValue}
-            onChange={setSortFromDropdown}
-            options={
-              selectedCollection === "beasts"
-                ? [
-                    { value: "price-high-low", label: "Price ↓" },
-                    { value: "price-low-high", label: "Price ↑" },
-                    { value: "time-ending-soon", label: "Ending soon" },
-                    { value: "time-newest", label: "Newest" },
-                    { value: "level-low-high", label: "Level ↑" },
-                    { value: "level-high-low", label: "Level ↓" },
-                    { value: "tier-low-high", label: "Tier ↑" },
-                    { value: "tier-high-low", label: "Tier ↓" },
-                    { value: "power-low-high", label: "Power ↑" },
-                    { value: "power-high-low", label: "Power ↓" },
-                    { value: "tokenId-low-high", label: "Token ID ↑" },
-                    { value: "tokenId-high-low", label: "Token ID ↓" },
-                  ]
-                : [
-                    { value: "price-high-low", label: "Price ↓" },
-                    { value: "price-low-high", label: "Price ↑" },
-                    { value: "time-ending-soon", label: "Ending soon" },
-                    { value: "time-newest", label: "Newest" },
-                    { value: "level-low-high", label: "Level ↑" },
-                    { value: "level-high-low", label: "Level ↓" },
-                    { value: "score-low-high", label: "Score ↑" },
-                    { value: "score-high-low", label: "Score ↓" },
-                    { value: "tokenId-low-high", label: "Token ID ↑" },
-                    { value: "tokenId-high-low", label: "Token ID ↓" },
-                  ]
-            }
-            variant="bar"
-          />
-          {selectedKeys.length > 0 && (
-            <button
-              type="button"
-              onClick={openBulkBuyModal}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 px-5 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/30 hover:cursor-pointer"
-            >
-              Buy {selectedKeys.length} {selectedCollection === "adventurers" ? "Adventurers" : "Beasts"}
-            </button>
-          )}
-        </div>
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div key={`${filteredNFTs.length}-${gridCurrentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+          <div key={`${filteredNFTs.length}-${gridCurrentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
               const key = itemKey(nft);
               if (nft.isPack && nft.packNfts?.length) {
@@ -1108,12 +1029,150 @@ export default function Buy({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 min-h-[70vh]">
-      <div className="flex gap-6 min-h-[60vh] min-w-0">
-        <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
+      {/* Mobile: Collection selector + action bar stacked; Desktop: COLLECTION label + action bar in row */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
+        {/* Mobile collection selector */}
+        <div className="md:hidden">
           <CollectionSelector
             selectedCollection={selectedCollection}
             onCollectionChange={setSelectedCollection}
+          />
+        </div>
+        {/* Desktop: just the label (selector is in sidebar) */}
+        <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
+          Collection
+        </span>
+        {!effectiveLoading && !error && filteredNFTs.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+              Select All ({Math.min(filteredNFTs.length, MAX_AUCTION_NFT_SELECTION)} max)
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedKeys.length === 0}
+              className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
+                selectedKeys.length > 0
+                  ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
+                  : "border-white/20 text-white/30"
+              }`}
+            >
+              Clear
+            </button>
+            <CustomDropdown
+              id="sort-buy"
+              value={sortDropdownValue}
+              onChange={setSortFromDropdown}
+              options={
+                selectedCollection === "beasts"
+                  ? [
+                      { value: "price-high-low", label: "Price ↓" },
+                      { value: "price-low-high", label: "Price ↑" },
+                      { value: "time-ending-soon", label: "Ending soon" },
+                      { value: "time-newest", label: "Newest" },
+                      { value: "level-low-high", label: "Level ↑" },
+                      { value: "level-high-low", label: "Level ↓" },
+                      { value: "tier-low-high", label: "Tier ↑" },
+                      { value: "tier-high-low", label: "Tier ↓" },
+                      { value: "power-low-high", label: "Power ↑" },
+                      { value: "power-high-low", label: "Power ↓" },
+                      { value: "tokenId-low-high", label: "Token ID ↑" },
+                      { value: "tokenId-high-low", label: "Token ID ↓" },
+                    ]
+                  : [
+                      { value: "price-high-low", label: "Price ↓" },
+                      { value: "price-low-high", label: "Price ↑" },
+                      { value: "time-ending-soon", label: "Ending soon" },
+                      { value: "time-newest", label: "Newest" },
+                      { value: "level-low-high", label: "Level ↑" },
+                      { value: "level-high-low", label: "Level ↓" },
+                      { value: "score-low-high", label: "Score ↑" },
+                      { value: "score-high-low", label: "Score ↓" },
+                      { value: "tokenId-low-high", label: "Token ID ↑" },
+                      { value: "tokenId-high-low", label: "Token ID ↓" },
+                    ]
+              }
+              variant="bar"
+            />
+            {selectedKeys.length > 0 && (
+              <button
+                type="button"
+                onClick={openBulkBuyModal}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 px-5 py-2.5 text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/30 hover:cursor-pointer"
+              >
+                Buy {selectedKeys.length} {selectedCollection === "adventurers" ? "Adventurers" : "Beasts"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      {/* Main content row: Sidebar filters (desktop) + Cards grid */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
+        {/* Mobile: quick filters inline */}
+        <div className="flex md:hidden flex-wrap gap-2 items-center">
+          {selectedCollection === "adventurers" && (
+            <>
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={showOnlyAlive}
+                  onChange={(e) => setShowOnlyAlive(e.target.checked)}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Alive only
+                </span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={filters.battleFilter === "out"}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, battleFilter: e.target.checked ? "out" : "" }))}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Not in battle
+                </span>
+              </label>
+            </>
+          )}
+          {selectedCollection === "beasts" && (
+            <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+              <input
+                type="checkbox"
+                checked={excludeExpired}
+                onChange={(e) => setExcludeExpired(e.target.checked)}
+                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+              />
+              <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                Exclude expired
+              </span>
+            </label>
+          )}
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[10px] font-orbitron uppercase tracking-[0.12em] text-[rgb(50,255,52)]"
+          >
+            Filters
+            {Object.values(filters).filter((v) => v !== "").length > 0 && (
+              <span className="rounded-full bg-[rgb(50,255,52)] min-w-[14px] px-1 py-0.5 text-[9px] text-black font-bold">
+                {Object.values(filters).filter((v) => v !== "").length}
+              </span>
+            )}
+          </button>
+        </div>
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+          <CollectionSelector
+            selectedCollection={selectedCollection}
+            onCollectionChange={setSelectedCollection}
+            hideLabel
           />
           {selectedCollection === "adventurers" && (
             <div className="flex flex-col gap-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-2" role="group" aria-label="Adventurer filters">
@@ -1216,7 +1275,9 @@ export default function Buy({
             compact
           />
         </aside>
-        <div className="min-w-0 flex-1 flex flex-col min-h-0">{renderContent()}</div>
+        <div className="min-w-0 flex-1 flex flex-col min-h-0">
+          {renderContent()}
+        </div>
       </div>
 
       {selectedCollection === "beasts" ? (
@@ -1227,7 +1288,6 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
-          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? {
             startingPrice: currentModalNft.startingPrice,
             highestBid: currentModalNft.highestBid,
@@ -1266,7 +1326,6 @@ export default function Buy({
           currentIndex={modalCurrentIndex}
           onNavigate={modalOnNavigate}
           auctionId={modalAuctionId || undefined}
-          listingSource={currentModalNft?.listingSource ?? (modalAuctionId ? (auctions.find((a) => String(a.auction_id) === modalAuctionId)?.source ?? "survivor_exchange") : undefined)}
           auctionBidData={currentModalNft ? (() => {
             const auction = auctions.find((a) => String(a.auction_id) === currentModalNft.auctionId);
             return {

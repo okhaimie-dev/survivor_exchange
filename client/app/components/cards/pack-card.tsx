@@ -4,10 +4,9 @@ import { useMemo } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import { IMAGE_BASE_URL } from "../../lib/constants";
-import { getAdventurerImageUrl } from "../../lib/utils";
+import { getAdventurerImageUrl, getReservePriceParts } from "../../lib/utils";
 import { toDecimalTokenId } from "../../lib/utils/normalization";
 import { calculateAdventurerRating } from "../../lib/utils/adventurer-rating";
-import { ReservePriceDisplay } from "../ui";
 import { CollectionType } from "../../lib/constants";
 
 /** Attributes cache keyed by token ID (decimal string) for Level/Health lookup */
@@ -152,7 +151,7 @@ export default function PackCard({
           handleCardClick();
         }
       }}
-      className={`group relative flex h-full w-full min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
+      className={`group relative flex h-full w-full min-w-0 min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
         selected
           ? "border-[rgb(50,255,52)] shadow-[0_0_20px_rgba(50,255,52,0.3)]"
           : "border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 hover:bg-black/80"
@@ -220,7 +219,7 @@ export default function PackCard({
 
         {/* Beast pack: average power, level, health, tier (rounded up, no decimals) */}
         {collection === "beasts" && beastAverages && (
-          <div className="grid grid-cols-2 gap-1.5 mt-auto flex-1 min-h-[72px] min-w-0 shrink-0">
+          <div className="grid grid-cols-2 gap-1.5 mt-auto flex-1 min-h-[72px] min-w-0 shrink-0 overflow-hidden">
             <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-white/5 border border-white/10">
               <span className="text-base font-orbitron font-bold text-white">
                 {beastAverages.avgLevel != null ? beastAverages.avgLevel : "—"}
@@ -250,7 +249,7 @@ export default function PackCard({
 
         {/* Adventurer pack: same 2x2 layout as individual card, averages */}
         {collection === "adventurers" && adventurerAverages && (
-          <div className="grid grid-cols-2 gap-1.5 mt-auto flex-1 min-h-[72px] min-w-0 shrink-0">
+          <div className="grid grid-cols-2 gap-1.5 mt-auto flex-1 min-h-[72px] min-w-0 shrink-0 overflow-hidden">
             <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-white/5 border border-white/10">
               <span className="text-base font-orbitron font-bold text-white">
                 {adventurerAverages.avgLevel != null ? adventurerAverages.avgLevel : "—"}
@@ -289,31 +288,41 @@ export default function PackCard({
       )}
 
       {/* Buy (price) in Buy tab; Price (static) in Sell/My Listings; when expired show Price only */}
-      <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center">
-        {priceLabel === "Price" || expired ? (
-          <div className="flex flex-col items-center justify-center">
-            <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Price</span>
-            <span className="text-sm font-orbitron font-bold text-[rgb(50,255,52)] whitespace-nowrap">
-              <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
-            </span>
+      {(() => {
+        const { symbol: priceSymbol, amount: priceAmount } = getReservePriceParts(price, reserveTokenSymbol);
+        return (
+          <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center overflow-hidden min-w-0">
+            {priceLabel === "Price" || expired ? (
+              <div className="flex flex-col items-center justify-center px-2">
+                <span className="text-base font-orbitron font-bold text-[rgb(50,255,52)]">
+                  {priceAmount}
+                </span>
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
+                  {priceSymbol}
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onInfoClick) onInfoClick();
+                }}
+                className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer px-2"
+                title="Open buy modal"
+              >
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
+                <span className="text-base font-orbitron font-bold">
+                  {priceAmount}
+                </span>
+                <span className="text-[9px] uppercase text-[rgb(186,255,188)]/50">
+                  {priceSymbol}
+                </span>
+              </button>
+            )}
           </div>
-        ) : (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (onInfoClick) onInfoClick();
-            }}
-            className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer"
-            title="Open buy modal"
-          >
-            <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
-            <span className="text-sm font-orbitron font-bold whitespace-nowrap">
-              <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
-            </span>
-          </button>
-        )}
-      </div>
+        );
+      })()}
     </article>
   );
 }
