@@ -2,3 +2,4 @@ export { useSummitLeaderboard, findMatchingSummitBeast, type SummitBeast } from 
 export { useSurvivorToUSD } from './use-survivor-to-usd';
 export { useNFTMetadata } from './use-nft-metadata';
 export { useAddressName } from './use-address-name';
+export { usePaymaster } from './use-paymaster';

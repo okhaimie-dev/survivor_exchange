@@ -121,6 +121,10 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
 
       const offers = offersByAuction.get(auction.auction_id) || [];
 
+      const statusNum = parseStatus(auction.status);
+      const status =
+        statusNum >= 0 ? String(statusNum) : (auction.status || "pending");
+
       return {
         id: `#${auction.auction_id}`,
         name: decodedName || `Auction ${auction.auction_id}`,
@@ -128,7 +132,7 @@ export function useMyListings({ seller }: UseMyListingsOptions) {
         startingPrice,
         currentBid,
         highestBidder: normalizedHighestBidder,
-        status: auction.status || "pending",
+        status,
         endTime: auction.end_time,
         seller: normalizedSeller,
         auctionId: auction.auction_id,

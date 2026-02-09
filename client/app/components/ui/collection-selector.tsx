@@ -3,6 +3,7 @@ import { COLLECTIONS, CollectionType } from "../../lib/constants";
 interface CollectionSelectorProps {
   selectedCollection: CollectionType;
   onCollectionChange: (collection: CollectionType) => void;
+  hideLabel?: boolean;
 }
 
 // Adventurers first (default), then Beasts
@@ -11,14 +12,17 @@ const COLLECTION_ORDER: CollectionType[] = ["adventurers", "beasts"];
 export default function CollectionSelector({
   selectedCollection,
   onCollectionChange,
+  hideLabel = false,
 }: CollectionSelectorProps) {
   const collections = COLLECTION_ORDER.map((id) => COLLECTIONS[id]);
 
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
-        Collection
-      </label>
+      {!hideLabel && (
+        <label className="text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70">
+          Collection
+        </label>
+      )}
       <div className="flex flex-col gap-2">
         {collections.map((collection) => {
           const isSelected = selectedCollection === collection.id;

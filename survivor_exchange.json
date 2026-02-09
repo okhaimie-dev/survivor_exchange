@@ -1,0 +1,38 @@
+[
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "create_auction"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "bid"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "end_auction"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "withdraw_bid"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "settle_auction"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "make_offer"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "accept_offer"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "reject_offer"
+  },
+  {
+    "contractAddress": "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+    "entrypoint": "withdraw_offer"
+  }
+]

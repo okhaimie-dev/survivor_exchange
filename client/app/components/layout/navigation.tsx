@@ -10,7 +10,7 @@ interface NavigationProps {
 }
 
 const tabBase =
-  "flex-1 min-w-0 min-h-[44px] flex items-center justify-center py-2 px-2 sm:py-2.5 sm:px-3 text-center text-[10px] sm:text-xs md:text-base font-orbitron uppercase tracking-wide transition-colors hover:cursor-pointer hover:text-[rgb(50,255,52)] md:flex-none md:w-[140px] lg:w-[180px]";
+  "flex-1 min-w-0 min-h-[44px] flex items-center justify-center py-2 px-3 sm:py-2.5 sm:px-4 text-center text-[10px] sm:text-xs md:text-sm font-orbitron uppercase tracking-wide transition-colors hover:cursor-pointer hover:text-[rgb(50,255,52)]";
 
 const activeHighlight =
   "text-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 font-bold shadow-[inset_0_0_0_2px_rgba(50,255,52,0.5)]";

@@ -4,7 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import type { ShareResult, ShareCardConfig } from "../../lib/types/beast-profile";
-import { IMAGE_BASE_URL } from "../../lib/constants";
+import { IMAGE_BASE_URL, EMPIRE_TRADE_BEASTS_URL } from "../../lib/constants";
+import type { ListingSource } from "../../lib/types";
 import { BeastProfileCard, BeastShareCard } from "../cards";
 import { AddressDisplay, InfoTooltip, CustomDropdown, CountdownTimer, ReservePriceDisplay, type DropdownOption } from "../ui";
 import { useBeastOwner } from "../../hooks";
@@ -573,6 +574,8 @@ interface BeastDetailModalProps {
   summitBeasts?: SummitBeastMatch[];
   /** When provided, renders direct sell form instead of Add/Remove for auction */
   sellFormContent?: React.ReactNode;
+  /** When "eternum", show "Buy on Realms" redirect instead of bid/offer UI */
+  listingSource?: ListingSource;
 }
 
 // Helper to format Unix timestamps to readable dates
@@ -608,6 +611,7 @@ export default function BeastDetailModal({
   onOpenWallet,
   summitBeasts = [],
   sellFormContent,
+  listingSource,
 }: BeastDetailModalProps) {
   const currentNft = nfts[currentIndex];
 
@@ -1296,9 +1300,28 @@ export default function BeastDetailModal({
               </div>
             ) : null}
 
-            {/* Bid/Offer Section - Only show in auction context with active auction */}
-            {auctionId && auctionBidData && bidState && parseInt(auctionBidData.status) === 2 && (
+            {/* Bid/Offer Section - Only show in auction context with active auction or Eternum listing */}
+            {auctionId && auctionBidData && (listingSource === "eternum" || (bidState && parseInt(auctionBidData.status) === 2)) && (
               <div className={`border-t border-[rgb(50,255,52)]/20 sticky bottom-0 bg-black/95 backdrop-blur-sm z-10 ${isPack ? "mt-2 pt-2 pb-2 -mb-4 md:-mb-3" : "mt-3 pt-3 pb-2 -mb-4 md:-mb-3"}`}>
+                {listingSource === "eternum" ? (
+                  <div className="flex flex-col gap-3 pt-2">
+                    <p className="text-xs font-orbitron text-[rgb(186,255,188)]/90">This beast is listed on Realms.</p>
+                    <a
+                      href={EMPIRE_TRADE_BEASTS_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 h-10 text-xs font-orbitron uppercase tracking-[0.12em] bg-[rgb(50,255,52)] text-black font-bold hover:bg-[rgb(40,220,42)] transition"
+                    >
+                      Buy on Realms
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                        <polyline points="15 3 21 3 21 9" />
+                        <line x1="10" y1="14" x2="21" y2="3" />
+                      </svg>
+                    </a>
+                  </div>
+                ) : bidState ? (
+                  <>
                 {/* Price info */}
                 <div className={`flex flex-wrap gap-2 ${isPack ? "mb-2" : "mb-3"}`}>
                   <div className={`flex-1 min-w-[80px] rounded-lg border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 ${isPack ? "px-2 py-1.5" : "px-3 py-2"}`}>
@@ -1499,6 +1522,8 @@ export default function BeastDetailModal({
                     </p>
                   </div>
                 )}
+                  </>
+                ) : null}
               </div>
             )}
           </div>

@@ -13,15 +13,18 @@ import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatB
 import { AUCTION_CONTRACT_ADDRESS, DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, DEFAULT_AUCTION_DURATION_MINUTES, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, COLLECTIONS, CollectionType } from "../lib/constants";
 import { fetchTokens } from "@avnu/avnu-sdk";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
+import { parseEndTime } from "../lib/utils/auction-status";
 function isListedToken(listedTokenIds: Set<string>, nftTokenId: string): boolean {
+    const raw = String(nftTokenId).trim();
     const normalized = normalizeTokenId(nftTokenId);
     const decimal = toDecimalTokenId(nftTokenId);
-    return listedTokenIds.has(normalized) || listedTokenIds.has(decimal);
+    return listedTokenIds.has(raw) || listedTokenIds.has(normalized) || listedTokenIds.has(decimal);
 }
 import { useSummitLeaderboard, findMatchingSummitBeast, useMyNFTs, useMyAdventurerNFTs, useMyListings } from "../hooks";
-import { useQuery } from "@apollo/client/react";
-import { AUCTIONS_QUERY } from "../lib/queries";
+import { useQuery, useApolloClient } from "@apollo/client/react";
+import { AUCTIONS_QUERY, AUCTION_ITEMS_BY_ID_QUERY } from "../lib/queries";
 import type { AuctionsResponse } from "../lib/types";
+import type { AuctionItem } from "../lib/types";
 
 interface AuctionProps {
     nfts?: FormattedNFT[];
@@ -151,33 +154,80 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
     }, [summitTopBeasts]);
 
     const { listings } = useMyListings({ seller: dataAddress });
+    const apolloClient = useApolloClient();
     const { data: auctionsData } = useQuery<AuctionsResponse>(AUCTIONS_QUERY, {
         fetchPolicy: "cache-and-network",
         errorPolicy: "all",
     });
-    const listedTokenIds = useMemo(() => {
-        if (!dataAddress || !listings?.length) return new Set<string>();
-        const myAuctionIds = new Set(listings.map((l) => String(l.auctionId)));
-        const items = auctionsData?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? [];
+
+    // Only treat listings as "listed" when they are Active (status 2) and have a valid future end time (no stale/ended)
+    const activeListings = useMemo(() => {
+        if (!listings?.length) return [];
+        const now = Math.floor(Date.now() / 1000);
+        return listings.filter((l) => {
+            const statusNum = Number(l.status);
+            if (statusNum !== 2) return false; // only Active
+            const endSec = parseEndTime(l.endTime);
+            if (endSec <= 0) return false; // require valid end time (avoid showing Listed for stale/zero end_time)
+            return endSec > now; // not expired
+        });
+    }, [listings]);
+
+    // Fetch auction items for the seller's active listings so we have token IDs even when they're not in the global AUCTIONS_QUERY limit
+    const [sellerListingItems, setSellerListingItems] = useState<AuctionItem[]>([]);
+    useEffect(() => {
+        if (!dataAddress || !activeListings.length) {
+            setSellerListingItems([]);
+            return;
+        }
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
+        let cancelled = false;
+        (async () => {
+            const results = await Promise.all(
+                activeListings.map(async (l) => {
+                    const auctionIdInt = parseInt(String(l.auctionId), 10);
+                    if (isNaN(auctionIdInt)) return [] as AuctionItem[];
+                    try {
+                        const res = await apolloClient.query<{ bm021AuctionItemModels: { edges: { node: AuctionItem }[] } }>({
+                            query: AUCTION_ITEMS_BY_ID_QUERY,
+                            variables: { auctionId: auctionIdInt },
+                        });
+                        const nodes = res.data?.bm021AuctionItemModels?.edges?.map((e) => e.node) ?? [];
+                        return nodes.filter((node) => normalizeContractAddress(node.contract_address) === collectionContract);
+                    } catch {
+                        return [] as AuctionItem[];
+                    }
+                })
+            );
+            if (cancelled) return;
+            setSellerListingItems(results.flat());
+        })();
+        return () => { cancelled = true; };
+    }, [dataAddress, activeListings, collectionConfig.contractAddress, apolloClient]);
+
+    // Listed token IDs: only from seller-specific fetch (per active listing). Do not use global query so we never show Listed for tokens that aren't in this seller's current active auctions.
+    const listedTokenIds = useMemo(() => {
+        if (!dataAddress || !activeListings.length) return new Set<string>();
         const listed = new Set<string>();
-        for (const item of items) {
-            if (!myAuctionIds.has(String(item.auction_id))) continue;
-            if (normalizeContractAddress(item.contract_address) !== collectionContract) continue;
+        const addToken = (item: { token_id?: string | number | null }) => {
+            const raw = item.token_id != null ? String(item.token_id).trim() : "";
+            if (raw) listed.add(raw);
             listed.add(normalizeTokenId(item.token_id));
             listed.add(toDecimalTokenId(item.token_id));
+        };
+        for (const item of sellerListingItems) {
+            addToken(item);
         }
         return listed;
-    }, [dataAddress, listings, auctionsData, collectionConfig.contractAddress]);
+    }, [dataAddress, activeListings, sellerListingItems]);
 
-    // Map tokenId -> reserve (starting price + symbol) and endTime for listed NFTs (Sell grid reserve display + Ending soon sort)
+    // Map tokenId -> reserve and endTime from seller-fetched items only (same source as listedTokenIds)
+    const listingByAuctionId = useMemo(() => new Map(activeListings.map((l) => [String(l.auctionId), l])), [activeListings]);
     const reserveByTokenId = useMemo(() => {
         const map: Record<string, { price: number; symbol?: string }> = {};
-        if (!listings?.length || !auctionsData?.bm021AuctionItemModels?.edges) return map;
-        const listingByAuctionId = new Map(listings.map((l) => [String(l.auctionId), l]));
-        const items = auctionsData.bm021AuctionItemModels.edges.map((e) => e.node);
+        if (!activeListings.length) return map;
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
-        for (const item of items) {
+        for (const item of sellerListingItems) {
             const listing = listingByAuctionId.get(String(item.auction_id));
             if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) continue;
             const norm = normalizeTokenId(item.token_id);
@@ -186,15 +236,13 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
             map[dec] = { price: listing.startingPrice, symbol: listing.reserveTokenSymbol };
         }
         return map;
-    }, [listings, auctionsData, collectionConfig.contractAddress]);
+    }, [activeListings, collectionConfig.contractAddress, listingByAuctionId, sellerListingItems]);
 
     const endTimeByTokenId = useMemo(() => {
         const map: Record<string, string> = {};
-        if (!listings?.length || !auctionsData?.bm021AuctionItemModels?.edges) return map;
-        const listingByAuctionId = new Map(listings.map((l) => [String(l.auctionId), l]));
-        const items = auctionsData.bm021AuctionItemModels.edges.map((e) => e.node);
+        if (!activeListings.length) return map;
         const collectionContract = normalizeContractAddress(collectionConfig.contractAddress);
-        for (const item of items) {
+        for (const item of sellerListingItems) {
             const listing = listingByAuctionId.get(String(item.auction_id));
             if (!listing || normalizeContractAddress(item.contract_address) !== collectionContract) continue;
             const raw = item.token_id != null ? String(item.token_id).trim() : "";
@@ -206,7 +254,7 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
             if (dec) map[dec] = listing.endTime;
         }
         return map;
-    }, [listings, auctionsData, collectionConfig.contractAddress]);
+    }, [activeListings, collectionConfig.contractAddress, listingByAuctionId, sellerListingItems]);
 
     const toggleCardSelection = useCallback((nftId: string) => {
         setSelectedNFTIds((previouslySelected) => {
@@ -355,9 +403,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
         // Exclude listed adventurers (Sell left filters)
         if (selectedCollection === "adventurers" && excludeListed && listedTokenIds.size > 0) {
             result = result.filter((nft) => {
+                const rawId = String(nft.tokenId ?? "").trim();
                 const dec = toDecimalTokenId(nft.tokenId);
                 const norm = normalizeTokenId(nft.tokenId);
-                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(nft.tokenId);
+                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(rawId);
             });
         }
 
@@ -440,9 +489,10 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
         }
         if (selectedCollection === "adventurers" && excludeListed && listedTokenIds.size > 0) {
             result = result.filter((nft) => {
+                const rawId = String(nft.tokenId ?? "").trim();
                 const dec = toDecimalTokenId(nft.tokenId);
                 const norm = normalizeTokenId(nft.tokenId);
-                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(nft.tokenId);
+                return !listedTokenIds.has(dec) && !listedTokenIds.has(norm) && !listedTokenIds.has(rawId);
             });
         }
         return result;
@@ -1191,10 +1241,22 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
 
     const gridKey = `${filteredNFTs.length}-${currentPage}-${filters.levelMin}-${filters.levelMax}-${filters.healthMin}-${filters.healthMax}`;
     const renderGrid = () => (
-        <div key={gridKey} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+        <div key={gridKey} className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
             {visibleNFTs.map((nft, index) => {
                 const CardComponent = selectedCollection === "beasts" ? MonsterCard : AdventurerCard;
-                const listed = isListedToken(listedTokenIds, nft.tokenId);
+                // Use exact same "is listed" check as Exclude listed filter: dec, norm, and raw tokenId (as string)
+                const rawId = String(nft.tokenId ?? "").trim();
+                const dec = toDecimalTokenId(nft.tokenId);
+                const norm = normalizeTokenId(nft.tokenId);
+                const listed =
+                    listedTokenIds.has(dec) ||
+                    listedTokenIds.has(norm) ||
+                    listedTokenIds.has(rawId);
+                const endTime = endTimeByTokenId[nft.tokenId] ?? endTimeByTokenId[norm] ?? endTimeByTokenId[dec] ?? endTimeByTokenId[rawId] ?? "";
+                const endTimeSec = parseEndTime(endTime);
+                const isExpired = listed && endTimeSec > 0 && endTimeSec <= Math.floor(Date.now() / 1000);
+                // Show Listed tag when token is in listedTokenIds (same check as Exclude listed filter). Hide tag only when auction end time has passed.
+                const showListedTag = listed && !isExpired;
                 const reserve = listed
                     ? reserveByTokenId[nft.tokenId] ?? reserveByTokenId[normalizeTokenId(nft.tokenId)] ?? reserveByTokenId[toDecimalTokenId(nft.tokenId)]
                     : undefined;
@@ -1205,7 +1267,7 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
                         selected={selectedNFTIds.includes(nft.tokenId)}
                         onToggle={() => toggleCardSelection(nft.tokenId)}
                         onInfoClick={() => openDetailModal(nft)}
-                        listed={listed}
+                        listed={showListedTag}
                         inBattle={inBattleByTokenId[toDecimalTokenId(nft.tokenId)] === true || inBattleByTokenId[normalizeTokenId(nft.tokenId)] === true}
                         priority={selectedCollection === "adventurers" && index === 0}
                         price={reserve?.price}
@@ -1351,9 +1413,69 @@ export default function Auction({ nfts: externalNfts, loading: externalLoading, 
     );
 
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 min-h-[70vh]">
-            <div className="flex gap-6 min-h-[60vh] min-w-0">
-                <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
+            {/* Mobile: Collection selector at top */}
+            <div className="md:hidden">
+                <CollectionSelector
+                    selectedCollection={selectedCollection}
+                    onCollectionChange={setSelectedCollection}
+                />
+            </div>
+            {/* Mobile: inline filters */}
+            <div className="flex md:hidden flex-wrap gap-2 items-center">
+                {selectedCollection === "adventurers" && (
+                    <>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={showOnlyAlive}
+                                onChange={(e) => setShowOnlyAlive(e.target.checked)}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Alive only
+                            </span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={filters.battleFilter === "out"}
+                                onChange={(e) => setFilters((prev) => ({ ...prev, battleFilter: e.target.checked ? "out" : "" }))}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Not in battle
+                            </span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                            <input
+                                type="checkbox"
+                                checked={excludeListed}
+                                onChange={(e) => setExcludeListed(e.target.checked)}
+                                className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                            />
+                            <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                                Not listed
+                            </span>
+                        </label>
+                    </>
+                )}
+                <button
+                    type="button"
+                    onClick={() => setFiltersOpen((v) => !v)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[10px] font-orbitron uppercase tracking-[0.12em] text-[rgb(50,255,52)]"
+                >
+                    Filters
+                    {Object.values(filters).filter((v) => v !== "").length > 0 && (
+                        <span className="rounded-full bg-[rgb(50,255,52)] min-w-[14px] px-1 py-0.5 text-[9px] text-black font-bold">
+                            {Object.values(filters).filter((v) => v !== "").length}
+                        </span>
+                    )}
+                </button>
+            </div>
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0">
+                {/* Desktop sidebar */}
+                <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
                     <CollectionSelector
                         selectedCollection={selectedCollection}
                         onCollectionChange={setSelectedCollection}

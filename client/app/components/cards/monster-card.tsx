@@ -1,7 +1,7 @@
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import { IMAGE_BASE_URL } from "../../lib/constants";
-import { ReservePriceDisplay } from "../ui";
+import { getReservePriceParts } from "../../lib/utils";
 
 type MonsterCardProps = {
   nft: FormattedNFT;
@@ -80,7 +80,7 @@ export default function MonsterCard({
           handleCardClick();
         }
       }}
-      className={`group relative flex h-full w-full min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
+      className={`group relative flex h-full w-full min-w-0 min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
         selected
           ? "border-[rgb(50,255,52)] shadow-[0_0_20px_rgba(50,255,52,0.3)]"
           : "border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 hover:bg-black/80"
@@ -154,25 +154,27 @@ export default function MonsterCard({
             </button>
           )}
         </div>
-        <div className="flex flex-col gap-0.5 md:gap-1 text-left md:text-center flex-1 min-w-0">
-          <h3 className="text-sm md:text-base font-orbitron uppercase tracking-wide leading-tight">
+        <div className="flex flex-col gap-0.5 md:gap-1 text-left md:text-center flex-1 min-w-0 overflow-hidden">
+          <h3 className="text-sm md:text-base font-orbitron uppercase tracking-wide leading-tight line-clamp-2">
             {nft.metadataName}
           </h3>
-          <p className="text-[10px] md:text-[11px] text-[rgb(186,255,188)]/50">{beastName}</p>
+          <p className="text-[10px] md:text-[11px] text-[rgb(186,255,188)]/50 truncate">{beastName}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-1 md:gap-2 text-white mt-auto flex-1 min-h-0">
+      <div className="grid grid-cols-2 gap-1 md:gap-1.5 text-white mt-auto flex-1 min-h-0 min-w-0 overflow-hidden">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-col md:flex-row items-center md:justify-between rounded-md md:rounded-lg bg-white/5 px-1.5 md:px-3 py-1.5 md:py-2"
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-white/5 px-1.5 py-1.5 overflow-hidden min-w-0 ${stat.label === "Type" ? "col-span-2" : ""}`}
           >
-            <span className="text-[rgb(186,255,188)]/50 text-[7px] md:text-[10px] uppercase">
-              {stat.label}
-            </span>
-            <span className="text-[11px] md:text-sm font-medium text-white">
+            <span
+              className={`text-base md:text-lg font-orbitron font-bold ${stat.label === "Health" ? "text-red-400" : "text-white"}`}
+            >
               {stat.value}
+            </span>
+            <span className="text-[rgb(186,255,188)]/50 text-[7px] md:text-[8px] uppercase">
+              {stat.label}
             </span>
           </div>
         ))}
@@ -188,33 +190,41 @@ export default function MonsterCard({
       )}
 
       {/* Price - fixed height; when expired or priceLabel=Price show static, else Buy button */}
-      {price !== undefined && (
-        <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center">
-          {priceLabel === "Price" || expired ? (
-            <div className="flex flex-col items-center justify-center">
-              <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Price</span>
-              <span className="text-sm font-orbitron font-bold text-[rgb(50,255,52)] truncate max-w-full">
-                <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
-              </span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onInfoClick) onInfoClick();
-              }}
-              className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer"
-              title="Open buy modal"
-            >
-              <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
-              <span className="text-sm font-orbitron font-bold truncate max-w-full">
-                <ReservePriceDisplay value={price} symbol={reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
-              </span>
-            </button>
-          )}
-        </div>
-      )}
+      {price !== undefined && (() => {
+        const { symbol: priceSymbol, amount: priceAmount } = getReservePriceParts(price, reserveTokenSymbol);
+        return (
+          <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center overflow-hidden min-w-0">
+            {priceLabel === "Price" || expired ? (
+              <div className="flex flex-col items-center justify-center px-2">
+                <span className="text-base font-orbitron font-bold text-[rgb(50,255,52)]">
+                  {priceAmount}
+                </span>
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
+                  {priceSymbol}
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onInfoClick) onInfoClick();
+                }}
+                className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer px-2"
+                title="Open buy modal"
+              >
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
+                <span className="text-base font-orbitron font-bold">
+                  {priceAmount}
+                </span>
+                <span className="text-[9px] uppercase text-[rgb(186,255,188)]/50">
+                  {priceSymbol}
+                </span>
+              </button>
+            )}
+          </div>
+        );
+      })()}
     </article>
   );
 }
