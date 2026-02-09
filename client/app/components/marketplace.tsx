@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useAccount } from "@starknet-react/core";
 import { CollectionSelector, Pagination, ReservePriceDisplay } from "./ui";
@@ -12,7 +12,7 @@ import { useWalletModal } from "../providers/wallet-modal-provider";
 import { type CollectionType, GRID_PAGE_SIZE } from "../lib/constants";
 import { getReservePriceParts } from "../lib/utils";
 
-const MAX_CART_SELECTION = 20;
+const MAX_SWEEP = 30;
 
 const EMPTY_FILTERS: FilterState = {
   id: "", search: "", beast: "", type: "", tier: "",
@@ -37,7 +37,6 @@ function getAttr(metadata: Record<string, unknown> | null, traitType: string): s
 
 /** Apply FilterState to a MarketplaceListing using its metadata attributes */
 function filterMarketplaceListing(listing: MarketplaceListing, filters: FilterState): boolean {
-  // Search
   if (filters.search) {
     const q = filters.search.toLowerCase();
     const name = (listing.name || "").toLowerCase();
@@ -54,60 +53,43 @@ function filterMarketplaceListing(listing: MarketplaceListing, filters: FilterSt
     }
     if (!matches) return false;
   }
-
-  // Beast dropdown
   if (filters.beast) {
     const beast = getAttr(listing.metadata, "Beast");
     if (!beast || beast.toLowerCase() !== filters.beast.toLowerCase()) return false;
   }
-
-  // Type dropdown
   if (filters.type) {
     const type = getAttr(listing.metadata, "Type");
     if (!type || type.toLowerCase() !== filters.type.toLowerCase()) return false;
   }
-
-  // Tier dropdown
   if (filters.tier) {
     const tier = getAttr(listing.metadata, "Tier");
     if (!tier || tier !== filters.tier) return false;
   }
-
-  // Level range
   const level = Number(getAttr(listing.metadata, "Level") ?? 0);
   if (filters.levelMin && level < Number(filters.levelMin)) return false;
   if (filters.levelMax && level > Number(filters.levelMax)) return false;
-
-  // Power range
   const power = Number(getAttr(listing.metadata, "Power") ?? 0);
   if (filters.powerMin && power < Number(filters.powerMin)) return false;
   if (filters.powerMax && power > Number(filters.powerMax)) return false;
-
-  // Rank range
   const rank = Number(getAttr(listing.metadata, "Rank") ?? 0);
   if (filters.rankMin && rank < Number(filters.rankMin)) return false;
   if (filters.rankMax && rank > Number(filters.rankMax)) return false;
-
-  // Shiny
   if (filters.shiny) {
     const shiny = getAttr(listing.metadata, "Shiny");
     const isShiny = shiny === "1" || shiny === "true";
     if (filters.shiny === "true" && !isShiny) return false;
     if (filters.shiny === "false" && isShiny) return false;
   }
-
-  // Animated
   if (filters.animated) {
     const animated = getAttr(listing.metadata, "Animated");
     const isAnimated = animated === "1" || animated === "true";
     if (filters.animated === "true" && !isAnimated) return false;
     if (filters.animated === "false" && isAnimated) return false;
   }
-
   return true;
 }
 
-/** Sort listings by price (uses priceSort from FilterState) */
+/** Sort listings by price */
 function sortListings(items: MarketplaceListing[], priceSort: string): MarketplaceListing[] {
   if (!priceSort) return items;
   const sorted = [...items];
@@ -127,15 +109,13 @@ export default function Marketplace() {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [filtersOpen, setFiltersOpen] = useState(true);
+  const [sweepOpen, setSweepOpen] = useState(false);
+  const [sweepCount, setSweepCount] = useState(0);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    try {
-      await refresh();
-    } finally {
-      setIsRefreshing(false);
-    }
+    try { await refresh(); } finally { setIsRefreshing(false); }
   }, [refresh]);
 
   const handleCollectionChange = useCallback((collection: CollectionType) => {
@@ -143,19 +123,20 @@ export default function Marketplace() {
     setCurrentPage(1);
     setSelectedKeys([]);
     setFilters(EMPTY_FILTERS);
+    setSweepOpen(false);
+    setSweepCount(0);
   }, []);
 
   const handleFiltersChange = useCallback((updates: FilterState | Partial<FilterState>) => {
     const u = updates as Record<string, unknown>;
     if (u && typeof u === "object" && "search" in u && "beast" in u && "type" in u) {
-      // Full state replacement (e.g. clear all)
       setFilters(updates as FilterState);
     } else {
       setFilters((prev) => ({ ...prev, ...updates }));
     }
   }, []);
 
-  // Clear selection when listings change (e.g. after refresh)
+  // Clear selection when listings change
   useEffect(() => {
     setSelectedKeys((prev) => {
       if (prev.length === 0) return prev;
@@ -169,14 +150,13 @@ export default function Marketplace() {
     setSelectedKeys((prev) =>
       prev.includes(key)
         ? prev.filter((k) => k !== key)
-        : prev.length >= MAX_CART_SELECTION
-          ? prev
-          : [...prev, key],
+        : prev.length >= MAX_SWEEP ? prev : [...prev, key],
     );
   }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedKeys([]);
+    setSweepCount(0);
   }, []);
 
   // Apply filters + sort
@@ -185,10 +165,40 @@ export default function Marketplace() {
     return sortListings(filtered, filters.priceSort);
   }, [listings, filters]);
 
-  const selectAll = useCallback(() => {
-    const keys = filteredListings.slice(0, MAX_CART_SELECTION).map((l) => String(l.orderId));
-    setSelectedKeys(keys);
-  }, [filteredListings]);
+  // Cheapest-first sorted list for sweep (always price ascending regardless of filter sort)
+  const cheapestListings = useMemo(() => {
+    const filtered = listings.filter((l) => filterMarketplaceListing(l, filters));
+    return [...filtered].sort((a, b) => a.price - b.price);
+  }, [listings, filters]);
+
+  // Floor price = cheapest filtered listing
+  const floorPrice = useMemo(() => {
+    if (cheapestListings.length === 0) return null;
+    const cheapest = cheapestListings[0];
+    return { price: cheapest.price, symbol: cheapest.currencySymbol };
+  }, [cheapestListings]);
+
+  const sweepMax = Math.min(MAX_SWEEP, cheapestListings.length);
+
+  // When sweep count changes, auto-select the N cheapest
+  useEffect(() => {
+    if (sweepCount > 0) {
+      const keys = cheapestListings.slice(0, sweepCount).map((l) => String(l.orderId));
+      setSelectedKeys(keys);
+    } else if (sweepOpen) {
+      setSelectedKeys([]);
+    }
+  }, [sweepCount, cheapestListings, sweepOpen]);
+
+  // Compute sweep total cost grouped by currency
+  const sweepTotals = useMemo(() => {
+    const totals = new Map<string, number>();
+    for (const listing of cheapestListings.slice(0, sweepCount)) {
+      const prev = totals.get(listing.currencySymbol) ?? 0;
+      totals.set(listing.currencySymbol, prev + listing.price);
+    }
+    return totals;
+  }, [cheapestListings, sweepCount]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -207,10 +217,7 @@ export default function Marketplace() {
 
   const handleBuy = useCallback(
     async (listing: MarketplaceListing) => {
-      if (!account || !address) {
-        openWalletModal();
-        return;
-      }
+      if (!account || !address) { openWalletModal(); return; }
       await buyListing({
         orderId: listing.orderId,
         rawPrice: listing.rawPrice,
@@ -236,10 +243,7 @@ export default function Marketplace() {
   }, [selectedKeys, listings]);
 
   const handleBulkBuy = useCallback(async () => {
-    if (!account || !address) {
-      openWalletModal();
-      return;
-    }
+    if (!account || !address) { openWalletModal(); return; }
     const selectedSet = new Set(selectedKeys);
     const params: MarketplaceBuyParams[] = listings
       .filter((l) => selectedSet.has(String(l.orderId)))
@@ -250,17 +254,15 @@ export default function Marketplace() {
         collection: l.collection,
         tokenId: l.tokenId,
       }));
-
     if (params.length === 0) return;
-
     await bulkBuyListings(params);
     setSelectedKeys([]);
+    setSweepCount(0);
     await refresh();
   }, [account, address, selectedKeys, listings, bulkBuyListings, openWalletModal, refresh]);
 
   const renderContent = () => {
     if (loading) return <BidsSkeleton />;
-
     if (error) {
       return (
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
@@ -268,7 +270,6 @@ export default function Marketplace() {
         </div>
       );
     }
-
     if (listings.length === 0) {
       return (
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
@@ -276,7 +277,6 @@ export default function Marketplace() {
         </div>
       );
     }
-
     if (filteredListings.length === 0) {
       return (
         <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-center gap-4 px-4 py-12">
@@ -284,7 +284,6 @@ export default function Marketplace() {
         </div>
       );
     }
-
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -303,11 +302,7 @@ export default function Marketplace() {
         </div>
         {totalPages > 1 && (
           <div className="flex justify-center py-4 mt-4 border-t border-white/10 shrink-0">
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-            />
+            <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </div>
         )}
       </div>
@@ -316,9 +311,9 @@ export default function Marketplace() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
-      {/* Mobile: collection selector + filters stacked; Desktop: label + toolbar in row */}
+      {/* Top toolbar row */}
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
-        {/* Mobile collection selector + filters */}
+        {/* Mobile: collection selector + filters */}
         <div className="md:hidden flex flex-col gap-2">
           <CollectionSelector
             selectedCollection={selectedCollection}
@@ -331,19 +326,34 @@ export default function Marketplace() {
             compact
           />
         </div>
-        {/* Desktop: just the label (selector + filters are in sidebar) */}
         <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
           Collection
         </span>
-        {/* Selection toolbar + refresh */}
+        {/* Sweep + Clear + Refresh */}
         {!loading && !error && listings.length > 0 && (
           <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
+            {/* Sweep toggle */}
             <button
               type="button"
-              onClick={selectAll}
-              className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+              onClick={() => {
+                setSweepOpen((prev) => !prev);
+                if (sweepOpen) { setSweepCount(0); setSelectedKeys([]); }
+              }}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-full border px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] transition hover:cursor-pointer ${
+                sweepOpen
+                  ? "border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
+                  : "border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20"
+              }`}
             >
-              Select All ({MAX_CART_SELECTION} max)
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              <span>Sweep</span>
+              {floorPrice && (
+                <span className="text-[rgb(186,255,188)]/60 font-normal ml-0.5">
+                  from {floorPrice.price.toFixed(0)} {floorPrice.symbol}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -381,7 +391,7 @@ export default function Marketplace() {
                 </>
               )}
             </button>
-            {selectedKeys.length > 0 && (
+            {selectedKeys.length > 0 && !sweepOpen && (
               <span className="text-[10px] sm:text-xs text-[rgb(186,255,188)]/60 font-orbitron">
                 {selectedKeys.length} selected
               </span>
@@ -389,6 +399,18 @@ export default function Marketplace() {
           </div>
         )}
       </div>
+
+      {/* Sweep panel — inline collapsible bar */}
+      {sweepOpen && sweepMax > 0 && (
+        <SweepPanel
+          sweepCount={sweepCount}
+          sweepMax={sweepMax}
+          onSweepCountChange={setSweepCount}
+          totals={sweepTotals}
+          onSweep={handleBulkBuy}
+          isBuying={isBuying}
+        />
+      )}
 
       {/* Main content row: Sidebar (desktop) + Cards grid */}
       <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
@@ -418,8 +440,8 @@ export default function Marketplace() {
         <div className="min-w-0 flex-1 flex flex-col min-h-0">{renderContent()}</div>
       </div>
 
-      {/* Fixed buy button — bottom-right */}
-      {selectedKeys.length > 0 && (
+      {/* Fixed buy button — bottom-right (only when manually selecting, not during sweep) */}
+      {selectedKeys.length > 0 && !sweepOpen && (
         <button
           type="button"
           onClick={handleBulkBuy}
@@ -439,11 +461,7 @@ export default function Marketplace() {
               </span>
               {Array.from(cartTotals.entries()).map(([symbol, total]) => (
                 <span key={symbol} className="text-[9px] sm:text-[10px] font-orbitron font-bold text-[rgb(50,255,52)] mt-1">
-                  <ReservePriceDisplay
-                    value={total}
-                    symbol={symbol}
-                    symbolClassName="text-[0.9em] opacity-90"
-                  />
+                  <ReservePriceDisplay value={total} symbol={symbol} symbolClassName="text-[0.9em] opacity-90" />
                 </span>
               ))}
             </>
@@ -453,6 +471,131 @@ export default function Marketplace() {
     </div>
   );
 }
+
+/* ─── Sweep Panel ─────────────────────────────────────────────── */
+
+function SweepPanel({
+  sweepCount,
+  sweepMax,
+  onSweepCountChange,
+  totals,
+  onSweep,
+  isBuying,
+}: {
+  sweepCount: number;
+  sweepMax: number;
+  onSweepCountChange: (n: number) => void;
+  totals: Map<string, number>;
+  onSweep: () => void;
+  isBuying: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = parseInt(e.target.value, 10);
+      if (isNaN(val) || val < 0) { onSweepCountChange(0); return; }
+      onSweepCountChange(Math.min(val, sweepMax));
+    },
+    [onSweepCountChange, sweepMax],
+  );
+
+  // Slider fill percentage for custom track
+  const fillPct = sweepMax > 0 ? (sweepCount / sweepMax) * 100 : 0;
+
+  return (
+    <div className="rounded-xl border border-[rgb(50,255,52)]/30 bg-black/70 backdrop-blur-sm p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+        {/* Slider + count */}
+        <div className="flex-1 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/70">
+              Items to sweep
+            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={inputRef}
+                type="number"
+                min={0}
+                max={sweepMax}
+                value={sweepCount}
+                onChange={handleInputChange}
+                className="w-12 sm:w-14 rounded-lg border border-[rgb(50,255,52)]/30 bg-black/80 px-2 py-1 text-center text-xs sm:text-sm font-orbitron text-white outline-none focus:border-[rgb(50,255,52)] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+              />
+              <span className="text-[10px] sm:text-xs text-[rgb(186,255,188)]/50 font-orbitron">
+                / {sweepMax}
+              </span>
+            </div>
+          </div>
+          <div className="relative h-8 flex items-center">
+            {/* Custom track background */}
+            <div className="absolute inset-x-0 h-2 rounded-full bg-white/10" />
+            {/* Filled portion */}
+            <div
+              className="absolute left-0 h-2 rounded-full bg-gradient-to-r from-[rgb(50,255,52)] to-[rgb(30,200,40)] transition-all duration-100"
+              style={{ width: `${fillPct}%` }}
+            />
+            {/* Native range input */}
+            <input
+              type="range"
+              min={0}
+              max={sweepMax}
+              value={sweepCount}
+              onChange={(e) => onSweepCountChange(parseInt(e.target.value, 10))}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            {/* Custom thumb */}
+            <div
+              className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-[rgb(50,255,52)] bg-black shadow-[0_0_10px_rgba(50,255,52,0.5)] pointer-events-none transition-all duration-100"
+              style={{ left: `calc(${fillPct}% - 10px)` }}
+            />
+          </div>
+        </div>
+
+        {/* Total + Sweep button */}
+        <div className="flex items-center gap-3 sm:gap-4 sm:min-w-[220px]">
+          <div className="flex flex-col items-start min-w-0">
+            {sweepCount > 0 ? (
+              Array.from(totals.entries()).map(([symbol, total]) => (
+                <div key={symbol} className="flex items-baseline gap-1.5">
+                  <span className="text-lg sm:text-xl font-orbitron font-bold text-white tabular-nums">
+                    {getReservePriceParts(total, symbol).amount}
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-orbitron uppercase text-[rgb(186,255,188)]/50">
+                    {symbol}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <span className="text-lg sm:text-xl font-orbitron font-bold text-white/30 tabular-nums">0.00</span>
+            )}
+            <span className="text-[9px] text-[rgb(186,255,188)]/40 font-orbitron uppercase tracking-wider">
+              Total
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={onSweep}
+            disabled={isBuying || sweepCount === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-[rgb(50,255,52)] bg-[rgb(50,255,52)]/15 px-4 sm:px-6 py-2.5 sm:py-3 font-orbitron text-xs sm:text-sm uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/25 hover:shadow-[0_0_20px_rgba(50,255,52,0.3)] hover:cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+          >
+            {isBuying ? (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+            )}
+            Sweep {sweepCount > 0 ? sweepCount : ""}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Listing Card ────────────────────────────────────────────── */
 
 function ListingCard({
   listing,
@@ -470,7 +613,6 @@ function ListingCard({
   const [imageError, setImageError] = useState(false);
   const isBeasts = listing.collectionType === "beasts";
 
-  // Resolve display name: prefer beast name from attributes, then metadata name, then tokenId
   const displayName = useMemo(() => {
     if (listing.metadata) {
       const attrs = listing.metadata.attributes;
@@ -499,10 +641,7 @@ function ListingCard({
       {/* Selection checkbox */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggle();
-        }}
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
         className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70"
         aria-pressed={selected}
         title={selected ? "Remove from selection" : "Add to selection"}
@@ -534,16 +673,7 @@ function ListingCard({
               onError={() => setImageError(true)}
             />
           ) : (
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-10 h-10 sm:w-12 sm:h-12 text-[rgb(50,255,52)]/40"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 sm:w-12 sm:h-12 text-[rgb(50,255,52)]/40">
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
               <circle cx="9" cy="9" r="2" />
               <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
@@ -562,13 +692,10 @@ function ListingCard({
         </p>
       </div>
 
-      {/* Buy button with price — matches auction card layout */}
+      {/* Buy button with price */}
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onBuy();
-        }}
+        onClick={(e) => { e.stopPropagation(); onBuy(); }}
         disabled={isBuying}
         className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col items-center justify-center w-full rounded-b-xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed px-2"
         title="Buy this NFT"
