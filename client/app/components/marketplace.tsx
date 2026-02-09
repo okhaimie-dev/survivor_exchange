@@ -152,36 +152,8 @@ export default function Marketplace() {
 
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
-        {/* Selection toolbar */}
-        <div className="flex flex-wrap gap-2 mb-4 items-center shrink-0">
-          <button
-            type="button"
-            onClick={selectAll}
-            className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
-          >
-            Select All ({MAX_CART_SELECTION} max)
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={selectedKeys.length === 0}
-            className={`inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-xs font-orbitron uppercase tracking-[0.14em] transition ${
-              selectedKeys.length > 0
-                ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
-                : "border-white/20 text-white/30"
-            }`}
-          >
-            Clear
-          </button>
-          {selectedKeys.length > 0 && (
-            <span className="text-xs text-[rgb(186,255,188)]/60 font-orbitron">
-              {selectedKeys.length} selected
-            </span>
-          )}
-        </div>
-
         <div className="flex-1 min-h-0 overflow-y-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 w-full">
             {visibleListings.map((listing) => (
               <ListingCard
                 key={listing.orderId}
@@ -208,37 +180,83 @@ export default function Marketplace() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 min-h-[70vh]">
-      <div className="flex gap-6 min-h-[60vh] min-w-0">
-        <aside className="flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-2 sm:px-4 min-h-[70vh]">
+      {/* Mobile: collection selector + toolbar stacked; Desktop: label + toolbar in row */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-6">
+        {/* Mobile collection selector */}
+        <div className="md:hidden">
           <CollectionSelector
             selectedCollection={selectedCollection}
             onCollectionChange={handleCollectionChange}
           />
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={loading || isRefreshing}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Reload listings"
-          >
-            {loading || isRefreshing ? (
-              <>
-                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                  <path d="M3 3v5h5" />
-                  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-                  <path d="M16 21h5v-5" />
-                </svg>
-                Refresh
-              </>
+        </div>
+        {/* Desktop: just the label (selector is in sidebar) */}
+        <span className="hidden md:block text-[11px] font-orbitron uppercase tracking-[0.16em] text-[rgb(186,255,188)]/70 shrink-0">
+          Collection
+        </span>
+        {/* Selection toolbar + refresh */}
+        {!loading && !error && listings.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center justify-start md:justify-end">
+            <button
+              type="button"
+              onClick={selectAll}
+              className="inline-flex items-center justify-center rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer"
+            >
+              Select All ({MAX_CART_SELECTION} max)
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedKeys.length === 0}
+              className={`inline-flex items-center justify-center rounded-full border px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] transition ${
+                selectedKeys.length > 0
+                  ? "border-white/40 text-white hover:border-[rgb(50,255,52)] hover:text-[rgb(50,255,52)] hover:cursor-pointer"
+                  : "border-white/20 text-white/30"
+              }`}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={loading || isRefreshing}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 sm:px-4 py-1.5 text-[10px] sm:text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Reload listings"
+            >
+              {loading || isRefreshing ? (
+                <>
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
+                  <span className="hidden sm:inline">Refreshing...</span>
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M16 21h5v-5" />
+                  </svg>
+                  <span className="hidden sm:inline">Refresh</span>
+                </>
+              )}
+            </button>
+            {selectedKeys.length > 0 && (
+              <span className="text-[10px] sm:text-xs text-[rgb(186,255,188)]/60 font-orbitron">
+                {selectedKeys.length} selected
+              </span>
             )}
-          </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main content row: Sidebar (desktop) + Cards grid */}
+      <div className="flex flex-col md:flex-row gap-4 md:gap-6 min-h-[60vh] min-w-0 md:items-start">
+        {/* Desktop sidebar */}
+        <aside className="hidden md:flex shrink-0 flex-col gap-2 w-[260px] min-w-[260px] min-h-[200px]">
+          <CollectionSelector
+            selectedCollection={selectedCollection}
+            onCollectionChange={handleCollectionChange}
+          />
           <div className="mt-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-3">
             <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 mb-1">
               Arcade Orderbook
@@ -257,21 +275,21 @@ export default function Marketplace() {
           type="button"
           onClick={handleBulkBuy}
           disabled={isBuying}
-          className="fixed bottom-6 right-6 z-40 flex flex-col items-center justify-center rounded-xl border border-[rgb(50,255,52)] bg-black/90 backdrop-blur-md px-6 py-4 shadow-[0_0_30px_rgba(50,255,52,0.25)] transition hover:bg-[rgb(50,255,52)]/15 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-center justify-center rounded-xl border border-[rgb(50,255,52)] bg-black/90 backdrop-blur-md px-4 py-3 sm:px-6 sm:py-4 shadow-[0_0_30px_rgba(50,255,52,0.25)] transition hover:bg-[rgb(50,255,52)]/15 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           title={`Buy ${selectedKeys.length} selected items`}
         >
           {isBuying ? (
             <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
           ) : (
             <>
-              <span className="text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)]">
+              <span className="text-xs sm:text-sm font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)]">
                 Buy
               </span>
-              <span className="text-xs font-orbitron text-[rgb(186,255,188)]/70 mt-0.5">
+              <span className="text-[10px] sm:text-xs font-orbitron text-[rgb(186,255,188)]/70 mt-0.5">
                 {selectedKeys.length} item{selectedKeys.length !== 1 ? "s" : ""}
               </span>
               {Array.from(cartTotals.entries()).map(([symbol, total]) => (
-                <span key={symbol} className="text-[10px] font-orbitron font-bold text-[rgb(50,255,52)] mt-1">
+                <span key={symbol} className="text-[9px] sm:text-[10px] font-orbitron font-bold text-[rgb(50,255,52)] mt-1">
                   <ReservePriceDisplay
                     value={total}
                     symbol={symbol}
@@ -340,7 +358,7 @@ function ListingCard({
       </button>
 
       {/* Image */}
-      <div className="flex items-center justify-center p-3 pb-0">
+      <div className="flex items-center justify-center p-2 sm:p-3 pb-0">
         <div className="relative w-full aspect-square flex items-center justify-center rounded-lg overflow-hidden">
           {!imageError ? (
             <Image
@@ -362,7 +380,7 @@ function ListingCard({
               strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="w-12 h-12 text-[rgb(50,255,52)]/40"
+              className="w-10 h-10 sm:w-12 sm:h-12 text-[rgb(50,255,52)]/40"
             >
               <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
               <circle cx="9" cy="9" r="2" />
@@ -373,11 +391,11 @@ function ListingCard({
       </div>
 
       {/* Info */}
-      <div className="flex flex-col gap-1 px-3 py-2">
-        <h3 className="text-xs font-orbitron uppercase tracking-wide leading-tight text-center line-clamp-1 text-white">
+      <div className="flex flex-col gap-0.5 sm:gap-1 px-2 sm:px-3 py-1.5 sm:py-2">
+        <h3 className="text-[10px] sm:text-xs font-orbitron uppercase tracking-wide leading-tight text-center line-clamp-1 text-white">
           {isBeasts ? displayName : `#${listing.tokenId}`}
         </h3>
-        <p className="text-[9px] text-center text-[rgb(186,255,188)]/40">
+        <p className="text-[8px] sm:text-[9px] text-center text-[rgb(186,255,188)]/40">
           {listing.owner.slice(0, 6)}...{listing.owner.slice(-4)}
         </p>
       </div>
@@ -390,13 +408,13 @@ function ListingCard({
           onBuy();
         }}
         disabled={isBuying}
-        className="mt-auto flex flex-col items-center justify-center w-full px-3 py-2.5 border-t border-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="mt-auto flex flex-col items-center justify-center w-full px-2 sm:px-3 py-2 sm:py-2.5 border-t border-[rgb(50,255,52)]/20 text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         title="Buy this NFT"
       >
-        <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
+        <span className="text-[9px] sm:text-[10px] uppercase text-[rgb(186,255,188)]/70">
           {isBuying ? "Buying..." : "Buy"}
         </span>
-        <span className="text-xs font-orbitron font-bold truncate max-w-full">
+        <span className="text-[10px] sm:text-xs font-orbitron font-bold truncate max-w-full">
           <ReservePriceDisplay
             value={listing.price}
             symbol={listing.currencySymbol}
