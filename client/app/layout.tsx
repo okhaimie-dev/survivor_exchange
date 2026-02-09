@@ -12,6 +12,7 @@ import { EVMProvider } from "./providers/evm-provider";
 import { ToastProvider } from "./providers/toast-provider";
 import { AdventurerAttributesProvider } from "./providers/adventurer-attributes-provider";
 import { ErrorBoundary } from "./components/ui";
+import { MarketplaceProvider } from "./providers/marketplace-provider";
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
@@ -53,6 +54,7 @@ export default function RootLayout({
         <EVMProvider>
           <ApolloGraphQLProvider>
             <StarknetProvider>
+              <MarketplaceProvider>
               <ToastProvider>
                 <WalletModalProvider>
                   <AdventurerAttributesProvider>
@@ -66,6 +68,7 @@ export default function RootLayout({
                   </AdventurerAttributesProvider>
                 </WalletModalProvider>
               </ToastProvider>
+              </MarketplaceProvider>
             </StarknetProvider>
           </ApolloGraphQLProvider>
         </EVMProvider>

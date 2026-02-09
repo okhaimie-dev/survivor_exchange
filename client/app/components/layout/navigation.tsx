@@ -2,7 +2,7 @@
 
 import { clsx } from "../../lib/utils";
 
-type NavigationTab = "buy" | "sell" | "my-listings";
+type NavigationTab = "buy" | "sell" | "my-listings" | "marketplace";
 
 interface NavigationProps {
   activeTab: NavigationTab;
@@ -17,7 +17,7 @@ const activeHighlight =
 
 export default function Navigation({ activeTab, onTabChange }: NavigationProps) {
   return (
-    <div className="flex flex-row items-stretch w-full max-w-full md:w-[420px] lg:w-[540px] rounded-xl overflow-hidden shrink-0 border-t-2 border-b-2 border-[rgb(50,255,52)]/20">
+    <div className="flex flex-row items-stretch w-full max-w-full md:w-[560px] lg:w-[720px] rounded-xl overflow-hidden shrink-0 border-t-2 border-b-2 border-[rgb(50,255,52)]/20">
       <button
         type="button"
         onClick={() => onTabChange("buy")}
@@ -45,11 +45,22 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
         onClick={() => onTabChange("my-listings")}
         className={clsx(
           tabBase,
-          "border-r-2 border-[rgb(50,255,52)]/20 rounded-r-xl",
+          "border-r-2 border-[rgb(50,255,52)]/20",
           activeTab === "my-listings" ? activeHighlight : "text-white/70 font-normal"
         )}
       >
         My Listings
+      </button>
+      <button
+        type="button"
+        onClick={() => onTabChange("marketplace")}
+        className={clsx(
+          tabBase,
+          "border-r-2 border-[rgb(50,255,52)]/20 rounded-r-xl",
+          activeTab === "marketplace" ? activeHighlight : "text-white/70 font-normal"
+        )}
+      >
+        Marketplace
       </button>
     </div>
   );

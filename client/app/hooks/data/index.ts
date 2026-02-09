@@ -3,3 +3,4 @@ export { useMyListings, type FormattedListing, type FormattedOffer } from './use
 export { useMyNFTs } from './use-my-nfts';
 export { useMyAdventurerNFTs } from './use-my-adventurer-nfts';
 export { useBeastByTokenId } from './use-beast-by-token-id';
+export { useMarketplaceListings, type MarketplaceListing } from './use-marketplace-listings';
