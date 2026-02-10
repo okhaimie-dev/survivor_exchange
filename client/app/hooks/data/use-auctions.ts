@@ -17,7 +17,7 @@ import {
   normalizeTokenId,
   normalizeContractAddress,
 } from "../../lib/utils/normalization";
-import { DEFAULT_PAGE_SIZE, VAULT_CONTRACT_ADDRESS } from "../../lib/constants";
+import { DEFAULT_PAGE_SIZE, DEFAULT_POLL_INTERVAL, VAULT_CONTRACT_ADDRESS } from "../../lib/constants";
 
 export type { AuctionWithNFTs };
 
@@ -38,6 +38,7 @@ export function useAuctions() {
     fetchPolicy: "cache-and-network",
     errorPolicy: "all",
     notifyOnNetworkStatusChange: false,
+    pollInterval: DEFAULT_POLL_INTERVAL,
   });
 
   const allAuctions: Auction[] = useMemo(() => {

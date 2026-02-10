@@ -13,6 +13,7 @@ import {
   VAULT_CONTRACT_ADDRESS,
   USDC_ADDRESS,
   SUPPORTED_TOKENS,
+  getOnChainDecimals,
 } from "../../lib/constants";
 import { normalizeContractAddress } from "../../lib/utils/normalization";
 import {
@@ -31,6 +32,8 @@ interface UseBidActionsOptions {
   bidAmountToken: string;
   paginatedFilteredAuctions: AuctionWithNFTs[];
   onTokenPriceUpdate: (price: number | null) => void;
+  /** Called after a successful bid/offer to refresh auction data */
+  onBidSuccess?: () => Promise<unknown> | void;
 }
 
 interface BidActionsState {
@@ -87,6 +90,7 @@ export function useBidActions(
     bidAmountToken,
     paginatedFilteredAuctions,
     onTokenPriceUpdate,
+    onBidSuccess,
   } = options;
 
   // State
@@ -125,9 +129,10 @@ export function useBidActions(
     }
 
     // Calculate how much of the payment token we need
+    const onChainDec = getOnChainDecimals(paymentTokenInfo);
     const tokenAmountNeeded = usdcAmount / currentTokenPrice;
     const tokenAmountWei = BigInt(
-      Math.floor(tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals))
+      Math.floor(tokenAmountNeeded * Math.pow(10, onChainDec))
     );
 
     // Check balance of payment token
@@ -239,11 +244,22 @@ export function useBidActions(
       return;
     }
 
-    if (
-      paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() &&
-      (tokenPrice === null || !isValidPrice(tokenPrice))
-    ) {
-      return;
+    // Fetch token price if needed for non-USDC tokens
+    let effectiveTokenPrice = tokenPrice;
+    if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+      if (effectiveTokenPrice === null || !isValidPrice(effectiveTokenPrice)) {
+        try {
+          effectiveTokenPrice = await getTokenPriceInUSDC(paymentToken, address);
+          onTokenPriceUpdate(effectiveTokenPrice);
+        } catch {
+          toast.error("Price unavailable", "Unable to get token price. Please try again.");
+          return;
+        }
+      }
+      if (!isValidPrice(effectiveTokenPrice)) {
+        toast.error("Price unavailable", "Unable to get token price. Please try again.");
+        return;
+      }
     }
 
     setInsufficientFundsError(null);
@@ -351,6 +367,8 @@ export function useBidActions(
       setTxnHash(response.transaction_hash);
       setLocalBidAmount("");
       toast.success("Bid placed", "Your bid has been submitted successfully");
+      // Refresh auction data after short delay to let indexer catch up
+      setTimeout(() => { onBidSuccess?.(); }, 3000);
     } catch (err) {
       console.error("Error placing bid:", err);
       if (err instanceof Error && err.message.includes("balance")) {
@@ -376,6 +394,7 @@ export function useBidActions(
     selectedCollection,
     buildSwapCalls,
     onTokenPriceUpdate,
+    onBidSuccess,
     toast,
     executeWithPaymaster,
   ]);
@@ -478,11 +497,22 @@ export function useBidActions(
       return;
     }
 
-    if (
-      paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase() &&
-      (tokenPrice === null || !isValidPrice(tokenPrice))
-    ) {
-      return;
+    // Fetch token price if needed for non-USDC tokens
+    let effectiveTokenPrice = tokenPrice;
+    if (paymentToken.toLowerCase() !== USDC_ADDRESS.toLowerCase()) {
+      if (effectiveTokenPrice === null || !isValidPrice(effectiveTokenPrice)) {
+        try {
+          effectiveTokenPrice = await getTokenPriceInUSDC(paymentToken, address);
+          onTokenPriceUpdate(effectiveTokenPrice);
+        } catch {
+          toast.error("Price unavailable", "Unable to get token price. Please try again.");
+          return;
+        }
+      }
+      if (!isValidPrice(effectiveTokenPrice)) {
+        toast.error("Price unavailable", "Unable to get token price. Please try again.");
+        return;
+      }
     }
 
     setInsufficientFundsError(null);
@@ -590,6 +620,7 @@ export function useBidActions(
       setOfferTxnHash(response.transaction_hash);
       setLocalBidAmount("");
       toast.success("Offer submitted", "Your offer has been sent to the seller");
+      setTimeout(() => { onBidSuccess?.(); }, 3000);
     } catch (err) {
       console.error("Error making offer:", err);
       if (err instanceof Error && err.message.includes("balance")) {
@@ -614,6 +645,7 @@ export function useBidActions(
     tokenPrice,
     buildSwapCalls,
     onTokenPriceUpdate,
+    onBidSuccess,
     toast,
     executeWithPaymaster,
   ]);

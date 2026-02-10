@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useCallback, useEffect, useRef } from "react";
-import { useAccount } from "@starknet-react/core";
+import { useAccount, useProvider } from "@starknet-react/core";
 import { AdventurerCard, MonsterCard, PackCard } from "./cards";
 import { Pagination } from "./ui";
 import { Filters, type FilterState } from "./filters";
@@ -9,11 +9,12 @@ import { BidsSkeleton } from "./skeletons";
 import { BeastDetailModal, AdventurerDetailModal } from "./modals";
 import type { FormattedNFT, AuctionItem, Collection } from "../lib/types";
 import { AuctionWithNFTs, useBidActions } from "../hooks";
-import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress } from "../lib/constants";
+import { DEFAULT_PAGE_SIZE, GRID_PAGE_SIZE, STAT_BOUNDS_MAX_TOKENS, ADVENTURER_NFT_CONTRACT_ADDRESS, BEASTS_NFT_CONTRACT_ADDRESS, SUPPORTED_TOKENS, USDC_ADDRESS, MAX_AUCTION_NFT_SELECTION, getTokenByAddress, getOnChainDecimals } from "../lib/constants";
 import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
-import { formatUSD, parseAmount, parseHexOrDecimal } from "../lib/utils";
+import { formatUSD, formatTokenAmount, parseAmount, parseHexOrDecimal } from "../lib/utils";
 import { applyFiltersToNFTs, computeAdventurerStatBounds, getFiltersWithoutStatBounds, type AdventurerStatBounds } from "../lib/filter-utils";
 import { isAuctionExpired } from "../lib/utils/auction-status";
+import { getTokenPriceInUSDC } from "../lib/utils/token-price-cache";
 import { CollectionSelector, CustomDropdown } from "./ui";
 import { CollectionType } from "../lib/constants";
 import { useWalletModal } from "../providers/wallet-modal-provider";
@@ -57,6 +58,7 @@ export default function Buy({
   onRefresh,
 }: BuyProps) {
   const { address, account } = useAccount();
+  const provider = useProvider();
   const { openWalletModal } = useWalletModal();
   const toast = useToast();
   const [selectedCollection, setSelectedCollection] = useState<CollectionType>("adventurers");
@@ -121,6 +123,7 @@ export default function Buy({
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
   const [userOffer, setUserOffer] = useState<{ buyer: string; amount: number; status: string; createdAt: string; expiresAt: string } | null>(null);
   const [tokenBalances, setTokenBalances] = useState<Record<string, { amount: string; usdValue: string | null }>>({});
+  const [tokenUsdPrices, setTokenUsdPrices] = useState<Record<string, number>>({});
   const [filters, setFilters] = useState<FilterState>({
     id: "", search: "", beast: "", type: "", tier: "",
     levelMin: "", levelMax: "", powerMin: "", powerMax: "", rankMin: "", rankMax: "",
@@ -181,10 +184,10 @@ export default function Buy({
       const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
       const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
       const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-      const decimals = reserveToken?.decimals ?? 6;
+      // starting_price and current_bid are always in USDC micro-units (6 decimals), regardless of fee_token
       const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
-      const startingPrice = parseAmount(startingPriceRaw, decimals);
-      const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
+      const startingPrice = (parseHexOrDecimal(startingPriceRaw) || 0) / 1e6;
+      const rawBid = auction.current_bid ? (parseHexOrDecimal(auction.current_bid) || 0) / 1e6 : undefined;
       const highestBid = rawBid != null && rawBid > 0 ? rawBid : undefined;
       const price = (highestBid != null && highestBid > 0) ? highestBid : startingPrice;
       const reserveTokenSymbol = "USDC";
@@ -717,10 +720,11 @@ export default function Buy({
     const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
     const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
     const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-    const decimals = reserveToken?.decimals ?? 6;
+    // starting_price and current_bid are always in USDC micro-units (6 decimals)
+    // Store as RAW here because use-bid-actions.ts divides by 1e6
     const startingPriceRaw = auction.starting_price ?? (auction as { startingPrice?: string }).startingPrice;
-    const startingPrice = parseAmount(startingPriceRaw, decimals);
-    const rawBid = auction.current_bid ? parseAmount(auction.current_bid, decimals) : undefined;
+    const startingPrice = parseHexOrDecimal(startingPriceRaw) || 0;
+    const rawBid = auction.current_bid ? (parseHexOrDecimal(auction.current_bid) || 0) : undefined;
     const highestBid = rawBid != null && rawBid > 0 ? rawBid : undefined;
     return {
       id: String(auction.auction_id),
@@ -759,6 +763,7 @@ export default function Buy({
     bidAmountToken,
     paginatedFilteredAuctions: paginatedFilteredAuctionsForModal,
     onTokenPriceUpdate: setTokenPrice,
+    onBidSuccess: onRefresh,
   });
 
   // Sync local bid amount with hook (modal uses controlled input)
@@ -798,13 +803,124 @@ export default function Buy({
     if (modalAuctionId) setBidAmountToken("");
   }, [modalAuctionId]);
 
-  // Token options for payment dropdown (balance can load async)
+  // Fetch token USD prices on mount (no wallet needed)
+  useEffect(() => {
+    let cancelled = false;
+    const loadPrices = async () => {
+      const prices: Record<string, number> = {};
+      prices[USDC_ADDRESS] = 1;
+      await Promise.all(
+        SUPPORTED_TOKENS.filter(
+          (t) => t.address.toLowerCase() !== USDC_ADDRESS.toLowerCase(),
+        ).map(async (token) => {
+          try {
+            const price = await getTokenPriceInUSDC(token.address);
+            if (price && isFinite(price) && price > 0) {
+              prices[token.address] = price;
+            }
+          } catch {
+            // skip
+          }
+        }),
+      );
+      if (!cancelled) setTokenUsdPrices(prices);
+    };
+    loadPrices();
+    const interval = setInterval(loadPrices, 40000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
+  // Fetch wallet balances when connected
+  useEffect(() => {
+    if (!address || !provider) return;
+    let cancelled = false;
+    const fetchBalances = async () => {
+      const balances: Record<string, { amount: string; usdValue: string | null }> = {};
+      await Promise.all(
+        SUPPORTED_TOKENS.map(async (token) => {
+          try {
+            const balanceResult = await provider.provider.callContract({
+              contractAddress: token.address,
+              entrypoint: "balanceOf",
+              calldata: [address],
+            });
+            if (balanceResult && balanceResult.length >= 2) {
+              const low = balanceResult[0];
+              const high = balanceResult[1];
+              const balance = BigInt(low) + (BigInt(high) << BigInt(128));
+              const dec = getOnChainDecimals(token);
+              const balanceDecimal = Number(balance) / Math.pow(10, dec);
+              const formattedAmount = balanceDecimal > 0
+                ? formatTokenAmount(balanceDecimal, dec)
+                : "0.00";
+              let usdValue: string | null = null;
+              try {
+                if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                  usdValue = formatUSD(balanceDecimal);
+                } else if (balanceDecimal > 0) {
+                  const price = await getTokenPriceInUSDC(token.address);
+                  if (price && isFinite(price) && price > 0) {
+                    usdValue = formatUSD(balanceDecimal * price);
+                  } else {
+                    usdValue = formatUSD(0);
+                  }
+                } else {
+                  usdValue = formatUSD(0);
+                }
+              } catch {
+                usdValue = formatUSD(0);
+              }
+              balances[token.address] = { amount: formattedAmount, usdValue: usdValue || formatUSD(0) };
+            } else {
+              balances[token.address] = { amount: "0.00", usdValue: formatUSD(0) };
+            }
+          } catch {
+            balances[token.address] = { amount: "0.00", usdValue: formatUSD(0) };
+          }
+        }),
+      );
+      if (!cancelled) setTokenBalances(balances);
+    };
+    fetchBalances();
+    return () => { cancelled = true; };
+  }, [address]);
+
+  // Fetch token price when payment token changes (needed for non-USDC bids)
+  useEffect(() => {
+    if (paymentToken.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+      setTokenPrice(1);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const price = await getTokenPriceInUSDC(paymentToken);
+        if (!cancelled && price && isFinite(price) && price > 0) {
+          setTokenPrice(price);
+        }
+      } catch {
+        // Will be retried when user clicks bid
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [paymentToken]);
+
+  // Token options for payment dropdown
   const tokenOptions = useMemo(() => {
     return SUPPORTED_TOKENS.map((token) => {
       const balanceInfo = address && tokenBalances[token.address];
-      let balanceDisplay = "—";
-      if (address && balanceInfo) {
+      let balanceDisplay: string;
+      if (balanceInfo) {
         balanceDisplay = balanceInfo.usdValue ?? formatUSD(0);
+      } else {
+        const usdPrice = tokenUsdPrices[token.address];
+        if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+          balanceDisplay = "$1.00";
+        } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+          balanceDisplay = `~${formatUSD(usdPrice)}`;
+        } else {
+          balanceDisplay = address ? "..." : "—";
+        }
       }
       return {
         value: token.address,
@@ -813,7 +929,7 @@ export default function Buy({
         logo: undefined,
       };
     });
-  }, [address, tokenBalances]);
+  }, [address, tokenBalances, tokenUsdPrices]);
 
   const itemKey = useCallback((nft: NFTWithAuction) =>
     nft.isPack ? `${nft.auctionId}-pack` : `${nft.auctionId}-${nft.tokenId}`, []);
@@ -862,11 +978,8 @@ export default function Buy({
       for (const auctionId of uniqueAuctionIdsForBulk) {
         const auction = auctions.find((a) => String(a.auction_id) === auctionId);
         if (!auction) continue;
-        const feeTokenRaw = (auction as { fee_token?: string }).fee_token;
-        const feeToken = feeTokenRaw ? normalizeContractAddress(feeTokenRaw) : undefined;
-        const reserveToken = feeToken ? getTokenByAddress(feeToken) : undefined;
-        const decimals = reserveToken?.decimals ?? 6;
-        const startingPrice = parseAmount(auction.starting_price, decimals);
+        // starting_price is always in USDC micro-units (6 decimals)
+        const startingPrice = (parseHexOrDecimal(auction.starting_price) || 0) / 1e6;
         const minimumBid = startingPrice * 1.02;
         await placeBidForAuction(auctionId, amount, minimumBid);
       }
