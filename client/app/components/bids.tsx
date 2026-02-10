@@ -31,6 +31,7 @@ import {
   IMAGE_BASE_URL,
   SUPPORTED_TOKENS,
   USDC_ADDRESS,
+  getOnChainDecimals,
 } from "../lib/constants";
 import { fetchTokens, getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
 import { normalizeContractAddress, normalizeTokenId } from "../lib/utils/normalization";
@@ -251,6 +252,40 @@ export default function Bids({
     loadLogos();
   }, []);
 
+  // Fetch token USD prices on mount (no wallet needed)
+  useEffect(() => {
+    let cancelled = false;
+    const loadPrices = async () => {
+      const prices: Record<string, number> = {};
+      // USDC is always $1
+      prices[USDC_ADDRESS] = 1;
+      await Promise.all(
+        SUPPORTED_TOKENS.filter(
+          (t) => t.address.toLowerCase() !== USDC_ADDRESS.toLowerCase(),
+        ).map(async (token) => {
+          try {
+            const price = await getTokenPriceInUSDC(token.address);
+            if (price && isFinite(price) && price > 0) {
+              prices[token.address] = price;
+            }
+          } catch {
+            // skip
+          }
+        }),
+      );
+      if (!cancelled) {
+        setTokenUsdPrices(prices);
+      }
+    };
+    loadPrices();
+    // Refresh prices periodically
+    const interval = setInterval(loadPrices, 40000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   const collections: Collection[] = useMemo(() => {
     return paginatedFilteredAuctions.map((auction) => {
       // Parse starting_price - handle both decimal and hex strings
@@ -308,6 +343,7 @@ export default function Bids({
   const [tokenBalances, setTokenBalances] = useState<
     Record<string, { amount: string; usdValue: string | null }>
   >({});
+  const [tokenUsdPrices, setTokenUsdPrices] = useState<Record<string, number>>({});
 
   // State for adventurer detail images (when NFTs aren't fetched from GraphQL)
   const [adventurerDetailImages, setAdventurerDetailImages] = useState<Array<{ tokenId: string; imageUrl: string }>>([]);
@@ -817,12 +853,12 @@ export default function Bids({
               const high = balanceResult[1];
               const balance = BigInt(low) + (BigInt(high) << BigInt(128));
               const balanceDecimal =
-                Number(balance) / Math.pow(10, token.decimals);
+                Number(balance) / Math.pow(10, getOnChainDecimals(token));
 
               // Format token amount
               const formattedAmount =
                 balanceDecimal > 0
-                  ? formatTokenAmount(balanceDecimal, token.decimals)
+                  ? formatTokenAmount(balanceDecimal, getOnChainDecimals(token))
                   : "0.00";
 
               // Calculate USD value
@@ -1063,10 +1099,11 @@ export default function Bids({
         }
 
         // Calculate how much of the payment token we need
+        const onChainDec = getOnChainDecimals(paymentTokenInfo);
         const tokenAmountNeeded = usdcAmount / currentTokenPrice;
         const tokenAmountWei = BigInt(
           Math.floor(
-            tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeeded * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1097,7 +1134,7 @@ export default function Bids({
         const tokenAmountNeededForSwap = usdcAmount / currentTokenPrice;
         const tokenAmountWeiForSwap = BigInt(
           Math.floor(
-            tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeededForSwap * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1350,10 +1387,11 @@ export default function Bids({
         }
 
         // Calculate how much of the payment token we need
+        const onChainDec = getOnChainDecimals(paymentTokenInfo);
         const tokenAmountNeeded = usdcAmount / currentTokenPrice;
         const tokenAmountWei = BigInt(
           Math.floor(
-            tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeeded * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1384,7 +1422,7 @@ export default function Bids({
         const tokenAmountNeededForSwap = usdcAmount / currentTokenPrice;
         const tokenAmountWeiForSwap = BigInt(
           Math.floor(
-            tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeededForSwap * Math.pow(10, onChainDec),
           ),
         );
 
@@ -2496,13 +2534,18 @@ export default function Bids({
                             : null;
 
                         let balanceDisplay: string;
-                        if (!address) {
-                          balanceDisplay = "—";
-                        } else if (!balanceInfo) {
-                          balanceDisplay = "...";
-                        } else {
-                          // Always show USD value (which will be $0.00 for zero balances)
+                        if (balanceInfo) {
                           balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+                        } else {
+                          // Show token USD price even without wallet
+                          const usdPrice = tokenUsdPrices[token.address];
+                          if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                            balanceDisplay = "$1.00";
+                          } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+                            balanceDisplay = `~${formatUSD(usdPrice)}`;
+                          } else {
+                            balanceDisplay = address ? "..." : "—";
+                          }
                         }
 
                         return {
@@ -3155,12 +3198,17 @@ export default function Bids({
               : null;
 
           let balanceDisplay: string;
-          if (!address) {
-            balanceDisplay = "—";
-          } else if (!balanceInfo) {
-            balanceDisplay = "...";
-          } else {
+          if (balanceInfo) {
             balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+          } else {
+            const usdPrice = tokenUsdPrices[token.address];
+            if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+              balanceDisplay = "$1.00";
+            } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+              balanceDisplay = `~${formatUSD(usdPrice)}`;
+            } else {
+              balanceDisplay = address ? "..." : "—";
+            }
           }
 
           return {
@@ -3223,12 +3271,17 @@ export default function Bids({
               : null;
 
           let balanceDisplay: string;
-          if (!address) {
-            balanceDisplay = "—";
-          } else if (!balanceInfo) {
-            balanceDisplay = "...";
-          } else {
+          if (balanceInfo) {
             balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+          } else {
+            const usdPrice = tokenUsdPrices[token.address];
+            if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+              balanceDisplay = "$1.00";
+            } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+              balanceDisplay = `~${formatUSD(usdPrice)}`;
+            } else {
+              balanceDisplay = address ? "..." : "—";
+            }
           }
 
           return {

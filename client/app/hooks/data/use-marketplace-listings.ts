@@ -10,6 +10,7 @@ import {
   BEASTS_NFT_CONTRACT_ADDRESS,
   ADVENTURER_NFT_CONTRACT_ADDRESS,
   SUPPORTED_TOKENS,
+  getOnChainDecimals,
 } from "../../lib/constants";
 import { normalizeContractAddress } from "../../lib/utils/normalization";
 import { getAdventurerImageUrl } from "../../lib/utils";
@@ -22,15 +23,6 @@ const COLLECTION_ADDRESSES: Record<CollectionType, string> = {
 
 /** Torii project that hosts beast collection images (NOT lax, which returns 404) */
 const BEASTS_TORII_BASE_URL = "https://api.cartridge.gg/x/pg-mainnet-10/torii";
-
-/**
- * ERC20 decimal overrides for the marketplace.
- * SUPPORTED_TOKENS lists LORDS as 6 decimals (auction contract convention),
- * but the actual ERC20 has 18 decimals. Arcade marketplace uses real ERC20 values.
- */
-const ERC20_DECIMAL_OVERRIDES: Record<string, number> = {
-  LORDS: 18,
-};
 
 export interface MarketplaceListing {
   orderId: number;
@@ -60,8 +52,7 @@ export function getCurrencyInfo(currencyAddress: string) {
     (t) => normalizeContractAddress(t.address).toLowerCase() === normalized,
   );
   const symbol = token?.symbol ?? "TOKEN";
-  // Use ERC20 override if available (e.g. LORDS is 18 on-chain, not 6 as in auction system)
-  const decimals = ERC20_DECIMAL_OVERRIDES[symbol] ?? token?.decimals ?? 18;
+  const decimals = token ? getOnChainDecimals(token) : 18;
   return { symbol, decimals };
 }
 

@@ -20,14 +20,14 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
     <div className="flex flex-row items-stretch w-full max-w-full md:w-[560px] lg:w-[720px] rounded-xl overflow-hidden shrink-0 border-t-2 border-b-2 border-[rgb(50,255,52)]/20">
       <button
         type="button"
-        onClick={() => onTabChange("buy")}
+        onClick={() => onTabChange("marketplace")}
         className={clsx(
           tabBase,
           "border-l-2 border-r-2 border-[rgb(50,255,52)]/20 rounded-l-xl",
-          activeTab === "buy" ? activeHighlight : "text-white/70 font-normal"
+          activeTab === "marketplace" ? activeHighlight : "text-white/70 font-normal"
         )}
       >
-        Auction
+        Marketplace
       </button>
       <button
         type="button"
@@ -53,14 +53,14 @@ export default function Navigation({ activeTab, onTabChange }: NavigationProps) 
       </button>
       <button
         type="button"
-        onClick={() => onTabChange("marketplace")}
+        onClick={() => onTabChange("buy")}
         className={clsx(
           tabBase,
           "border-r-2 border-[rgb(50,255,52)]/20 rounded-r-xl",
-          activeTab === "marketplace" ? activeHighlight : "text-white/70 font-normal"
+          activeTab === "buy" ? activeHighlight : "text-white/70 font-normal"
         )}
       >
-        Marketplace
+        Auction
       </button>
     </div>
   );

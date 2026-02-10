@@ -102,6 +102,8 @@ export interface TokenInfo {
   symbol: string;
   name: string;
   decimals: number;
+  /** On-chain ERC20 decimals when different from auction contract decimals */
+  onChainDecimals?: number;
 }
 
 export const SUPPORTED_TOKENS: TokenInfo[] = [
@@ -128,6 +130,7 @@ export const SUPPORTED_TOKENS: TokenInfo[] = [
     symbol: "LORDS",
     name: "Lords",
     decimals: 6, // contract uses 6 decimals for Lords amounts
+    onChainDecimals: 18, // actual ERC20 decimals on-chain
   },
   {
     address: SURVIVOR_ADDRESS_MAINNET,
@@ -159,3 +162,7 @@ export const getTokenBySymbol = (symbol: string): TokenInfo | undefined => {
     (token) => token.symbol.toUpperCase() === symbol.toUpperCase(),
   );
 };
+
+/** Returns the actual on-chain ERC20 decimals (falls back to `decimals`). */
+export const getOnChainDecimals = (token: TokenInfo): number =>
+  token.onChainDecimals ?? token.decimals;

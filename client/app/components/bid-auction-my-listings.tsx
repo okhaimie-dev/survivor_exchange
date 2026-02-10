@@ -51,7 +51,7 @@ export default function BidAuctionMyListingsRent({
     token,
     walletOverride
 }: BidAuctionMyListingsProps) {
-    const [activeTab, setActiveTab] = useState<"buy" | "sell" | "my-listings" | "marketplace">("buy");
+    const [activeTab, setActiveTab] = useState<"buy" | "sell" | "my-listings" | "marketplace">("marketplace");
     return (
         <div className="flex flex-1 flex-col w-full max-w-6xl mx-auto px-4 md:px-6 min-w-0">
             <div className="flex flex-col items-center justify-center shrink-0 pt-2 md:pt-3 mb-4">
