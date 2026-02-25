@@ -752,8 +752,10 @@ export default function Buy({
     handlePlaceBid,
     placeBidForAuction,
     handleMakeOffer,
+    handleSettleAuction,
     isSubmitting,
     isSubmittingOffer,
+    isSettling,
     insufficientFundsError,
   } = useBidActions({
     selectedCollectionId: modalAuctionId,
@@ -1429,6 +1431,8 @@ export default function Buy({
           onPlaceBid={handlePlaceBid}
           onMakeOffer={handleMakeOffer}
           onOpenWallet={openWalletModal}
+          onSettle={handleSettleAuction}
+          isSettling={isSettling}
           summitBeasts={[]}
         />
       ) : (
@@ -1469,6 +1473,8 @@ export default function Buy({
           onPlaceBid={handlePlaceBid}
           onMakeOffer={handleMakeOffer}
           onOpenWallet={openWalletModal}
+          onSettle={handleSettleAuction}
+          isSettling={isSettling}
         />
       )}
 

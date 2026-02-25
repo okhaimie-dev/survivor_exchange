@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image";
 import type { FormattedNFT } from "../../lib/types";
 import { AddressDisplay, CustomDropdown, InfoTooltip, CountdownTimer, ReservePriceDisplay, type DropdownOption } from "../ui";
-import { formatUSDSmart, getAdventurerImageUrl } from "../../lib/utils";
+import { formatUSDSmart, getAdventurerImageUrl, isAuctionExpired } from "../../lib/utils";
 import { copyAuctionLink } from "../../lib/utils/share-utils";
 import { normalizeTokenId } from "../../lib/utils/normalization";
 import { calculateAdventurerRating } from "../../lib/utils/adventurer-rating";
@@ -64,6 +64,10 @@ interface AdventurerDetailModalProps {
   onMakeOffer?: () => void;
   /** Callback to open wallet modal */
   onOpenWallet?: () => void;
+  /** Callback to settle an expired auction */
+  onSettle?: () => void;
+  /** Whether a settle transaction is in progress */
+  isSettling?: boolean;
   /** When provided, renders direct sell form instead of Add/Remove for auction */
   sellFormContent?: React.ReactNode;
   /** When true, use same compact layout as Sell (stats, inventory, Level/XP/Score) but hide sell/bid section (e.g. My Listings view) */
@@ -101,6 +105,8 @@ export default function AdventurerDetailModal({
   onPlaceBid,
   onMakeOffer,
   onOpenWallet,
+  onSettle,
+  isSettling = false,
   sellFormContent,
   viewOnly = false,
 }: AdventurerDetailModalProps) {
@@ -655,7 +661,8 @@ export default function AdventurerDetailModal({
                         </p>
                       </div>
                     </div>
-                    {!auctionBidData.isUserSeller && (
+                    {/* Bid controls - only when NOT expired and NOT seller */}
+                    {!auctionBidData.isUserSeller && !isAuctionExpired(auctionBidData.endTime, auctionBidData.status) && (
                       <>
                         {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
                           <div className="flex flex-col gap-1">
@@ -970,8 +977,8 @@ export default function AdventurerDetailModal({
                 </div>
               </div>
 
-              {/* Bid input and actions (only for non-sellers) */}
-              {!bidData.isUserSeller && (
+              {/* Bid input and actions - only when NOT expired and NOT seller */}
+              {!bidData.isUserSeller && !isAuctionExpired(bidData.endTime, bidData.status) && (
                 <>
                   {/* Token selector */}
                   {tokenOptions && tokenOptions.length > 0 && onPaymentTokenChange && (
@@ -1123,10 +1130,29 @@ export default function AdventurerDetailModal({
                   </p>
                 </div>
               )}
+
             </div>
             );
           })()}
             </>
+          )}
+
+          {/* Settle button - shown for anyone when auction is expired (outside layout gates) */}
+          {auctionId && auctionBidData && onSettle && isAuctionExpired(auctionBidData.endTime, auctionBidData.status) && (
+            <div className="border-t border-orange-500/30 p-4">
+              <button
+                type="button"
+                onClick={onSettle}
+                disabled={isSettling}
+                className={`w-full inline-flex items-center justify-center rounded-full px-4 py-3 text-xs font-orbitron uppercase tracking-wider transition ${
+                  !isSettling
+                    ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+                    : "border border-white/12 text-[rgb(186,255,188)]/45 cursor-not-allowed"
+                }`}
+              >
+                {isSettling ? "Settling..." : "Settle Auction"}
+              </button>
+            </div>
           )}
         </div>
       </div>
