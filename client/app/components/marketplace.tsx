@@ -9,7 +9,9 @@ import { Filters, type FilterState } from "./filters";
 import { BidsSkeleton } from "./skeletons";
 import { MarketplaceStats } from "./marketplace-stats";
 import { MarketplaceActivity } from "./marketplace-activity";
+import { AdventurerDetailModal, BeastDetailModal } from "./modals";
 import { useMarketplaceListings, type MarketplaceListing } from "../hooks/data/use-marketplace-listings";
+import type { FormattedNFT, MetadataAttribute } from "../lib/types";
 import { useMarketplaceActivity } from "../hooks/data/use-marketplace-activity";
 import { useMarketplaceBuy, type MarketplaceBuyParams } from "../hooks/auction/use-marketplace-buy";
 import { useWalletModal } from "../providers/wallet-modal-provider";
@@ -130,6 +132,39 @@ export default function Marketplace() {
   const [sweepCount, setSweepCount] = useState(0);
   const [sweepCurrency, setSweepCurrency] = useState<string | null>(null);
 
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailListing, setDetailListing] = useState<MarketplaceListing | null>(null);
+
+  // Adventurer-specific: exclude dead / in-battle
+  const [excludeDead, setExcludeDead] = useState(true);
+  const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
+  const [deadByTokenId, setDeadByTokenId] = useState<Record<string, boolean>>({});
+
+  // Fetch battle + dead status when viewing adventurer listings
+  useEffect(() => {
+    if (selectedCollection !== "adventurers") {
+      setInBattleByTokenId({});
+      setDeadByTokenId({});
+      return;
+    }
+    let cancelled = false;
+    fetch("/api/adventurer-attributes?include=dead", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { battle: {}, dead: {} }))
+      .then((data: { battle: Record<string, boolean>; dead: Record<string, boolean> }) => {
+        if (!cancelled) {
+          setInBattleByTokenId(data.battle ?? {});
+          setDeadByTokenId(data.dead ?? {});
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setInBattleByTokenId({});
+          setDeadByTokenId({});
+        }
+      });
+    return () => { cancelled = true; };
+  }, [selectedCollection]);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
@@ -180,8 +215,18 @@ export default function Marketplace() {
 
   // Base filtered listings (before sort / currency scope)
   const baseFilteredListings = useMemo(() => {
-    return listings.filter((l) => filterMarketplaceListing(l, filters));
-  }, [listings, filters]);
+    let result = listings.filter((l) => filterMarketplaceListing(l, filters));
+
+    if (selectedCollection === "adventurers" && excludeDead) {
+      result = result.filter((l) => deadByTokenId[l.tokenId] !== true);
+    }
+
+    if (selectedCollection === "adventurers" && filters.battleFilter === "out") {
+      result = result.filter((l) => inBattleByTokenId[l.tokenId] !== true);
+    }
+
+    return result;
+  }, [listings, filters, selectedCollection, excludeDead, deadByTokenId, inBattleByTokenId]);
 
   // Available currencies from filtered listings (for sweep currency picker)
   const currencyGroups = useMemo(() => {
@@ -324,6 +369,28 @@ export default function Marketplace() {
     await refresh();
   }, [account, address, selectedKeys, listings, bulkBuyListings, openWalletModal, refresh]);
 
+  const listingToNft = useCallback((listing: MarketplaceListing): FormattedNFT => ({
+    tokenId: String(listing.tokenId),
+    metadataName: listing.name || `#${listing.tokenId}`,
+    metadataDescription: "",
+    contractAddress: listing.collection,
+    imagePath: listing.image,
+    metadata: listing.metadata ? {
+      attributes: (listing.metadata.attributes as MetadataAttribute[]) || [],
+      description: "",
+      image: listing.image,
+      name: listing.name || `#${listing.tokenId}`,
+    } : null,
+    attributes: (listing.metadata?.attributes as MetadataAttribute[]) || [],
+    name: listing.name || `#${listing.tokenId}`,
+    symbol: "",
+  }), []);
+
+  const openDetail = useCallback((listing: MarketplaceListing) => {
+    setDetailListing(listing);
+    setDetailModalOpen(true);
+  }, []);
+
   const renderContent = () => {
     if (loading) return <BidsSkeleton />;
     if (error) {
@@ -358,6 +425,7 @@ export default function Marketplace() {
                 selected={selectedKeys.includes(String(listing.orderId))}
                 onToggle={() => toggleSelection(String(listing.orderId))}
                 onBuy={() => handleBuy(listing)}
+                onDetail={() => openDetail(listing)}
                 isBuying={isBuying}
               />
             ))}
@@ -384,6 +452,32 @@ export default function Marketplace() {
             collection={selectedCollection}
             compact
           />
+          {selectedCollection === "adventurers" && (
+            <div className="flex flex-wrap gap-2 items-center">
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={excludeDead}
+                  onChange={(e) => setExcludeDead(e.target.checked)}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Exclude dead
+                </span>
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer rounded-full border border-[rgb(50,255,52)]/30 bg-black/40 px-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={filters.battleFilter === "out"}
+                  onChange={(e) => handleFiltersChange({ battleFilter: e.target.checked ? "out" : "" })}
+                  className="w-3 h-3 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] accent-[rgb(50,255,52)]"
+                />
+                <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                  Exclude in battle
+                </span>
+              </label>
+            </div>
+          )}
         </div>
         {/* Collection toggle */}
         <div className="flex gap-1 rounded-full border border-[rgb(50,255,52)]/20 bg-black/50 p-0.5">
@@ -561,6 +655,34 @@ export default function Marketplace() {
                 onToggleExpanded={setFiltersOpen}
                 compact
               />
+              {selectedCollection === "adventurers" && (
+                <div className="flex flex-col gap-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-2" role="group" aria-label="Adventurer filters">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={excludeDead}
+                      onChange={(e) => setExcludeDead(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] focus:ring-[rgb(50,255,52)]/50 accent-[rgb(50,255,52)]"
+                      aria-label="Exclude dead"
+                    />
+                    <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                      Exclude dead
+                    </span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.battleFilter === "out"}
+                      onChange={(e) => handleFiltersChange({ battleFilter: e.target.checked ? "out" : "" })}
+                      className="w-3.5 h-3.5 rounded border-[rgb(50,255,52)]/40 bg-black/60 text-[rgb(50,255,52)] focus:ring-[rgb(50,255,52)]/50 accent-[rgb(50,255,52)]"
+                      aria-label="Exclude in battle"
+                    />
+                    <span className="text-[10px] font-orbitron uppercase tracking-wide text-[rgb(186,255,188)]/80">
+                      Exclude in battle
+                    </span>
+                  </label>
+                </div>
+              )}
               <div className="mt-2 rounded-md border border-[rgb(50,255,52)]/20 bg-black/40 p-3">
                 <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 mb-1">
                   Arcade Orderbook
@@ -608,6 +730,28 @@ export default function Marketplace() {
             </>
           )}
         </button>
+      )}
+
+      {/* Detail modals for marketplace listings */}
+      {detailModalOpen && detailListing && (
+        detailListing.collectionType === "adventurers" ? (
+          <AdventurerDetailModal
+            isOpen={detailModalOpen}
+            onClose={() => setDetailModalOpen(false)}
+            nfts={[listingToNft(detailListing)]}
+            currentIndex={0}
+            onNavigate={() => {}}
+            viewOnly
+          />
+        ) : (
+          <BeastDetailModal
+            isOpen={detailModalOpen}
+            onClose={() => setDetailModalOpen(false)}
+            nfts={[listingToNft(detailListing)]}
+            currentIndex={0}
+            onNavigate={() => {}}
+          />
+        )
       )}
     </div>
   );
@@ -769,12 +913,14 @@ function ListingCard({
   selected,
   onToggle,
   onBuy,
+  onDetail,
   isBuying,
 }: {
   listing: MarketplaceListing;
   selected: boolean;
   onToggle: () => void;
   onBuy: () => void;
+  onDetail?: () => void;
   isBuying: boolean;
 }) {
   const [imageError, setImageError] = useState(false);
@@ -798,7 +944,7 @@ function ListingCard({
 
   return (
     <article
-      onClick={onToggle}
+      onClick={onDetail}
       className={`group relative flex h-full w-full flex-col overflow-hidden rounded-xl border bg-black/70 backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer hover:bg-black/80 ${
         selected
           ? "border-[rgb(50,255,52)] shadow-[0_0_20px_rgba(50,255,52,0.3)]"
