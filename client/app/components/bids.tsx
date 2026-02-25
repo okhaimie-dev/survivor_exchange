@@ -3223,6 +3223,8 @@ export default function Bids({
         onPlaceBid={handlePlaceBid}
         onMakeOffer={handleMakeOffer}
         onOpenWallet={openWalletModal}
+        onSettle={handleSettleAuction}
+        isSettling={isSettling}
         summitBeasts={auctionSummitBeasts}
 />
 
@@ -3296,6 +3298,8 @@ export default function Bids({
         onPlaceBid={handlePlaceBid}
         onMakeOffer={handleMakeOffer}
         onOpenWallet={openWalletModal}
+        onSettle={handleSettleAuction}
+        isSettling={isSettling}
       />
     </div>
   );

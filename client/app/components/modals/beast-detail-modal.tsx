@@ -10,7 +10,7 @@ import { AddressDisplay, InfoTooltip, CustomDropdown, CountdownTimer, ReservePri
 import { useBeastOwner } from "../../hooks";
 import { shareToTwitter, copyBeastLink, copyAuctionLink } from "../../lib/utils/share-utils";
 import { extractBeastStats, generateBeastProfile } from "../../lib/utils/tagline-generator";
-import { formatUSDSmart } from "../../lib/utils";
+import { formatUSDSmart, isAuctionExpired } from "../../lib/utils";
 
 /** Summit beast data for displaying badge */
 interface SummitBeastMatch {
@@ -569,6 +569,10 @@ interface BeastDetailModalProps {
   onMakeOffer?: () => void;
   /** Callback to open wallet modal */
   onOpenWallet?: () => void;
+  /** Callback to settle an expired auction */
+  onSettle?: () => void;
+  /** Whether a settle transaction is in progress */
+  isSettling?: boolean;
   /** Summit beasts in this auction (for displaying badge) */
   summitBeasts?: SummitBeastMatch[];
   /** When provided, renders direct sell form instead of Add/Remove for auction */
@@ -606,6 +610,8 @@ export default function BeastDetailModal({
   onPlaceBid,
   onMakeOffer,
   onOpenWallet,
+  onSettle,
+  isSettling = false,
   summitBeasts = [],
   sellFormContent,
 }: BeastDetailModalProps) {
@@ -1345,8 +1351,8 @@ export default function BeastDetailModal({
                   </div>
                 </div>
 
-                {/* Bid input and quick bid buttons */}
-                {!auctionBidData.isUserSeller && (
+                {/* Bid input and quick bid buttons - only when NOT expired and NOT seller */}
+                {!auctionBidData.isUserSeller && !isAuctionExpired(auctionBidData.endTime, auctionBidData.status) && (
                   <>
                     {/* Pay With + Your Bid on one line */}
                     <div className={`flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end ${isPack ? "mb-2" : "mb-3"}`}>
@@ -1499,6 +1505,25 @@ export default function BeastDetailModal({
                     </p>
                   </div>
                 )}
+
+              </div>
+            )}
+
+            {/* Settle button - shown for anyone when auction is expired (outside bidState gate) */}
+            {auctionId && auctionBidData && onSettle && isAuctionExpired(auctionBidData.endTime, auctionBidData.status) && (
+              <div className="border-t border-orange-500/30 p-4">
+                <button
+                  type="button"
+                  onClick={onSettle}
+                  disabled={isSettling}
+                  className={`w-full inline-flex items-center justify-center rounded-full px-4 py-3 text-xs font-orbitron uppercase tracking-wider transition ${
+                    !isSettling
+                      ? "border border-orange-500 bg-orange-500/10 text-orange-500 hover:cursor-pointer hover:bg-orange-500 hover:text-black shadow-[0_0_12px_rgba(249,115,22,0.3)]"
+                      : "border border-white/12 text-[rgb(186,255,188)]/45 cursor-not-allowed"
+                  }`}
+                >
+                  {isSettling ? "Settling..." : "Settle Auction"}
+                </button>
               </div>
             )}
           </div>
