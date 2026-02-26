@@ -140,21 +140,37 @@ export default function Marketplace() {
   const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
   const [deadByTokenId, setDeadByTokenId] = useState<Record<string, boolean>>({});
 
-  // Fetch battle + dead status when viewing adventurer listings
+  // Batch-fetch dead + battle status for marketplace listing token IDs via POST endpoint
+  // (works for all adventurer IDs regardless of game version)
+  const listingTokenIds = useMemo(() => {
+    if (selectedCollection !== "adventurers") return [];
+    return Array.from(new Set(listings.map((l) => l.tokenId)));
+  }, [selectedCollection, listings]);
+
   useEffect(() => {
-    if (selectedCollection !== "adventurers") {
+    if (listingTokenIds.length === 0) {
       setInBattleByTokenId({});
       setDeadByTokenId({});
       return;
     }
     let cancelled = false;
-    fetch("/api/adventurer-attributes?include=dead", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { battle: {}, dead: {} }))
-      .then((data: { battle: Record<string, boolean>; dead: Record<string, boolean> }) => {
-        if (!cancelled) {
-          setInBattleByTokenId(data.battle ?? {});
-          setDeadByTokenId(data.dead ?? {});
+    fetch("/api/adventurer-attributes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tokenIds: listingTokenIds }),
+    })
+      .then((r) => (r.ok ? r.json() : { results: [] }))
+      .then((data: { results: Array<{ tokenId: string; in_battle?: boolean; attributes: Array<{ trait_type: string; value: string }> }> }) => {
+        if (cancelled) return;
+        const battle: Record<string, boolean> = {};
+        const dead: Record<string, boolean> = {};
+        for (const r of data.results ?? []) {
+          battle[r.tokenId] = r.in_battle === true;
+          const health = r.attributes?.find((a) => a.trait_type === "Health");
+          dead[r.tokenId] = health ? Number(health.value) === 0 : false;
         }
+        setInBattleByTokenId(battle);
+        setDeadByTokenId(dead);
       })
       .catch(() => {
         if (!cancelled) {
@@ -163,7 +179,7 @@ export default function Marketplace() {
         }
       });
     return () => { cancelled = true; };
-  }, [selectedCollection]);
+  }, [listingTokenIds]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = useCallback(async () => {
