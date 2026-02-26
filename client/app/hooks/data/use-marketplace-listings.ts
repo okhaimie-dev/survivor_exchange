@@ -4,8 +4,8 @@ import { useMemo, useCallback } from "react";
 import {
   useMarketplaceCollectionListings,
   useMarketplaceCollectionTokens,
-  useInvalidateCollection,
 } from "@cartridge/arcade/marketplace/react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { CollectionType } from "../../lib/constants";
 import {
   BEASTS_NFT_CONTRACT_ADDRESS,
@@ -101,7 +101,7 @@ export function useMarketplaceListings(collection: CollectionType) {
     verifyOwnership: false,
   });
 
-  const invalidateCollection = useInvalidateCollection(collectionAddress);
+  const queryClient = useQueryClient();
 
   // Extract token IDs from listings for metadata fetch (SDK expects padded hex format)
   const tokenIds = useMemo(() => {
@@ -222,8 +222,8 @@ export function useMarketplaceListings(collection: CollectionType) {
     ));
 
   const refresh = useCallback(async () => {
-    await invalidateCollection();
-  }, [invalidateCollection]);
+    await queryClient.invalidateQueries({ queryKey: ["marketplace"] });
+  }, [queryClient]);
 
   return {
     listings: mergedListings,
