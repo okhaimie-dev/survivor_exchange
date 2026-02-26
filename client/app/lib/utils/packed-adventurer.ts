@@ -8,6 +8,18 @@ const TWO_POW_10 = BigInt(2) ** BigInt(10);
 const TWO_POW_15 = BigInt(2) ** BigInt(15);
 const TWO_POW_9 = BigInt(2) ** BigInt(9);
 
+export function decodeHealthFromPacked(packedHex: string | null | undefined): number {
+  if (packedHex == null || packedHex === "") return 0;
+  let packed: bigint;
+  try {
+    packed = BigInt(packedHex.trim());
+  } catch {
+    return 0;
+  }
+  const health = packed % TWO_POW_10;
+  return Number(health);
+}
+
 export function decodeBeastHealthFromPacked(packedHex: string | null | undefined): number {
   if (packedHex == null || packedHex === "") return 0;
   let packed: bigint;

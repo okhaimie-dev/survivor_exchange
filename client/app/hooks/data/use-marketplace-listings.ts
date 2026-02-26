@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   useMarketplaceCollectionListings,
   useMarketplaceCollectionTokens,
 } from "@cartridge/arcade/marketplace/react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { CollectionType } from "../../lib/constants";
 import {
   BEASTS_NFT_CONTRACT_ADDRESS,
@@ -94,12 +95,13 @@ export function useMarketplaceListings(collection: CollectionType) {
     status: listingsStatus,
     error: listingsError,
     isFetching: listingsFetching,
-    refresh: refreshListings,
   } = useMarketplaceCollectionListings({
     collection: collectionAddress,
     limit: 1000,
     verifyOwnership: false,
   });
+
+  const queryClient = useQueryClient();
 
   // Extract token IDs from listings for metadata fetch (SDK expects padded hex format)
   const tokenIds = useMemo(() => {
@@ -124,7 +126,7 @@ export function useMarketplaceListings(collection: CollectionType) {
       limit: tokenIds.length || 1,
       fetchImages: true,
     },
-    tokenIds.length > 0,
+    tokenIds.length > 0 as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- SDK v4 expects boolean, v5 expects { enabled }
   );
 
   // Build a lookup map of token data by tokenId
@@ -156,11 +158,12 @@ export function useMarketplaceListings(collection: CollectionType) {
     return map;
   }, [tokensResult]);
 
-  // Merge listings with token data — only include active, non-expired orders
+  // Merge listings with token data — only include active, non-expired orders.
+  // Deduplicate by tokenId, keeping the cheapest listing per token (ERC721 = one owner per token).
   const mergedListings = useMemo((): MarketplaceListing[] => {
     if (!listings || listings.length === 0) return [];
     const now = Math.floor(Date.now() / 1000);
-    return listings
+    const all = listings
     .filter((order) => {
       // Only include active ("Placed") listings
       if (order.status?.value !== "Placed") return false;
@@ -196,18 +199,37 @@ export function useMarketplaceListings(collection: CollectionType) {
         name: tokenData?.name ?? `#${tokenIdStr}`,
       };
     });
+
+    // Deduplicate: keep only the cheapest listing per tokenId
+    const bestByToken = new Map<string, MarketplaceListing>();
+    for (const listing of all) {
+      const existing = bestByToken.get(listing.tokenId);
+      if (!existing || listing.rawPrice < existing.rawPrice) {
+        bestByToken.set(listing.tokenId, listing);
+      }
+    }
+    return Array.from(bestByToken.values());
   }, [listings, tokenDataMap, collection]);
 
   const loading =
-    listingsStatus === "loading" ||
-    listingsStatus === "idle" ||
-    (tokenIds.length > 0 && (tokensStatus === "loading" || tokensStatus === "idle"));
+    (listingsStatus as string) === "loading" ||
+    (listingsStatus as string) === "idle" ||
+    (listingsStatus as string) === "pending" ||
+    (tokenIds.length > 0 && (
+      (tokensStatus as string) === "loading" ||
+      (tokensStatus as string) === "idle" ||
+      (tokensStatus as string) === "pending"
+    ));
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ["marketplace"] });
+  }, [queryClient]);
 
   return {
     listings: mergedListings,
     loading,
     error: listingsError,
     isFetching: listingsFetching || tokensFetching,
-    refresh: refreshListings,
+    refresh,
   };
 }
