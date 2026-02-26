@@ -126,7 +126,7 @@ export function useMarketplaceListings(collection: CollectionType) {
       limit: tokenIds.length || 1,
       fetchImages: true,
     },
-    { enabled: tokenIds.length > 0 },
+    tokenIds.length > 0 as any, // eslint-disable-line @typescript-eslint/no-explicit-any -- SDK v4 expects boolean, v5 expects { enabled }
   );
 
   // Build a lookup map of token data by tokenId
@@ -212,8 +212,14 @@ export function useMarketplaceListings(collection: CollectionType) {
   }, [listings, tokenDataMap, collection]);
 
   const loading =
-    listingsStatus === "pending" ||
-    (tokenIds.length > 0 && tokensStatus === "pending");
+    (listingsStatus as string) === "loading" ||
+    (listingsStatus as string) === "idle" ||
+    (listingsStatus as string) === "pending" ||
+    (tokenIds.length > 0 && (
+      (tokensStatus as string) === "loading" ||
+      (tokensStatus as string) === "idle" ||
+      (tokensStatus as string) === "pending"
+    ));
 
   const refresh = useCallback(async () => {
     await invalidateCollection();
