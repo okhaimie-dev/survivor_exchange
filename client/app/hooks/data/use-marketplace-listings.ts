@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import {
   useMarketplaceCollectionListings,
   useMarketplaceCollectionTokens,
+  useInvalidateCollection,
 } from "@cartridge/arcade/marketplace/react";
 import type { CollectionType } from "../../lib/constants";
 import {
@@ -94,12 +95,13 @@ export function useMarketplaceListings(collection: CollectionType) {
     status: listingsStatus,
     error: listingsError,
     isFetching: listingsFetching,
-    refetch: refreshListings,
   } = useMarketplaceCollectionListings({
     collection: collectionAddress,
     limit: 1000,
     verifyOwnership: false,
   });
+
+  const invalidateCollection = useInvalidateCollection(collectionAddress);
 
   // Extract token IDs from listings for metadata fetch (SDK expects padded hex format)
   const tokenIds = useMemo(() => {
@@ -124,7 +126,7 @@ export function useMarketplaceListings(collection: CollectionType) {
       limit: tokenIds.length || 1,
       fetchImages: true,
     },
-    tokenIds.length > 0,
+    { enabled: tokenIds.length > 0 },
   );
 
   // Build a lookup map of token data by tokenId
@@ -210,15 +212,18 @@ export function useMarketplaceListings(collection: CollectionType) {
   }, [listings, tokenDataMap, collection]);
 
   const loading =
-    listingsStatus === "loading" ||
-    listingsStatus === "idle" ||
-    (tokenIds.length > 0 && (tokensStatus === "loading" || tokensStatus === "idle"));
+    listingsStatus === "pending" ||
+    (tokenIds.length > 0 && tokensStatus === "pending");
+
+  const refresh = useCallback(async () => {
+    await invalidateCollection();
+  }, [invalidateCollection]);
 
   return {
     listings: mergedListings,
     loading,
     error: listingsError,
     isFetching: listingsFetching || tokensFetching,
-    refresh: refreshListings,
+    refresh,
   };
 }
