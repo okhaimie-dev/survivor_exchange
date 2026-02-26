@@ -94,7 +94,7 @@ export function useMarketplaceListings(collection: CollectionType) {
     status: listingsStatus,
     error: listingsError,
     isFetching: listingsFetching,
-    refresh: refreshListings,
+    refetch: refreshListings,
   } = useMarketplaceCollectionListings({
     collection: collectionAddress,
     limit: 1000,
