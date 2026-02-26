@@ -156,11 +156,12 @@ export function useMarketplaceListings(collection: CollectionType) {
     return map;
   }, [tokensResult]);
 
-  // Merge listings with token data — only include active, non-expired orders
+  // Merge listings with token data — only include active, non-expired orders.
+  // Deduplicate by tokenId, keeping the cheapest listing per token (ERC721 = one owner per token).
   const mergedListings = useMemo((): MarketplaceListing[] => {
     if (!listings || listings.length === 0) return [];
     const now = Math.floor(Date.now() / 1000);
-    return listings
+    const all = listings
     .filter((order) => {
       // Only include active ("Placed") listings
       if (order.status?.value !== "Placed") return false;
@@ -196,6 +197,16 @@ export function useMarketplaceListings(collection: CollectionType) {
         name: tokenData?.name ?? `#${tokenIdStr}`,
       };
     });
+
+    // Deduplicate: keep only the cheapest listing per tokenId
+    const bestByToken = new Map<string, MarketplaceListing>();
+    for (const listing of all) {
+      const existing = bestByToken.get(listing.tokenId);
+      if (!existing || listing.rawPrice < existing.rawPrice) {
+        bestByToken.set(listing.tokenId, listing);
+      }
+    }
+    return Array.from(bestByToken.values());
   }, [listings, tokenDataMap, collection]);
 
   const loading =
