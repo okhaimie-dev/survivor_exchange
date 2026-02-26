@@ -2,27 +2,26 @@ import React, { useCallback, useMemo, useState, useEffect, useRef } from "react"
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import MonsterCollectionCard from "./monster-collection-card";
-import Pagination from "./pagination";
-import Filters, { FilterState } from "./filters";
-import BidPriceChart from "./bid-price-chart";
-import BidsSkeleton from "./bids-skeleton";
-import CustomDropdown from "./custom-dropdown";
-import InfoTooltip from "./info-tooltip";
-import BeastDetailModal from "./beast-detail-modal";
-import AddressDisplay from "./address-display";
-import CountdownTimer from "./countdown-timer";
+import { MonsterCollectionCard, AdventurerCollectionCard } from "./cards";
+import { ADVENTURER_NFT_CONTRACT_ADDRESS } from "../lib/constants";
+import { Pagination, BidPriceChart, CustomDropdown, InfoTooltip, AddressDisplay, CountdownTimer } from "./ui";
+import { Filters, type FilterState } from "./filters";
+import { BidsSkeleton } from "./skeletons";
+import { BeastDetailModal, AdventurerDetailModal } from "./modals";
+import { AuctionTimeline } from "./bid-components";
 import { useWalletModal } from "../providers/wallet-modal-provider";
-import type { AuctionItem } from "../lib/types";
-import { AuctionWithNFTs } from "../hooks/use-auctions";
-import { useBeastSkullRewards } from "../hooks/use-beast-skull-rewards";
-import { useSummitLeaderboard, findMatchingSummitBeast, SummitBeast } from "../hooks/use-summit-leaderboard";
+import { useToast } from "../providers/toast-provider";
+import type { AuctionItem, FormattedNFT, Collection, UserOffer } from "../lib/types";
+import { AuctionWithNFTs, useBeastSkullRewards, useSummitLeaderboard, findMatchingSummitBeast, type SummitBeast, usePaymaster } from "../hooks";
 import { uint256 } from "starknet";
 import {
   formatUSD,
   formatUSDSmart,
   formatTokenAmount,
   truncateAuctionName,
+  getStatusLabel,
+  getStatusStyle,
+  isAuctionExpired,
 } from "../lib/utils";
 import { applyFiltersToAuctions } from "../lib/filter-utils";
 import {
@@ -32,68 +31,17 @@ import {
   IMAGE_BASE_URL,
   SUPPORTED_TOKENS,
   USDC_ADDRESS,
+  getOnChainDecimals,
 } from "../lib/constants";
 import { fetchTokens, getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
-import { normalizeContractAddress } from "../lib/utils/normalization";
+import { normalizeContractAddress, normalizeTokenId } from "../lib/utils/normalization";
 import {
   getTokenPriceInUSDC,
   shouldRefetchPrice,
 } from "../lib/utils/token-price-cache";
 
-const getStatusLabel = (status: string): string => {
-  const statusNum = parseInt(status);
-
-  if (statusNum === 0) return "None";
-  if (statusNum === 1) return "Draft";
-  if (statusNum === 2) return "Active";
-  if (statusNum === 3) return "Ended";
-  if (statusNum === 4) return "Settled";
-  if (statusNum === 5) return "Canceled";
-
-  return status;
-};
-
-const getStatusStyle = (status: string): string => {
-  const statusNum = parseInt(status);
-
-  if (statusNum === 0) {
-    return "bg-white/10 text-white/50 border border-white/20";
-  }
-  if (statusNum === 1) {
-    return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
-  }
-  if (statusNum === 2) {
-    return "bg-[rgb(50,255,52)]/10 text-[rgb(50,255,52)] border border-[rgb(50,255,52)]/40";
-  }
-  if (statusNum === 3) {
-    return "bg-white/10 text-white border border-white/20";
-  }
-  if (statusNum === 4) {
-    return "bg-blue-400/10 text-blue-300 border border-blue-300/30";
-  }
-  if (statusNum === 5) {
-    return "bg-red-400/10 text-red-300 border border-red-300/30";
-  }
-
-  if (status === "pending" || status === "queued") {
-    return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
-  }
-  return "bg-white/10 text-white border border-white/20";
-};
-
-type Collection = {
-  id: string;
-  name: string;
-  totalMonsters: number;
-  startingPrice: number;
-  highestBid?: number;
-  image: string;
-  status: string;
-  endTime: string;
-  sellerFull: string;
-  highestBidderFull: string;
-  executedAt?: string;
-};
+// getStatusLabel, getStatusStyle, and isAuctionExpired are imported from ../lib/utils
+// Collection and UserOffer types are imported from ../lib/types
 
 interface BidsProps {
   auctions: AuctionWithNFTs[];
@@ -112,6 +60,7 @@ export default function Bids({
   error,
   currentPage,
   setCurrentPage,
+  getAuctionItems,
   token,
 }: BidsProps) {
   const { account, address } = useAccount();
@@ -119,6 +68,8 @@ export default function Bids({
   const provider = useProvider();
   const { openWalletModal } = useWalletModal();
   const router = useRouter();
+  const toast = useToast();
+  const { executeWithPaymaster } = usePaymaster();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [txnHash, setTxnHash] = useState<string | undefined>();
   const [insufficientFundsError, setInsufficientFundsError] = useState<
@@ -129,13 +80,7 @@ export default function Bids({
   const [isRefunded, setIsRefunded] = useState(false);
   const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
   const [offerTxnHash, setOfferTxnHash] = useState<string | undefined>();
-  const [userOffer, setUserOffer] = useState<{
-    buyer: string;
-    amount: number;
-    status: string;
-    createdAt: string;
-    expiresAt: string;
-  } | null>(null);
+  const [userOffer, setUserOffer] = useState<UserOffer | null>(null);
   const [isWithdrawingOffer, setIsWithdrawingOffer] = useState(false);
   const [withdrawOfferTxnHash, setWithdrawOfferTxnHash] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -154,8 +99,27 @@ export default function Bids({
     animated: "",
     priceSort: "",
     tokenIdSort: "",
+    levelSort: "",
+    scoreSort: "",
+    tierSort: "",
+    powerSort: "",
     summitTop15: "",
     timeSort: "ending-soon", // Default to ending soon for urgency
+    healthMin: "",
+    healthMax: "",
+    strengthMin: "",
+    strengthMax: "",
+    dexterityMin: "",
+    dexterityMax: "",
+    vitalityMin: "",
+    vitalityMax: "",
+    intelligenceMin: "",
+    intelligenceMax: "",
+    wisdomMin: "",
+    wisdomMax: "",
+    charismaMin: "",
+    charismaMax: "",
+    battleFilter: "",
   });
 
   const [localCurrentPage, setLocalCurrentPage] = useState(currentPage);
@@ -288,6 +252,40 @@ export default function Bids({
     loadLogos();
   }, []);
 
+  // Fetch token USD prices on mount (no wallet needed)
+  useEffect(() => {
+    let cancelled = false;
+    const loadPrices = async () => {
+      const prices: Record<string, number> = {};
+      // USDC is always $1
+      prices[USDC_ADDRESS] = 1;
+      await Promise.all(
+        SUPPORTED_TOKENS.filter(
+          (t) => t.address.toLowerCase() !== USDC_ADDRESS.toLowerCase(),
+        ).map(async (token) => {
+          try {
+            const price = await getTokenPriceInUSDC(token.address);
+            if (price && isFinite(price) && price > 0) {
+              prices[token.address] = price;
+            }
+          } catch {
+            // skip
+          }
+        }),
+      );
+      if (!cancelled) {
+        setTokenUsdPrices(prices);
+      }
+    };
+    loadPrices();
+    // Refresh prices periodically
+    const interval = setInterval(loadPrices, 40000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
   const collections: Collection[] = useMemo(() => {
     return paginatedFilteredAuctions.map((auction) => {
       // Parse starting_price - handle both decimal and hex strings
@@ -345,6 +343,12 @@ export default function Bids({
   const [tokenBalances, setTokenBalances] = useState<
     Record<string, { amount: string; usdValue: string | null }>
   >({});
+  const [tokenUsdPrices, setTokenUsdPrices] = useState<Record<string, number>>({});
+
+  // State for adventurer detail images (when NFTs aren't fetched from GraphQL)
+  const [adventurerDetailImages, setAdventurerDetailImages] = useState<Array<{ tokenId: string; imageUrl: string }>>([]);
+  const [isAdventurerModalOpen, setIsAdventurerModalOpen] = useState(false);
+  const [selectedAdventurerIndex, setSelectedAdventurerIndex] = useState(0);
 
   const priceRetryIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -369,6 +373,41 @@ export default function Bids({
       return () => clearTimeout(timer);
     }
   }, [selectedCollectionId]);
+
+// Compute adventurer image URLs for detail panel when an adventurer auction is selected
+  useEffect(() => {
+    if (!selectedCollectionId) {
+      setAdventurerDetailImages([]);
+      return;
+    }
+
+    const auctionItems = getAuctionItems(selectedCollectionId);
+    const adventurerItems = auctionItems.filter(item => {
+      const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
+      const adventurerAddr = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+      return contractAddr === adventurerAddr;
+    });
+
+    if (adventurerItems.length === 0) {
+      setAdventurerDetailImages([]);
+      return;
+    }
+
+    // Generate static image URLs for all adventurer items
+    const images = adventurerItems.map(item => {
+      const tokenIdStr = String(item.token_id);
+      const tokenIdNum = tokenIdStr.startsWith("0x")
+        ? parseInt(tokenIdStr, 16)
+        : parseInt(tokenIdStr, 10);
+
+      const paddedTokenId = "0x" + tokenIdNum.toString(16).padStart(64, '0');
+      const imageUrl = `https://api.cartridge.gg/x/arcade-main/torii/static/${ADVENTURER_NFT_CONTRACT_ADDRESS}/${paddedTokenId}/image`;
+
+      return { tokenId: tokenIdStr, imageUrl };
+    });
+
+    setAdventurerDetailImages(images);
+  }, [selectedCollectionId, getAuctionItems]);
 
   // Track if we've auto-opened from URL to avoid re-triggering
   const hasAutoOpenedFromUrl = useRef(false);
@@ -433,11 +472,57 @@ export default function Bids({
     };
   }, [selectedCollectionId, checkScrollButtons]);
 
-  const selectedCollection = useMemo(
-    () =>
-      collections.find((collection) => collection.id === selectedCollectionId),
-    [selectedCollectionId, collections],
-  );
+  // When opened from URL, the auction might not be in the filtered/paginated collections
+  // So we need a fallback that looks up directly from auctions and builds a Collection object
+  const selectedCollection = useMemo(() => {
+    if (!selectedCollectionId) return undefined;
+
+    // First try filtered collections (normal flow)
+    const fromCollections = collections.find(
+      (collection) => collection.id === selectedCollectionId
+    );
+    if (fromCollections) return fromCollections;
+
+    // Fallback: build Collection object directly from auctions prop (for URL-based opening)
+    const directAuction = auctions.find(
+      (a) => String(a.auction_id) === selectedCollectionId
+    );
+    if (!directAuction) return undefined;
+
+    // Parse starting_price
+    const startingPriceStr = directAuction.starting_price || "0";
+    const startingPrice =
+      startingPriceStr.startsWith("0x") || startingPriceStr.startsWith("0X")
+        ? parseInt(startingPriceStr, 16)
+        : parseFloat(startingPriceStr);
+
+    // Parse current_bid
+    const highestBid = directAuction.current_bid
+      ? (() => {
+          const bidStr = directAuction.current_bid;
+          const parsed =
+            bidStr.startsWith("0x") || bidStr.startsWith("0X")
+              ? parseInt(bidStr, 16)
+              : parseFloat(bidStr);
+          return parsed / 1e6;
+        })()
+      : undefined;
+
+    return {
+      id: String(directAuction.auction_id),
+      name: truncateAuctionName(directAuction.name),
+      fullName: directAuction.name,
+      totalMonsters: parseInt(directAuction.item_count) || 0,
+      startingPrice,
+      highestBid,
+      image: "/logo.png",
+      status: directAuction.status,
+      endTime: directAuction.end_time,
+      sellerFull: directAuction.seller,
+      highestBidderFull: directAuction.highest_bidder,
+      executedAt: directAuction.executedAt,
+    } as Collection;
+  }, [selectedCollectionId, collections, auctions]);
 
   // Get NFTs for the selected auction (for modal)
   // When opened from URL, look up directly from auctions to avoid filter timing issues
@@ -457,6 +542,39 @@ export default function Bids({
     return directAuction?.nfts || [];
   }, [selectedCollectionId, paginatedFilteredAuctions, auctions]);
 
+// Create synthetic FormattedNFT[] from auction items for adventurer auctions
+  const selectedAdventurerNfts = useMemo((): FormattedNFT[] => {
+    if (!selectedCollectionId) return [];
+
+    const auctionItems = getAuctionItems(selectedCollectionId);
+    const isAdventurerAuction = auctionItems.length > 0 && auctionItems.some(item => {
+      const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
+      const adventurerAddr = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+      return contractAddr === adventurerAddr;
+    });
+
+    if (!isAdventurerAuction) return [];
+
+    // Filter to only adventurer items and create synthetic NFTs
+    return auctionItems
+      .filter(item => {
+        const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
+        const adventurerAddr = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+        return contractAddr === adventurerAddr;
+      })
+      .map((item): FormattedNFT => ({
+        tokenId: normalizeTokenId(item.token_id),
+        contractAddress: normalizeContractAddress(item.contract_address || ADVENTURER_NFT_CONTRACT_ADDRESS),
+        metadataName: `Adventurer`,
+        metadataDescription: '',
+        imagePath: '',
+        metadata: null,
+        attributes: [],
+        name: 'Adventurer',
+        symbol: 'ADV',
+      }));
+  }, [selectedCollectionId, getAuctionItems]);
+
   // Track if we need to open modal after NFTs load
   const shouldOpenModalOnNftsLoad = useRef(false);
 
@@ -474,7 +592,7 @@ export default function Bids({
     }
   }, [token, auctions, loading]);
 
-  // Open modal once NFTs are available
+  // Open modal once NFTs are available (for beasts)
   useEffect(() => {
     if (shouldOpenModalOnNftsLoad.current && selectedAuctionNfts.length > 0) {
       shouldOpenModalOnNftsLoad.current = false;
@@ -482,6 +600,15 @@ export default function Bids({
       setIsBeastModalOpen(true);
     }
   }, [selectedAuctionNfts]);
+
+  // Open adventurer modal when adventurer images are available (for adventurer auctions from URL)
+  useEffect(() => {
+    if (shouldOpenModalOnNftsLoad.current && adventurerDetailImages.length > 0 && selectedAuctionNfts.length === 0) {
+      shouldOpenModalOnNftsLoad.current = false;
+      setSelectedAdventurerIndex(0);
+      setIsAdventurerModalOpen(true);
+    }
+  }, [adventurerDetailImages, selectedAuctionNfts]);
 
   // Prepare beast metadata for skull rewards hook
   const selectedAuctionBeastData = useMemo(() => {
@@ -726,12 +853,12 @@ export default function Bids({
               const high = balanceResult[1];
               const balance = BigInt(low) + (BigInt(high) << BigInt(128));
               const balanceDecimal =
-                Number(balance) / Math.pow(10, token.decimals);
+                Number(balance) / Math.pow(10, getOnChainDecimals(token));
 
               // Format token amount
               const formattedAmount =
                 balanceDecimal > 0
-                  ? formatTokenAmount(balanceDecimal, token.decimals)
+                  ? formatTokenAmount(balanceDecimal, getOnChainDecimals(token))
                   : "0.00";
 
               // Calculate USD value
@@ -797,7 +924,7 @@ export default function Bids({
     return () => {
       cancelled = true;
     };
-  }, [address, provider]);
+  }, [address]); // provider is stable after mount, don't include wrapper object
 
   // Countdown timer effect
   useEffect(() => {
@@ -972,10 +1099,11 @@ export default function Bids({
         }
 
         // Calculate how much of the payment token we need
+        const onChainDec = getOnChainDecimals(paymentTokenInfo);
         const tokenAmountNeeded = usdcAmount / currentTokenPrice;
         const tokenAmountWei = BigInt(
           Math.floor(
-            tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeeded * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1006,7 +1134,7 @@ export default function Bids({
         const tokenAmountNeededForSwap = usdcAmount / currentTokenPrice;
         const tokenAmountWeiForSwap = BigInt(
           Math.floor(
-            tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeededForSwap * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1167,13 +1295,18 @@ export default function Bids({
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setTxnHash(response.transaction_hash);
       setBidAmountToken("");
+      toast.success("Bid placed", "Your bid has been submitted successfully");
     } catch (err) {
       console.error("Error placing bid:", err);
       if (err instanceof Error && err.message.includes("balance")) {
         setInsufficientFundsError("Insufficient funds");
+        toast.error("Insufficient funds", "You don't have enough balance to place this bid");
+      } else {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to place bid", errorMessage);
       }
     } finally {
       setIsSubmitting(false);
@@ -1190,6 +1323,8 @@ export default function Bids({
     provider,
     isValidPrice,
     selectedCollection,
+    toast,
+    executeWithPaymaster,
   ]);
 
   const handleMakeOffer = useCallback(async () => {
@@ -1252,10 +1387,11 @@ export default function Bids({
         }
 
         // Calculate how much of the payment token we need
+        const onChainDec = getOnChainDecimals(paymentTokenInfo);
         const tokenAmountNeeded = usdcAmount / currentTokenPrice;
         const tokenAmountWei = BigInt(
           Math.floor(
-            tokenAmountNeeded * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeeded * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1286,7 +1422,7 @@ export default function Bids({
         const tokenAmountNeededForSwap = usdcAmount / currentTokenPrice;
         const tokenAmountWeiForSwap = BigInt(
           Math.floor(
-            tokenAmountNeededForSwap * Math.pow(10, paymentTokenInfo.decimals),
+            tokenAmountNeededForSwap * Math.pow(10, onChainDec),
           ),
         );
 
@@ -1458,13 +1594,18 @@ export default function Bids({
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setOfferTxnHash(response.transaction_hash);
       setBidAmountToken("");
+      toast.success("Offer submitted", "Your offer has been sent to the seller");
     } catch (err) {
       console.error("Error making offer:", err);
       if (err instanceof Error && err.message.includes("balance")) {
         setInsufficientFundsError("Insufficient funds");
+        toast.error("Insufficient funds", "You don't have enough balance to make this offer");
+      } else {
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to make offer", errorMessage);
       }
     } finally {
       setIsSubmittingOffer(false);
@@ -1479,6 +1620,8 @@ export default function Bids({
     paymentToken,
     tokenPrice,
     isValidPrice,
+    toast,
+    executeWithPaymaster,
   ]);
 
   const handleWithdrawOffer = useCallback(async () => {
@@ -1500,40 +1643,19 @@ export default function Bids({
         },
       ];
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setWithdrawOfferTxnHash(response.transaction_hash);
+      toast.success("Offer withdrawn", "Your offer has been cancelled");
     } catch (error) {
       console.error("Error withdrawing offer:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      toast.error("Failed to withdraw offer", errorMessage);
     } finally {
       setIsWithdrawingOffer(false);
     }
-  }, [account, selectedCollectionId, userOffer]);
+  }, [account, selectedCollectionId, userOffer, toast, executeWithPaymaster]);
 
-  const isAuctionExpired = useCallback(
-    (endTime: string, status: string): boolean => {
-      if (!endTime || endTime === "0") return false;
-
-      try {
-        let endTimeNum: number;
-        if (endTime.startsWith("0x") || endTime.startsWith("0X")) {
-          endTimeNum = parseInt(endTime, 16);
-        } else {
-          endTimeNum = parseInt(endTime, 10);
-        }
-
-        if (isNaN(endTimeNum) || endTimeNum === 0) return false;
-
-        const now = Math.floor(Date.now() / 1000);
-        const statusNum = parseInt(status);
-
-        // Expired if end time passed or status is Ended (3)
-        return endTimeNum <= now || statusNum === 3;
-      } catch {
-        return false;
-      }
-    },
-    [],
-  );
+  // isAuctionExpired is now imported from ../lib/utils
 
   const handleSettleAuction = useCallback(async () => {
     if (
@@ -1572,13 +1694,14 @@ export default function Bids({
 
         const auctionId = parseInt(selectedCollectionId, 10);
 
-        const response = await account.execute({
+        const response = await executeWithPaymaster(account, [{
           contractAddress: AUCTION_CONTRACT_ADDRESS,
           entrypoint: "settle_auction",
           calldata: [auctionId.toString()],
-        });
+        }]);
 
         setSettleTxnHash(response.transaction_hash);
+        toast.success("Auction settled", "NFTs have been returned");
 
         try {
           await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -1597,6 +1720,8 @@ export default function Bids({
         }
       } catch (err) {
         console.error("Error settling auction:", err);
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to settle auction", errorMessage);
       } finally {
         setIsSettling(false);
       }
@@ -1724,8 +1849,9 @@ export default function Bids({
         });
       }
 
-      const response = await account.execute(calls);
+      const response = await executeWithPaymaster(account, calls);
       setSettleTxnHash(response.transaction_hash);
+      toast.success("Auction settled", "Transaction submitted successfully");
 
       try {
         await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -1744,15 +1870,8 @@ export default function Bids({
       }
     } catch (err) {
       console.error("Error settling auction - contract call failed:", err);
-      if (err instanceof Error) {
-        console.error("Error message:", err.message);
-        console.error("Error stack:", err.stack);
-      }
-      console.error("Failed call details:", {
-        contract: AUCTION_CONTRACT_ADDRESS,
-        entrypoint: "settle_auction",
-        auctionId: selectedCollectionId,
-      });
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      toast.error("Failed to settle auction", errorMessage);
     } finally {
       setIsSettling(false);
     }
@@ -1762,6 +1881,8 @@ export default function Bids({
     selectedCollectionId,
     paginatedFilteredAuctions,
     provider,
+    toast,
+    executeWithPaymaster,
   ]);
 
   const updateSelection = useCallback((collection: Collection | undefined) => {
@@ -1921,15 +2042,34 @@ export default function Bids({
             // Show detail panel after the last card in the selected row
             const showDetailAfterThis = index === lastIndexInSelectedRow && selectedCollection;
 
+            // Check if this auction contains Adventurer NFTs using auction items
+            const auctionItems = getAuctionItems(collection.id);
+            const isAdventurerAuction = auctionItems.length > 0 && auctionItems.some(item => {
+              const contractAddr = normalizeContractAddress(item.contract_address || '').toLowerCase();
+              const adventurerAddr = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+              return contractAddr === adventurerAddr;
+            });
+
             return (
               <React.Fragment key={collection.id}>
-                <MonsterCollectionCard
-                  collection={collection}
-                  isSelected={isSelected}
-                  onSelect={() => handleSelectCollection(collection)}
-                  onQuickBid={() => handleQuickBid(collection)}
-                  nfts={nfts}
-                />
+{isAdventurerAuction ? (
+                  <AdventurerCollectionCard
+                    collection={collection}
+                    isSelected={isSelected}
+                    onSelect={() => handleSelectCollection(collection)}
+                    onQuickBid={() => handleQuickBid(collection)}
+                    nfts={nfts}
+                    items={auctionItems}
+                  />
+                ) : (
+                  <MonsterCollectionCard
+                    collection={collection}
+                    isSelected={isSelected}
+                    onSelect={() => handleSelectCollection(collection)}
+                    onQuickBid={() => handleQuickBid(collection)}
+                    nfts={nfts}
+                  />
+                )}
                 {showDetailAfterThis && (
                   <div className="col-span-1 md:col-span-2 lg:col-span-3">
                     {renderSelectedDetails()}
@@ -1969,8 +2109,55 @@ export default function Bids({
                   const nfts = auction?.nfts || [];
 
                   if (nfts.length === 0) {
+                    // Check if this is an adventurer auction with fetched images
+                    if (adventurerDetailImages.length > 0) {
+                      return (
+                        <div className="w-full relative">
+                          {/* Horizontal scroll for adventurer images */}
+                          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                            {adventurerDetailImages.map((item, index) => (
+                              <div
+                                key={item.tokenId}
+                                onClick={() => {
+                                  setSelectedAdventurerIndex(index);
+                                  setIsAdventurerModalOpen(true);
+                                }}
+                                className="group/nft relative shrink-0 h-20 sm:h-28 w-auto overflow-hidden cursor-pointer transition-all hover:scale-105 hover:ring-2 hover:ring-[rgb(50,255,52)]/60"
+                              >
+                                <img
+                                  src={item.imageUrl}
+                                  alt={`Adventurer #${item.tokenId}`}
+                                  draggable={false}
+                                  className="h-full w-auto object-contain"
+                                />
+                                {/* Eye icon overlay on hover */}
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover/nft:opacity-100 transition-opacity">
+                                  <svg
+                                    width="20"
+                                    height="20"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="rgb(50,255,52)"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                  </svg>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {/* Helper text */}
+                          <p className="mt-2 text-[10px] font-orbitron uppercase tracking-[0.14em] text-[rgb(186,255,188)]/50">
+                            Click adventurer to view details
+                          </p>
+                        </div>
+                      );
+                    }
                     return (
-                      <div className="flex h-28 w-28 items-center justify-center rounded-2xl border border-[rgb(50,255,52)]/35 bg-[rgb(50,255,52)]/10">
+                      <div className="flex h-28 w-28 items-center justify-center rounded-2xl overflow-hidden">
                         <Image
                           src="/logo.png"
                           alt={selectedCollection.name}
@@ -2163,170 +2350,12 @@ export default function Bids({
                     />
                   </div>
                 )}
-                {(() => {
-                  const statusNum = parseInt(selectedCollection.status);
-                  const formatTime = (timestamp: string) => {
-                    try {
-                      let timestampNum: number;
-                      if (
-                        timestamp.startsWith("0x") ||
-                        timestamp.startsWith("0X")
-                      ) {
-                        timestampNum = parseInt(timestamp, 16);
-                      } else {
-                        timestampNum = parseInt(timestamp, 10);
-                      }
-                      if (isNaN(timestampNum) || timestampNum === 0)
-                        return null;
-                      const date = new Date(timestampNum * 1000);
-                      return date.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      });
-                    } catch {
-                      return null;
-                    }
-                  };
-
-                  const endTimeFormatted = selectedCollection.endTime
-                    ? formatTime(selectedCollection.endTime)
-                    : null;
-
-                  const formatExecutedAt = (executedAt: string | undefined) => {
-                    if (!executedAt) return null;
-                    try {
-                      const date = new Date(executedAt);
-                      return date.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      });
-                    } catch {
-                      return null;
-                    }
-                  };
-
-                  const executedAtFormatted = formatExecutedAt(
-                    selectedCollection.executedAt,
-                  );
-
-                  const timelineItems = [];
-
-                  timelineItems.push({
-                    status: "created",
-                    label: "Auction Created",
-                    active: true,
-                    completed: true,
-                    time: executedAtFormatted || undefined,
-                  });
-
-                  if (selectedCollection.endTime) {
-                    timelineItems.push({
-                      status: "settled",
-                      label: "Auction Settled",
-                      active: statusNum >= 3,
-                      completed: statusNum >= 3,
-                      time: endTimeFormatted,
-                    });
-                  }
-
-                  return (
-                    <div className="w-full mt-1">
-                      <div className="w-full rounded-2xl border border-[rgb(50,255,52)]/20 bg-[rgb(50,255,52)]/5 p-3 md:p-4">
-                        <p className="text-[10px] font-orbitron uppercase tracking-[0.18em] text-[rgb(186,255,188)]/70 mb-2 md:mb-3">
-                          Auction Timeline
-                        </p>
-                        <div className="flex flex-col gap-3">
-                          {timelineItems.map((item, index) => {
-                            const isLast = index === timelineItems.length - 1;
-                            return (
-                              <div
-                                key={item.status}
-                                className="relative flex items-start gap-3"
-                              >
-                                <div className="flex flex-col items-center">
-                                  <div
-                                    className={`w-3 h-3 rounded-full border-2 ${
-                                      item.completed
-                                        ? "bg-[rgb(50,255,52)] border-[rgb(50,255,52)]"
-                                        : item.active
-                                          ? "bg-[rgb(50,255,52)]/30 border-[rgb(50,255,52)] animate-pulse"
-                                          : "bg-transparent border-[rgb(186,255,188)]/30"
-                                    }`}
-                                  />
-                                  {!isLast && (
-                                    <div
-                                      className={`w-0.5 h-full min-h-[30px] mt-1 ${
-                                        item.completed || item.active
-                                          ? "bg-[rgb(50,255,52)]/30"
-                                          : "bg-[rgb(186,255,188)]/10"
-                                      }`}
-                                    />
-                                  )}
-                                </div>
-                                <div className="flex-1">
-                                  <p
-                                    className={`text-xs font-orbitron uppercase tracking-[0.12em] ${
-                                      item.active
-                                        ? "text-[rgb(50,255,52)]"
-                                        : "text-[rgb(186,255,188)]/70"
-                                    }`}
-                                  >
-                                    {item.label}
-                                  </p>
-                                  {item.time && (
-                                    <p className="text-[10px] text-[rgb(186,255,188)]/50 mt-1">
-                                      {item.time}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {/* Countdown inside the same box */}
-                        <div className="mt-3 pt-3 border-t border-[rgb(50,255,52)]/20">
-                          <p className="text-[10px] font-orbitron uppercase tracking-[0.16em] text-[rgb(50,255,52)] mb-1">
-                            COUNTDOWN
-                          </p>
-                          {countdown ? (
-                            <div className="flex items-baseline gap-1.5 flex-wrap">
-                              <span className="text-white font-orbitron text-base tracking-wider">
-                                {countdown.days}
-                              </span>
-                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                                days
-                              </span>
-                              <span className="text-white font-orbitron text-base tracking-wider">
-                                {countdown.hours}
-                              </span>
-                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                                hrs
-                              </span>
-                              <span className="text-white font-orbitron text-base tracking-wider">
-                                {countdown.minutes}
-                              </span>
-                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                                Mins
-                              </span>
-                              <span className="text-white font-orbitron text-base tracking-wider">
-                                {countdown.seconds}
-                              </span>
-                              <span className="text-[rgb(186,255,188)]/70 font-orbitron text-[10px] tracking-wider">
-                                Secs
-                              </span>
-                            </div>
-                          ) : (
-                            <p className="text-[rgb(186,255,188)]/70 text-[10px] font-orbitron uppercase">
-                              Auction ended
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })()}
+                <AuctionTimeline
+                  status={selectedCollection.status}
+                  endTime={selectedCollection.endTime}
+                  executedAt={selectedCollection.executedAt}
+                  countdown={countdown}
+                />
 
                 <div className="flex items-center gap-3">
                   <p
@@ -2505,13 +2534,18 @@ export default function Bids({
                             : null;
 
                         let balanceDisplay: string;
-                        if (!address) {
-                          balanceDisplay = "—";
-                        } else if (!balanceInfo) {
-                          balanceDisplay = "...";
-                        } else {
-                          // Always show USD value (which will be $0.00 for zero balances)
+                        if (balanceInfo) {
                           balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+                        } else {
+                          // Show token USD price even without wallet
+                          const usdPrice = tokenUsdPrices[token.address];
+                          if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+                            balanceDisplay = "$1.00";
+                          } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+                            balanceDisplay = `~${formatUSD(usdPrice)}`;
+                          } else {
+                            balanceDisplay = address ? "..." : "—";
+                          }
                         }
 
                         return {
@@ -2779,44 +2813,49 @@ export default function Bids({
 
                 <div ref={bidActionsRef} className="flex flex-col gap-2 w-full max-w-full md:max-w-[550px]">
                   <div className="flex flex-row gap-2 md:gap-3 w-full">
-                    <button
-                      type="button"
-                      onClick={handlePlaceBid}
-                      disabled={
-                        !isBidValid || !account || isSubmitting || isUserSeller
-                      }
-                      className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
-                        isBidValid && account && !isSubmitting && !isUserSeller
-                          ? "bg-[rgb(50,255,52)] text-black font-bold hover:cursor-pointer hover:bg-[rgb(40,220,42)] shadow-[0_0_12px_rgba(50,255,52,0.4)]"
-                          : "border border-white/12 text-[rgb(186,255,188)]/45"
-                      }`}
-                    >
-                      <span>{isSubmitting ? "..." : "Place Bid"}</span>
-                      {!isSubmitting && (
-                        <InfoTooltip content="Compete in the auction. Your bid must be higher than the current highest bid. Winner is determined when the auction ends." />
-                      )}
-                    </button>
-                    {!userOffer && (
-                      <button
-                        type="button"
-                        onClick={handleMakeOffer}
-                        disabled={
-                          !isBidValid ||
-                          !account ||
-                          isSubmittingOffer ||
-                          isUserSeller
-                        }
-                        className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
-                          isBidValid && account && !isSubmittingOffer && !isUserSeller
-                            ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
-                            : "border border-white/12 text-[rgb(186,255,188)]/45"
-                        }`}
-                      >
-                        <span>{isSubmittingOffer ? "..." : "Make Offer"}</span>
-                        {!isSubmittingOffer && (
-                          <InfoTooltip content="Make a direct buyout offer to the seller. If accepted, the auction ends immediately and you get the NFTs. Your funds are held in escrow until accepted or auction ends." />
+                    {/* Only show Place Bid and Make Offer when auction is NOT expired */}
+                    {!isAuctionExpired(selectedCollection.endTime, selectedCollection.status) && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handlePlaceBid}
+                          disabled={
+                            !isBidValid || !account || isSubmitting || isUserSeller
+                          }
+                          className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                            isBidValid && account && !isSubmitting && !isUserSeller
+                              ? "bg-[rgb(50,255,52)] text-black font-bold hover:cursor-pointer hover:bg-[rgb(40,220,42)] shadow-[0_0_12px_rgba(50,255,52,0.4)]"
+                              : "border border-white/12 text-[rgb(186,255,188)]/45"
+                          }`}
+                        >
+                          <span>{isSubmitting ? "..." : "Place Bid"}</span>
+                          {!isSubmitting && (
+                            <InfoTooltip content="Compete in the auction. Your bid must be higher than the current highest bid. Winner is determined when the auction ends." />
+                          )}
+                        </button>
+                        {!userOffer && (
+                          <button
+                            type="button"
+                            onClick={handleMakeOffer}
+                            disabled={
+                              !isBidValid ||
+                              !account ||
+                              isSubmittingOffer ||
+                              isUserSeller
+                            }
+                            className={`inline-flex items-center justify-center gap-1.5 rounded-full flex-1 px-3 md:px-4 h-9 text-[10px] md:text-xs font-orbitron uppercase tracking-[0.1em] md:tracking-[0.12em] transition whitespace-nowrap ${
+                              isBidValid && account && !isSubmittingOffer && !isUserSeller
+                                ? "border border-blue-500 bg-blue-500/10 text-blue-500 hover:cursor-pointer hover:bg-blue-500 hover:text-black"
+                                : "border border-white/12 text-[rgb(186,255,188)]/45"
+                            }`}
+                          >
+                            <span>{isSubmittingOffer ? "..." : "Make Offer"}</span>
+                            {!isSubmittingOffer && (
+                              <InfoTooltip content="Make a direct buyout offer to the seller. If accepted, the auction ends immediately and you get the NFTs. Your funds are held in escrow until accepted or auction ends." />
+                            )}
+                          </button>
                         )}
-                      </button>
+                      </>
                     )}
                     <button
                       type="button"
@@ -3106,7 +3145,12 @@ export default function Bids({
         </div>
       )}
 
-      <Filters token={token} filters={filters} onFiltersChange={setFilters} summitListedCount={summitListedCount} />
+      <Filters
+        token={token}
+        filters={filters}
+        onFiltersChange={(updates) => setFilters((prev) => ({ ...prev, ...updates }))}
+        summitListedCount={summitListedCount}
+      />
       {renderContent()}
 
       <BeastDetailModal
@@ -3154,12 +3198,17 @@ export default function Bids({
               : null;
 
           let balanceDisplay: string;
-          if (!address) {
-            balanceDisplay = "—";
-          } else if (!balanceInfo) {
-            balanceDisplay = "...";
-          } else {
+          if (balanceInfo) {
             balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+          } else {
+            const usdPrice = tokenUsdPrices[token.address];
+            if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+              balanceDisplay = "$1.00";
+            } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+              balanceDisplay = `~${formatUSD(usdPrice)}`;
+            } else {
+              balanceDisplay = address ? "..." : "—";
+            }
           }
 
           return {
@@ -3174,7 +3223,83 @@ export default function Bids({
         onPlaceBid={handlePlaceBid}
         onMakeOffer={handleMakeOffer}
         onOpenWallet={openWalletModal}
+        onSettle={handleSettleAuction}
+        isSettling={isSettling}
         summitBeasts={auctionSummitBeasts}
+/>
+
+      <AdventurerDetailModal
+        isOpen={isAdventurerModalOpen}
+        onClose={() => {
+          setIsAdventurerModalOpen(false);
+          // Remove auction param from URL if it was opened from URL
+          if (token && hasAutoOpenedFromUrl.current) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete("auction");
+            router.push(url.pathname + url.search, { scroll: false });
+          }
+        }}
+        nfts={selectedAdventurerNfts}
+        currentIndex={selectedAdventurerIndex}
+        onNavigate={setSelectedAdventurerIndex}
+        auctionId={selectedCollectionId}
+        auctionBidData={selectedCollection ? {
+          startingPrice: selectedCollection.startingPrice / 1e6,
+          highestBid: selectedCollection.highestBid,
+          status: selectedCollection.status,
+          endTime: selectedCollection.endTime,
+          isUserSeller: (() => {
+            const auction = auctions.find((a) => String(a.auction_id) === selectedCollectionId);
+            if (!address || !auction?.seller) return false;
+            const userAddress = normalizeContractAddress(address).toLowerCase();
+            const sellerAddress = normalizeContractAddress(auction.seller).toLowerCase();
+            return userAddress === sellerAddress;
+          })(),
+        } : undefined}
+        bidState={{
+          bidAmount: bidAmountToken,
+          isSubmitting,
+          isSubmittingOffer,
+          hasActiveOffer: !!userOffer,
+          account: !!account,
+          paymentToken,
+          tokenSymbol: SUPPORTED_TOKENS.find(t => t.address.toLowerCase() === paymentToken.toLowerCase())?.symbol || "USDC",
+          insufficientFundsError: insufficientFundsError || undefined,
+        }}
+        tokenOptions={SUPPORTED_TOKENS.map((token) => {
+          const balanceInfo =
+            address && tokenBalances[token.address] !== undefined
+              ? tokenBalances[token.address]
+              : null;
+
+          let balanceDisplay: string;
+          if (balanceInfo) {
+            balanceDisplay = balanceInfo.usdValue || formatUSD(0);
+          } else {
+            const usdPrice = tokenUsdPrices[token.address];
+            if (token.address.toLowerCase() === USDC_ADDRESS.toLowerCase()) {
+              balanceDisplay = "$1.00";
+            } else if (usdPrice && isFinite(usdPrice) && usdPrice > 0) {
+              balanceDisplay = `~${formatUSD(usdPrice)}`;
+            } else {
+              balanceDisplay = address ? "..." : "—";
+            }
+          }
+
+          return {
+            value: token.address,
+            label: token.symbol,
+            balance: balanceDisplay,
+            logo: tokenLogos[token.address],
+          };
+        })}
+        onBidAmountChange={setBidAmountToken}
+        onPaymentTokenChange={setPaymentToken}
+        onPlaceBid={handlePlaceBid}
+        onMakeOffer={handleMakeOffer}
+        onOpenWallet={openWalletModal}
+        onSettle={handleSettleAuction}
+        isSettling={isSettling}
       />
     </div>
   );

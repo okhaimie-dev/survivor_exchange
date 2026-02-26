@@ -1,9 +1,34 @@
 import type { ERC721Token, FormattedNFT, MetadataAttribute, ParsedMetadata } from '../types';
 import { safeParseJSON } from './json';
+import { ADVENTURER_NFT_CONTRACT_ADDRESS } from '../constants';
+
+// Torii static API base URL for adventurer images
+const TORII_STATIC_BASE_URL = 'https://api.cartridge.gg/x/arcade-main/torii/static';
+
+/**
+ * Generate static image URL for an adventurer NFT
+ * Uses the Torii static API which returns the SVG directly - no RPC calls needed
+ * @param tokenId - Token ID (can be hex or decimal string, or number)
+ * @returns Static image URL
+ */
+export function getAdventurerImageUrl(tokenId: string | number): string {
+  // Convert to number first
+  const tokenIdNum = typeof tokenId === 'string'
+    ? (tokenId.startsWith('0x') ? parseInt(tokenId, 16) : parseInt(tokenId, 10))
+    : tokenId;
+
+  // Pad token ID to 64 hex characters (without 0x prefix, then add 0x)
+  const paddedTokenId = '0x' + tokenIdNum.toString(16).padStart(64, '0');
+
+  return `${TORII_STATIC_BASE_URL}/${ADVENTURER_NFT_CONTRACT_ADDRESS}/${paddedTokenId}/image`;
+}
 
 function getAttributeValue(attributes: MetadataAttribute[], traitType: string): string | undefined {
-  const attr = attributes.find((a) => a.trait_type === traitType);
-  return attr ? String(attr.value) : undefined;
+  const exact = attributes.find((a) => a.trait_type === traitType);
+  if (exact) return String(exact.value);
+  const lower = traitType.toLowerCase();
+  const insensitive = attributes.find((a) => (a.trait_type ?? '').toLowerCase() === lower);
+  return insensitive ? String(insensitive.value) : undefined;
 }
 
 function cleanupMetadataName(name: string | null | undefined): string {

@@ -1,5 +1,5 @@
 mod test_auction_system {
-    //use dojo_snf_test::set_caller_address;
+    use starknet::ContractAddress;
     use survivor_exchange::store::{Store, StoreTrait};
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcherTrait;
     use survivor_exchange::tests::mocks::erc721::{
@@ -55,6 +55,45 @@ mod test_auction_system {
         assert(auction.status == 2, 'not started');
         assert(auction.end_time > 0, 'no end time');
     }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    #[should_panic(expected: 'Collection not supported')]
+    fn test_create_auction_unlisted_collection_fails() {
+        // Spawn auction WITHOUT mocks (no whitelist setup)
+        let (_world, systems, _context) = setup::tests::spawn_auction();
+
+        // Deploy a mock ERC721 but DON'T whitelist it
+        let unlisted_erc721 = setup::tests::deploy_mock_erc721();
+        let mock_erc20 = setup::tests::deploy_mock_erc20();
+
+        let name: ByteArray = "test_auction";
+        let starting_price: u64 = 100;
+        let mut items = ArrayTrait::new();
+        items.append(1);
+        let items_span = items.span();
+        let duration: Option<u64> = Option::Some(3600);
+
+        // This should panic with "Collection not supported"
+        systems
+            .auction_systems
+            .create_auction(name, starting_price, items_span, unlisted_erc721, duration, mock_erc20);
+    }
+
+    #[test]
+    #[available_gas(l2_gas: 300000000000)]
+    fn test_whitelist_validation_works() {
+        let (world, systems, _context, mocks) = setup::tests::spawn_auction_with_mocks();
+
+        // Verify the mock collection is whitelisted
+        let store: Store = StoreTrait::new(world);
+        let collection = store.supported_nft_collection(mocks.erc721_address.into());
+
+        // Should be whitelisted with ERC721 standard (1)
+        assert(collection.standard == 1, 'should be ERC721');
+        assert(collection.collection_address != 0, 'should have address');
+    }
+
     //#[test]
 //#[available_gas(l2_gas: 300000000000)]
 ////#[fork("MAINNET_LATEST")]

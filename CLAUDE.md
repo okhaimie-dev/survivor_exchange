@@ -102,7 +102,7 @@ assert(auction.status == AuctionStatus::Active, Errors::AUCTION_NOT_ACTIVE);
 - Max 163 NFTs per auction (contract limit)
 - GraphQL query limit: 500 records (performance optimization)
 - Supported payment tokens: USDC (6 decimals), ETH/STRK/LORDS/SURVIVOR (18 decimals), WBTC (8 decimals)
-- World namespace: `bm_0_1_9`
+- World namespace: `bm_0_2_1`
 
 ## Tool Versions
 

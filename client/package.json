@@ -3,14 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https",
+    "dev": "node server.js",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "vercel-check": "node -e \"const fs=require('fs'); const ok = fs.existsSync('app/page.tsx') && fs.existsSync('app/layout.tsx') && fs.existsSync('next.config.ts'); console.log(ok ? 'OK: app structure valid' : 'FAIL: missing app/page.tsx, app/layout.tsx, or next.config.ts'); process.exit(ok?0:1);\""
   },
   "dependencies": {
     "@apollo/client": "^4.0.9",
     "@avnu/avnu-sdk": "^4.0.0",
+    "@cartridge/arcade": "0.3.12",
     "@cartridge/connector": "^0.11.1",
     "@cartridge/controller": "^0.11.1",
     "@starknet-react/chains": "^5.0.3",
@@ -25,7 +27,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "rxjs": "^7.8.2",
-    "starknet": "^8.7.0",
+    "starknet": "^8.9.2",
     "viem": "^2.44.4",
     "wagmi": "^3.4.1"
   },

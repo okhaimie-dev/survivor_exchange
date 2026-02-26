@@ -1,10 +1,17 @@
 import Image from "next/image";
 import moment from "moment";
+import { MonsterCard, AdventurerCard } from "./cards";
+import { AdventurerDetailModal } from "./modals";
+import { ADVENTURER_NFT_CONTRACT_ADDRESS } from "../lib/constants";
+import { useQuery } from "@apollo/client/react";
 import { useAccount, useExplorer, useProvider } from "@starknet-react/core";
 import { useState, useCallback, useMemo, useEffect } from "react";
-import MyListingsSkeleton from "./my-listings-skeleton";
-import AddressDisplay from "./address-display";
-import { FormattedListing, FormattedOffer } from "../hooks/use-my-listings";
+import { MyListingsSkeleton } from "./skeletons";
+import { AUCTION_ITEMS_BY_ID_QUERY } from "../lib/queries/auctions";
+import type { AuctionItemNode } from "../lib/types/auction";
+import { AddressDisplay, ReservePriceDisplay, CustomDropdown } from "./ui";
+import { type FormattedListing, type FormattedOffer, useMyAdventurerNFTs } from "../hooks";
+import { useToast } from "../providers/toast-provider";
 import {
   AUCTION_CONTRACT_ADDRESS,
   USDC_ADDRESS,
@@ -12,13 +19,16 @@ import {
   DEFAULT_PAGE_SIZE,
 } from "../lib/constants";
 import {
-  formatUSDCompact,
+  formatUSDSmart,
   truncateAuctionName,
+  parseStatus,
 } from "../lib/utils";
-import { normalizeContractAddress } from "../lib/utils/normalization";
+import { normalizeContractAddress, normalizeTokenId, toDecimalTokenId } from "../lib/utils/normalization";
+import { isAuctionExpired } from "../lib/utils/auction-status";
+import type { FormattedNFT, AuctionItem } from "../lib/types";
 import { uint256, num } from "starknet";
 import { getQuotes, quoteToCalls } from "@avnu/avnu-sdk";
-import Pagination from "./pagination";
+import { Pagination } from "./ui";
 
 const formatTimeAgo = (timestamp: string): string => {
   if (!timestamp) return "Unknown";
@@ -55,7 +65,13 @@ const formatTimeAgo = (timestamp: string): string => {
 };
 
 const getStatusStyle = (status: string): string => {
-  const statusNum = parseInt(status);
+  const statusNum = parseStatus(status);
+  if (statusNum < 0) {
+    if (status === "pending" || status === "queued") {
+      return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
+    }
+    return "bg-white/10 text-white border border-white/20";
+  }
 
   if (statusNum === 0) {
     return "bg-white/10 text-white/50 border border-white/20";
@@ -76,14 +92,12 @@ const getStatusStyle = (status: string): string => {
     return "bg-red-400/10 text-red-300 border border-red-300/30";
   }
 
-  if (status === "pending" || status === "queued") {
-    return "bg-yellow-400/10 text-yellow-300 border border-yellow-300/30";
-  }
   return "bg-white/10 text-white border border-white/20";
 };
 
 const getStatusLabel = (status: string): string => {
-  const statusNum = parseInt(status);
+  const statusNum = parseStatus(status);
+  if (statusNum < 0) return status;
 
   if (statusNum === 0) return "None";
   if (statusNum === 1) return "Draft";
@@ -95,20 +109,222 @@ const getStatusLabel = (status: string): string => {
   return status;
 };
 
+/** Effective display status: show "Ended" when end time has passed, even if API still returns Active. */
+function getDisplayStatus(listing: FormattedListing, isAuctionExpired: (endTime: string, status: string) => boolean): string {
+  return isAuctionExpired(listing.endTime, listing.status) ? "3" : listing.status;
+}
+
+function formatEndTime(endTime: string): string {
+  if (!endTime || endTime === "0") return "—";
+  try {
+    let n: number;
+    if (endTime.startsWith("0x") || endTime.startsWith("0X")) {
+      n = parseInt(endTime, 16);
+    } else {
+      n = parseInt(endTime, 10);
+    }
+    if (isNaN(n) || n === 0) return "—";
+    return new Date(n * 1000).toLocaleString();
+  } catch {
+    return "—";
+  }
+}
+
+interface ListingDetailModalProps {
+  listing: FormattedListing;
+  items: AuctionItem[];
+  itemsLoading?: boolean;
+  nfts?: FormattedNFT[];
+  onClose: () => void;
+  inBattleByTokenId?: Record<string, boolean>;
+  /** When user clicks an adventurer card, open adventurer detail modal (view-only: stats, inventory, level, xp, score) */
+  onAdventurerCardClick?: (nft: FormattedNFT, index: number, nfts: FormattedNFT[]) => void;
+}
+
+function ListingDetailModal({ listing, items, itemsLoading = false, nfts = [], onClose, inBattleByTokenId = {}, onAdventurerCardClick }: ListingDetailModalProps) {
+  const findNft = useCallback(
+    (item: AuctionItem): FormattedNFT | undefined => {
+      const contractNorm = normalizeContractAddress(item.contract_address).toLowerCase();
+      const tokenNorm = normalizeTokenId(item.token_id);
+      return nfts.find(
+        (nft) =>
+          normalizeContractAddress(nft.contractAddress).toLowerCase() === contractNorm &&
+          normalizeTokenId(nft.tokenId) === tokenNorm
+      );
+    },
+    [nfts]
+  );
+
+  const adventurerNftsFromListing = useMemo(() => {
+    const adventurerContract = normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+    return items
+      .filter((item) => normalizeContractAddress(item.contract_address).toLowerCase() === adventurerContract)
+      .map((item) => findNft(item))
+      .filter((n): n is FormattedNFT => n != null);
+  }, [items, findNft]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="listing-detail-title"
+    >
+      <div
+        className="flex max-h-[90vh] w-full max-w-6xl flex-col rounded-xl border border-[rgb(50,255,52)]/30 bg-black shadow-xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
+          <h2 id="listing-detail-title" className="text-sm font-orbitron uppercase tracking-wider text-white">
+            {truncateAuctionName(listing.name)}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded p-1 text-white/60 hover:text-white hover:bg-white/10 transition"
+            aria-label="Close"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">ID</p>
+              <p className="font-orbitron text-white">{listing.id}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Status</p>
+              <p className={`font-orbitron ${getStatusStyle(getDisplayStatus(listing, isAuctionExpired))} rounded px-1 py-0.5 inline-block`}>
+                {getStatusLabel(getDisplayStatus(listing, isAuctionExpired))}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Reserve</p>
+              <p className="font-orbitron text-[rgb(50,255,52)]">
+                <ReservePriceDisplay value={listing.startingPrice} symbol={listing.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Top bid</p>
+              <p className="font-orbitron text-white">
+                {listing.currentBid != null && listing.currentBid > 0 ? (
+                  <ReservePriceDisplay value={listing.currentBid} symbol={listing.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                ) : "—"}
+              </p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">End time</p>
+              <p className="font-orbitron text-white/90">{formatEndTime(listing.endTime)}</p>
+            </div>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+              <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Tokens</p>
+              <p className="font-orbitron text-white">{items.length}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/70 mb-3">
+              Tokens in this listing
+            </p>
+            {itemsLoading ? (
+              <p className="text-[10px] text-[rgb(186,255,188)]/60 py-4 flex items-center gap-2">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
+                Loading tokens…
+              </p>
+            ) : items.length === 0 ? (
+              <p className="text-[10px] text-[rgb(186,255,188)]/50 py-2">No token data for this auction.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 w-full">
+                {items.map((item, idx) => {
+                  const nft = findNft(item);
+                  const isAdventurer =
+                    normalizeContractAddress(item.contract_address).toLowerCase() ===
+                    normalizeContractAddress(ADVENTURER_NFT_CONTRACT_ADDRESS).toLowerCase();
+                  if (nft) {
+                    const CardComponent = isAdventurer ? AdventurerCard : MonsterCard;
+                    const dec = toDecimalTokenId(item.token_id ?? nft.tokenId);
+                    const norm = normalizeTokenId(item.token_id ?? nft.tokenId);
+                    const inBattle = isAdventurer && (inBattleByTokenId[dec] === true || inBattleByTokenId[norm] === true);
+                    return (
+                      <div key={`${item.auction_id}-${item.token_id}-${item.item_index}-${idx}`}>
+                        <CardComponent
+                          nft={nft}
+                          selected={false}
+                          onToggle={() => {}}
+                          onInfoClick={
+                            isAdventurer && onAdventurerCardClick
+                              ? () => {
+                                  const index = adventurerNftsFromListing.findIndex(
+                                    (a) => normalizeTokenId(a.tokenId) === normalizeTokenId(nft.tokenId)
+                                  );
+                                  onAdventurerCardClick(nft, index >= 0 ? index : 0, adventurerNftsFromListing);
+                                }
+                              : undefined
+                          }
+                          price={listing.startingPrice}
+                          auctionName={listing.name}
+                          listed={true}
+                          inBattle={isAdventurer ? inBattle : undefined}
+                          {...(isAdventurer ? { priceLabel: "Price" as const } : {})}
+                        />
+                      </div>
+                    );
+                  }
+                  return (
+                    <div
+                      key={`${item.auction_id}-${item.token_id}-${item.item_index}-${idx}`}
+                      className="flex flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border border-[rgb(50,255,52)]/15 bg-black/70 p-3 md:p-4 min-h-[200px] justify-center items-center"
+                    >
+                      <div className="aspect-square w-full max-w-[120px] rounded-lg border border-[rgb(50,255,52)]/20 bg-black/40 flex items-center justify-center">
+                        <Image src="/logo.png" alt="" width={40} height={40} className="opacity-50" />
+                      </div>
+                      <p className="text-xs font-orbitron text-white">Token #{item.token_id}</p>
+                      <p className="text-[10px] text-[rgb(186,255,188)]/50">No metadata</p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface MyListingsProps {
   listings: FormattedListing[];
   loading: boolean;
   error: Error | null;
+  getAuctionItems?: (auctionId: string) => AuctionItem[];
+  nfts?: FormattedNFT[];
+  onRefresh?: () => Promise<unknown>;
 }
 
 export default function MyListings({
   listings,
   loading,
   error,
+  getAuctionItems,
+  nfts = [],
+  onRefresh,
 }: MyListingsProps) {
   const { account, address } = useAccount();
   const explorer = useExplorer();
   const provider = useProvider();
+  const toast = useToast();
+  const { nfts: adventurerNfts } = useMyAdventurerNFTs();
+  const allNftsForModal = useMemo(
+    () => [...(nfts || []), ...(adventurerNfts || [])],
+    [nfts, adventurerNfts]
+  );
+  const [selectedListing, setSelectedListing] = useState<FormattedListing | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEndingAuction, setIsEndingAuction] = useState<string | null>(null);
   const [txnHashes, setTxnHashes] = useState<Record<string, string>>({});
   const [isSettling, setIsSettling] = useState<string | null>(null);
@@ -127,20 +343,148 @@ export default function MyListings({
   const [expandedOffers, setExpandedOffers] = useState<Record<string, boolean>>(
     {},
   );
+  const [inBattleByTokenId, setInBattleByTokenId] = useState<Record<string, boolean>>({});
+  const [listingsSort, setListingsSort] = useState<string>("time-newest");
+  const [listingsFilter, setListingsFilter] = useState<"all" | "active" | "settled" | "cancelled">("all");
+  const [adventurerModalOpen, setAdventurerModalOpen] = useState(false);
+  const [adventurerModalNfts, setAdventurerModalNfts] = useState<FormattedNFT[]>([]);
+  const [adventurerModalIndex, setAdventurerModalIndex] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [onRefresh]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/adventurer-attributes", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((data: Record<string, boolean>) => {
+        if (!cancelled) setInBattleByTokenId(data ?? {});
+      })
+      .catch(() => {
+        if (!cancelled) setInBattleByTokenId({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const openListingDetail = useCallback((listing: FormattedListing) => {
+    setSelectedListing(listing);
+    setIsDetailModalOpen(true);
+  }, []);
+
+  const closeListingDetail = useCallback(() => {
+    setIsDetailModalOpen(false);
+    setSelectedListing(null);
+  }, []);
+
+  const handleAdventurerCardClick = useCallback((nft: FormattedNFT, index: number, nfts: FormattedNFT[]) => {
+    setAdventurerModalNfts(nfts);
+    setAdventurerModalIndex(index);
+    setAdventurerModalOpen(true);
+  }, []);
+
+  const closeAdventurerModal = useCallback(() => {
+    setAdventurerModalOpen(false);
+    setAdventurerModalNfts([]);
+    setAdventurerModalIndex(0);
+  }, []);
+
+  const auctionIdInt = selectedListing ? parseInt(selectedListing.auctionId, 10) : 0;
+  const { data: auctionItemsData, loading: auctionItemsLoading } = useQuery<{ bm021AuctionItemModels: { edges: AuctionItemNode[] } }>(
+    AUCTION_ITEMS_BY_ID_QUERY,
+    {
+      variables: { auctionId: isNaN(auctionIdInt) ? 0 : auctionIdInt },
+      skip: !selectedListing || !isDetailModalOpen,
+      fetchPolicy: "cache-and-network",
+    }
+  );
+
+  const selectedListingItems = useMemo((): AuctionItem[] => {
+    if (!auctionItemsData?.bm021AuctionItemModels?.edges?.length) {
+      return [];
+    }
+    return auctionItemsData.bm021AuctionItemModels.edges.map((e) => e.node);
+  }, [auctionItemsData]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [listings]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listingsSort]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listingsFilter]);
+
+  const parseEndTimeNum = useCallback((endTime: string): number => {
+    if (!endTime || endTime === "0") return 0;
+    if (endTime.startsWith("0x") || endTime.startsWith("0X")) return parseInt(endTime, 16);
+    return parseInt(endTime, 10);
+  }, []);
+
+  const filteredListings = useMemo(() => {
+    if (listingsFilter === "all") return listings;
+    if (listingsFilter === "active") return listings.filter((l) => parseStatus(l.status) === 2);
+    if (listingsFilter === "settled") return listings.filter((l) => parseStatus(l.status) === 4);
+    if (listingsFilter === "cancelled") return listings.filter((l) => parseStatus(l.status) === 5);
+    return listings;
+  }, [listings, listingsFilter]);
+
+  const sortedListings = useMemo(() => {
+    const sortBySelected = (arr: FormattedListing[]) => {
+      const a = [...arr];
+      if (listingsSort === "price-high-low") {
+        a.sort((x, y) => {
+          const priceA = x.currentBid ?? x.startingPrice ?? 0;
+          const priceB = y.currentBid ?? y.startingPrice ?? 0;
+          return priceB - priceA;
+        });
+      } else if (listingsSort === "price-low-high") {
+        a.sort((x, y) => {
+          const priceA = x.currentBid ?? x.startingPrice ?? 0;
+          const priceB = y.currentBid ?? y.startingPrice ?? 0;
+          return priceA - priceB;
+        });
+      } else if (listingsSort === "time-ending-soon") {
+        a.sort((x, y) => parseEndTimeNum(x.endTime) - parseEndTimeNum(y.endTime));
+      } else {
+        // time-newest (default): latest first by auction ID (higher = newer)
+        a.sort((x, y) => {
+          const idA = parseInt(x.auctionId, 10) || 0;
+          const idB = parseInt(y.auctionId, 10) || 0;
+          return idB - idA;
+        });
+      }
+      return a;
+    };
+    if (listingsFilter === "all") {
+      const active = filteredListings.filter((l) => parseStatus(l.status) === 2);
+      const inactive = filteredListings.filter((l) => parseStatus(l.status) !== 2);
+      return [...sortBySelected(active), ...sortBySelected(inactive)];
+    }
+    return sortBySelected([...filteredListings]);
+  }, [filteredListings, listingsFilter, listingsSort, parseEndTimeNum]);
+
   const totalPages = useMemo(
-    () => Math.max(1, Math.ceil(listings.length / DEFAULT_PAGE_SIZE)),
-    [listings.length],
+    () => Math.max(1, Math.ceil(sortedListings.length / DEFAULT_PAGE_SIZE)),
+    [sortedListings.length],
   );
 
   const visibleListings = useMemo(() => {
     const startIndex = (currentPage - 1) * DEFAULT_PAGE_SIZE;
-    return listings.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
-  }, [currentPage, listings]);
+    return sortedListings.slice(startIndex, startIndex + DEFAULT_PAGE_SIZE);
+  }, [currentPage, sortedListings]);
 
   const handlePageChange = useCallback(
     (page: number) => {
@@ -171,22 +515,17 @@ export default function MyListings({
           ...prev,
           [auctionId]: response.transaction_hash,
         }));
+
+        toast.success("Auction ended", "Transaction submitted successfully");
       } catch (err) {
         console.error("Error ending auction - contract call failed:", err);
-        if (err instanceof Error) {
-          console.error("Error message:", err.message);
-          console.error("Error stack:", err.stack);
-        }
-        console.error("Failed call details:", {
-          contract: AUCTION_CONTRACT_ADDRESS,
-          entrypoint: "end_auction",
-          auctionId: auctionId,
-        });
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to end auction", errorMessage);
       } finally {
         setIsEndingAuction(null);
       }
     },
-    [account],
+    [account, toast],
   );
 
   const isAuctionExpired = (endTime: string, status: string): boolean => {
@@ -223,6 +562,12 @@ export default function MyListings({
         console.error("Listing not found");
         return;
       }
+      if (parseStatus(listing.status) === 4 || settleTxnHashes[auctionId]) {
+        return; // Already settled, do nothing
+      }
+      if (parseStatus(listing.status) === 5) {
+        return; // Cancelled auctions cannot be settled
+      }
 
       // If there's no current bid, just settle without swap
       if (!listing.currentBid || listing.currentBid === 0) {
@@ -239,6 +584,8 @@ export default function MyListings({
             ...prev,
             [auctionId]: response.transaction_hash,
           }));
+
+          toast.success("Auction settled", "NFTs have been returned");
 
           try {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -260,6 +607,8 @@ export default function MyListings({
           }
         } catch (err) {
           console.error("Error settling auction - contract call failed:", err);
+          const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+          toast.error("Failed to settle auction", errorMessage);
         } finally {
           setIsSettling(null);
         }
@@ -391,6 +740,8 @@ export default function MyListings({
           [auctionId]: response.transaction_hash,
         }));
 
+        toast.success("Auction settled", "Transaction submitted successfully");
+
         try {
           await new Promise((resolve) => setTimeout(resolve, 2000));
           const canSettleResult = await provider.provider.callContract({
@@ -411,25 +762,19 @@ export default function MyListings({
         }
       } catch (err) {
         console.error("Error settling auction - contract call failed:", err);
-        if (err instanceof Error) {
-          console.error("Error message:", err.message);
-          console.error("Error stack:", err.stack);
-        }
-        console.error("Failed call details:", {
-          contract: AUCTION_CONTRACT_ADDRESS,
-          entrypoint: "settle_auction",
-          auctionId: auctionId,
-        });
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to settle auction", errorMessage);
       } finally {
         setIsSettling(null);
       }
     },
-    [account, address, listings, provider],
+    [account, address, listings, provider, toast, settleTxnHashes],
   );
 
   const handleAcceptOffer = useCallback(
     async (auctionId: string, buyerAddress: string) => {
       if (!account) {
+        toast.warning("Wallet not connected", "Please connect your wallet to accept offers");
         return;
       }
 
@@ -446,18 +791,23 @@ export default function MyListings({
           ...prev,
           [`${auctionId}-accept`]: response.transaction_hash,
         }));
+
+        toast.success("Offer accepted", "Transaction submitted successfully");
       } catch (err) {
         console.error("Error accepting offer:", err);
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to accept offer", errorMessage);
       } finally {
         setIsAcceptingOffer(null);
       }
     },
-    [account],
+    [account, toast],
   );
 
   const handleRejectOffer = useCallback(
     async (auctionId: string, buyerAddress: string) => {
       if (!account) {
+        toast.warning("Wallet not connected", "Please connect your wallet to reject offers");
         return;
       }
 
@@ -474,13 +824,17 @@ export default function MyListings({
           ...prev,
           [`${auctionId}-reject`]: response.transaction_hash,
         }));
+
+        toast.success("Offer rejected", "Transaction submitted successfully");
       } catch (err) {
         console.error("Error rejecting offer:", err);
+        const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+        toast.error("Failed to reject offer", errorMessage);
       } finally {
         setIsRejectingOffer(null);
       }
     },
-    [account],
+    [account, toast],
   );
 
   const toggleOffers = useCallback((auctionId: string) => {
@@ -489,332 +843,357 @@ export default function MyListings({
 
   if (loading) {
     return (
-      <section className="flex w-full flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">
+      <section className="flex w-full flex-col gap-4">
+        <header className="flex items-baseline justify-between gap-2 border-b border-white/10 pb-2">
+          <h2 className="text-sm font-orbitron uppercase tracking-widest text-white">
             My Listings
           </h2>
-          <p className="text-sm text-[rgb(186,255,188)]/70">
-            Review and manage every collection you have introduced to the Loot
-            Auction habitat.
-          </p>
         </header>
-        <div className="flex flex-col gap-4">
-          <MyListingsSkeleton />
-        </div>
+        <MyListingsSkeleton />
       </section>
     );
   }
 
   if (error) {
     return (
-      <section className="flex w-full flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">
+      <section className="flex w-full flex-col gap-4">
+        <header className="flex items-baseline justify-between gap-2 border-b border-white/10 pb-2">
+          <h2 className="text-sm font-orbitron uppercase tracking-widest text-white">
             My Listings
           </h2>
-          <p className="text-sm text-[rgb(186,255,188)]/70">
-            Review and manage every collection you have introduced to the Loot
-            Auction habitat.
-          </p>
         </header>
-        <div className="flex items-center justify-center py-12">
-          <p className="text-red-400">
-            Error loading listings: {error.message}
-          </p>
-        </div>
+        <p className="text-xs text-red-400 py-4">
+          Error loading listings: {error.message}
+        </p>
       </section>
     );
   }
 
   if (listings.length === 0) {
     return (
-      <section className="flex w-full flex-col gap-6">
-        <header className="flex flex-col gap-2">
-          <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">
+      <section className="flex w-full flex-col gap-4">
+        <header className="flex items-baseline justify-between gap-2 border-b border-white/10 pb-2">
+          <h2 className="text-sm font-orbitron uppercase tracking-widest text-white">
             My Listings
           </h2>
-          <p className="text-sm text-[rgb(186,255,188)]/70">
-            Review and manage every collection you have introduced to the Loot
-            Auction habitat.
-          </p>
         </header>
-        <div className="flex flex-col items-center justify-center py-12 gap-4">
-          <div className="w-16 h-16 rounded-full bg-[rgb(50,255,52)]/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-[rgb(50,255,52)]/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-          </div>
-          <div className="text-center">
-            <p className="text-[rgb(186,255,188)]/70 mb-2">
-              You haven&apos;t created any auctions yet.
-            </p>
-            <p className="text-sm text-[rgb(186,255,188)]/50">
-              Switch to the &quot;Auction your collection&quot; tab to list your first beasts and start earning!
-            </p>
-          </div>
+        <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+          <p className="text-xs text-[rgb(186,255,188)]/70">
+            No listings yet. Switch to Sell to list your first collection.
+          </p>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="flex w-full flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h2 className="text-2xl font-orbitron uppercase tracking-[0.4em] text-white">
+    <section className="flex w-full flex-col gap-3">
+      <header className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <h2 className="text-sm font-orbitron uppercase tracking-widest text-white">
           My Listings
         </h2>
-        <p className="text-sm text-[rgb(186,255,188)]/70">
-          Review and manage every collection you have introduced to the Loot
-          Auction habitat.
-        </p>
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+          <div className="flex items-center rounded-lg border border-[rgb(50,255,52)]/20 overflow-hidden shrink-0">
+            <button
+              type="button"
+              onClick={() => setListingsFilter("all")}
+              className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition ${
+                listingsFilter === "all"
+                  ? "bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingsFilter("active")}
+              className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition border-l border-[rgb(50,255,52)]/20 ${
+                listingsFilter === "active"
+                  ? "bg-[rgb(50,255,52)]/20 text-[rgb(50,255,52)]"
+                  : "text-white/70 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingsFilter("settled")}
+              className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition border-l border-blue-400/30 ${
+                listingsFilter === "settled"
+                  ? "bg-blue-400/20 text-blue-300 border-blue-400/50 ring-1 ring-blue-400/40"
+                  : "text-white/70 hover:text-blue-300 hover:bg-blue-400/10"
+              }`}
+            >
+              Settled
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingsFilter("cancelled")}
+              className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider transition border-l border-red-400/30 ${
+                listingsFilter === "cancelled"
+                  ? "bg-red-400/20 text-red-300 border-red-400/50 ring-1 ring-red-400/40"
+                  : "text-white/70 hover:text-red-300 hover:bg-red-400/10"
+              }`}
+            >
+              Canceled
+            </button>
+          </div>
+          <CustomDropdown
+            id="sort-my-listings"
+            value={listingsSort}
+            onChange={setListingsSort}
+            options={[
+              { value: "time-ending-soon", label: "Ending soon" },
+              { value: "time-newest", label: "Newest" },
+              { value: "price-high-low", label: "Price ↓" },
+              { value: "price-low-high", label: "Price ↑" },
+            ]}
+            variant="bar"
+          />
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={loading || isRefreshing}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-4 py-2 text-xs font-orbitron uppercase tracking-[0.14em] text-[rgb(50,255,52)] transition hover:bg-[rgb(50,255,52)]/20 hover:cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Reload listings"
+            >
+              {(loading || isRefreshing) ? (
+                <>
+                  <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-[rgb(50,255,52)] border-t-transparent" />
+                  Refreshing...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+                    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                    <path d="M3 3v5h5" />
+                    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+                    <path d="M16 21h5v-5" />
+                  </svg>
+                  Refresh
+                </>
+              )}
+            </button>
+          )}
+          <span className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 shrink-0">
+            {filteredListings.length} listing{filteredListings.length !== 1 ? "s" : ""}
+          </span>
+        </div>
       </header>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
         {visibleListings.map((listing) => (
           <article
             key={listing.id}
-            className="flex w-full flex-col rounded-2xl border border-[rgb(50,255,52)]/25 bg-black/40 p-5 shadow-[0_0_25px_rgba(50,255,52,0.12)] transition hover:border-[rgb(50,255,52)]/60 hover:shadow-[0_0_40px_rgba(50,255,52,0.18)]"
+            onClick={() => openListingDetail(listing)}
+            className="flex flex-col rounded-xl border border-[rgb(50,255,52)]/20 bg-white/[0.02] p-3 transition hover:border-[rgb(50,255,52)]/40 cursor-pointer"
           >
-            {/* Main content row */}
-            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex w-full flex-1 items-center gap-4">
-              <div className="relative h-16 w-16 overflow-hidden rounded-xl border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10">
-                <Image
-                  src="/logo.png"
-                  alt={listing.name}
-                  width={64}
-                  height={64}
-                  draggable={false}
-                  className="h-full w-full object-cover p-2"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xs font-orbitron uppercase tracking-[0.25em] text-[rgb(186,255,188)]/70">
-                  {listing.id}
-                </span>
-                <h3 className="text-lg font-orbitron uppercase tracking-[0.2em] text-white">
-                  {truncateAuctionName(listing.name)}
-                </h3>
-                {(() => {
-                  const timeAgo = formatTimeAgo(listing.endTime);
-                  return timeAgo ? (
-                    <p className="text-xs text-[rgb(186,255,188)]/70">
-                      {timeAgo}
+            <div className="flex flex-wrap items-center gap-3 gap-y-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-[rgb(50,255,52)]/30 bg-[rgb(50,255,52)]/5">
+                  <Image
+                    src="/logo.png"
+                    alt=""
+                    width={40}
+                    height={40}
+                    draggable={false}
+                    className="h-full w-full object-cover p-1"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-orbitron uppercase tracking-wider text-[rgb(186,255,188)]/60 truncate">
+                    {listing.id}
+                  </p>
+                  <p className="text-xs font-orbitron text-white truncate">
+                    {truncateAuctionName(listing.name)}
+                  </p>
+                  {formatTimeAgo(listing.endTime) && (
+                    <p className="text-[10px] text-[rgb(186,255,188)]/50">
+                      {formatTimeAgo(listing.endTime)}
                     </p>
-                  ) : null;
-                })()}
+                  )}
+                </div>
               </div>
-            </div>
 
-            <div className="grid w-full max-w-[450px] grid-cols-2 gap-4 text-sm text-white md:grid-cols-3">
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
-                <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">
-                  Tokens
-                </p>
-                <p className="font-orbitron text-xl tracking-[0.3em]">
-                  {listing.tokenCount}
-                </p>
+              <div className="flex items-center gap-4 text-[10px]">
+                <div className="text-center">
+                  <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Tokens</p>
+                  <p className="font-orbitron text-white">{listing.tokenCount}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Reserve</p>
+                  <p className="font-orbitron text-[rgb(50,255,52)]">
+                    <ReservePriceDisplay value={listing.startingPrice} symbol={listing.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-[rgb(186,255,188)]/50 uppercase tracking-wider">Top bid</p>
+                  <p className="font-orbitron text-white">
+                    {listing.currentBid != null && listing.currentBid > 0 ? (
+                      <ReservePriceDisplay value={listing.currentBid} symbol={listing.reserveTokenSymbol} symbolClassName="text-[0.9em] opacity-90" />
+                    ) : "—"}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
-                <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">
-                  Reserved Price
-                </p>
-                <p className="font-orbitron text-base tracking-[0.3em]">
-                  {formatUSDCompact(listing.startingPrice / 1e6)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-4 text-center min-w-[120px]">
-                <p className="text-[rgb(186,255,188)]/70 text-xs uppercase tracking-[0.2em]">
-                  Top Bid
-                </p>
-                <p className="font-orbitron text-base tracking-[0.3em]">
-                  {listing.currentBid !== null
-                    ? formatUSDCompact(listing.currentBid)
-                    : "—"}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:items-end">
               <span
-                className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-orbitron uppercase tracking-[0.3em] ${getStatusStyle(listing.status)}`}
+                className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-orbitron uppercase ${getStatusStyle(getDisplayStatus(listing, isAuctionExpired))}`}
               >
-                {getStatusLabel(listing.status)}
+                {getStatusLabel(getDisplayStatus(listing, isAuctionExpired))}
               </span>
-              <div className="flex flex-row gap-2">
+
+              <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={() => handleEndAuction(listing.auctionId)}
                   disabled={
                     !account ||
                     isEndingAuction === listing.auctionId ||
-                    Number(listing.status) !== 2
+                    parseStatus(listing.status) !== 2 ||
+                    isAuctionExpired(listing.endTime, listing.status) ||
+                    parseStatus(listing.status) === 3
                   }
-                  className="inline-flex items-center justify-center rounded-full border border-red-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-red-400 transition hover:cursor-pointer hover:bg-red-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="rounded border border-red-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-red-400 hover:bg-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isEndingAuction === listing.auctionId
-                    ? "Ending..."
-                    : "End Auction"}
+                  {isEndingAuction === listing.auctionId ? "…" : "End"}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => handleSettleAuction(listing.auctionId)}
-                  disabled={
-                    !account ||
-                    isSettling === listing.auctionId ||
-                    !isAuctionExpired(listing.endTime, listing.status) ||
-                    Number(listing.status) === 4
-                  }
-                  className="inline-flex items-center justify-center rounded-full border border-orange-500/80 px-5 py-2 text-xs font-orbitron uppercase tracking-[0.3em] text-orange-400 transition hover:cursor-pointer hover:bg-orange-500 hover:text-black disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSettling === listing.auctionId
-                    ? "Settling..."
-                    : "Settle Bid"}
-                </button>
+                {parseStatus(listing.status) === 4 || settleTxnHashes[listing.auctionId] ? (
+                  <span
+                    className="rounded border border-orange-500/30 px-2 py-1 text-[10px] font-orbitron uppercase text-orange-400/70 cursor-default"
+                    aria-hidden
+                  >
+                    Settled
+                  </span>
+                ) : parseStatus(listing.status) === 5 ? (
+                  <span
+                    className="rounded border border-red-500/30 px-2 py-1 text-[10px] font-orbitron uppercase text-red-400/70 cursor-default"
+                    aria-hidden
+                  >
+                    Canceled
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleSettleAuction(listing.auctionId)}
+                    disabled={
+                      !account ||
+                      isSettling === listing.auctionId ||
+                      !isAuctionExpired(listing.endTime, listing.status) ||
+                      parseStatus(listing.status) === 5
+                    }
+                    className="rounded border border-orange-500/60 px-2 py-1 text-[10px] font-orbitron uppercase text-orange-400 hover:bg-orange-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSettling === listing.auctionId ? "…" : "Settle"}
+                  </button>
+                )}
               </div>
-              {txnHashes[listing.auctionId] && (
-                <a
-                  href={explorer.transaction(txnHashes[listing.auctionId])}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-orbitron text-[rgb(50,255,52)] hover:underline break-all"
-                >
-                  View Transaction
-                </a>
-              )}
-              {settleTxnHashes[listing.auctionId] && (
-                <div className="flex flex-col gap-1">
-                  {refundedAuctions[listing.auctionId] && (
-                    <p className="text-xs text-[rgb(186,255,188)]/70">
-                      Auction Refunded - All parties have been refunded
-                    </p>
-                  )}
+            </div>
+
+            <div onClick={(e) => e.stopPropagation()}>
+            {(txnHashes[listing.auctionId] || settleTxnHashes[listing.auctionId] || offerTxnHashes[`${listing.auctionId}-accept`] || offerTxnHashes[`${listing.auctionId}-reject`]) && (
+              <div className="mt-2 flex flex-wrap gap-2 border-t border-white/5 pt-2">
+                {txnHashes[listing.auctionId] && (
                   <a
-                    href={explorer.transaction(
-                      settleTxnHashes[listing.auctionId],
-                    )}
+                    href={explorer.transaction(txnHashes[listing.auctionId])}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs font-orbitron text-orange-400 hover:underline break-all"
+                    className="text-[10px] font-orbitron text-[rgb(50,255,52)] hover:underline"
                   >
-                    View Settle Transaction
+                    End tx
                   </a>
-                </div>
-              )}
-              {offerTxnHashes[`${listing.auctionId}-accept`] && (
-                <a
-                  href={explorer.transaction(
-                    offerTxnHashes[`${listing.auctionId}-accept`],
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-orbitron text-blue-400 hover:underline break-all"
-                >
-                  View Accept Offer Transaction
-                </a>
-              )}
-              {offerTxnHashes[`${listing.auctionId}-reject`] && (
-                <a
-                  href={explorer.transaction(
-                    offerTxnHashes[`${listing.auctionId}-reject`],
-                  )}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-orbitron text-red-400 hover:underline break-all"
-                >
-                  View Reject Offer Transaction
-                </a>
-              )}
-            </div>
-            </div>{/* End main content row */}
+                )}
+                {settleTxnHashes[listing.auctionId] && (
+                  <>
+                    {refundedAuctions[listing.auctionId] && (
+                      <span className="text-[10px] text-[rgb(186,255,188)]/70">Refunded</span>
+                    )}
+                    <a
+                      href={explorer.transaction(settleTxnHashes[listing.auctionId])}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] font-orbitron text-orange-400 hover:underline"
+                    >
+                      Settle tx
+                    </a>
+                  </>
+                )}
+                {offerTxnHashes[`${listing.auctionId}-accept`] && (
+                  <a
+                    href={explorer.transaction(offerTxnHashes[`${listing.auctionId}-accept`])}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-orbitron text-blue-400 hover:underline"
+                  >
+                    Accept tx
+                  </a>
+                )}
+                {offerTxnHashes[`${listing.auctionId}-reject`] && (
+                  <a
+                    href={explorer.transaction(offerTxnHashes[`${listing.auctionId}-reject`])}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-orbitron text-red-400 hover:underline"
+                  >
+                    Reject tx
+                  </a>
+                )}
+              </div>
+            )}
 
-            {/* Offers section - separate row below main content */}
+            </div>
             {listing.offers && listing.offers.length > 0 && (
-              <div className="w-full border-t border-blue-500/20 pt-4 mt-4">
+              <div className="mt-2 border-t border-white/5 pt-2" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={() => toggleOffers(listing.auctionId)}
-                  className="flex items-center gap-2 text-sm font-orbitron uppercase tracking-[0.2em] text-blue-400 hover:text-blue-300 transition"
+                  className="flex items-center gap-1.5 text-[10px] font-orbitron uppercase tracking-wider text-blue-400 hover:text-blue-300"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
-                    />
+                  <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                   </svg>
-                  <span>{listing.offers.length} Pending Offer{listing.offers.length > 1 ? "s" : ""}</span>
+                  {listing.offers.length} offer{listing.offers.length > 1 ? "s" : ""}
                   <svg
-                    className={`w-4 h-4 transition-transform ${expandedOffers[listing.auctionId] ? "rotate-180" : ""}`}
+                    className={`w-3 h-3 transition-transform ${expandedOffers[listing.auctionId] ? "rotate-180" : ""}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 9l-7 7-7-7"
-                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
                 {expandedOffers[listing.auctionId] && (
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="mt-2 flex flex-col gap-1.5">
                     {listing.offers.map((offer, idx) => (
                       <div
                         key={`${offer.buyer}-${idx}`}
-                        className="flex flex-col gap-3 rounded-xl border border-blue-500/30 bg-blue-500/5 p-4"
+                        className="flex items-center justify-between gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-2 py-1.5"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-[rgb(186,255,188)]/70 uppercase tracking-wider">
-                            Offer
+                        <div className="min-w-0 flex-1">
+                          <span className="text-[10px] font-orbitron text-blue-400">
+                            {formatUSDSmart(offer.amount)}
                           </span>
-                          <span className="text-lg font-orbitron text-blue-400">
-                            ${offer.amount.toFixed(2)}
+                          <span className="ml-1.5 text-[10px] text-[rgb(186,255,188)]/50 truncate block">
+                            <AddressDisplay address={offer.buyer} />
                           </span>
                         </div>
-                        <div className="text-xs text-[rgb(186,255,188)]/50">
-                          From: <AddressDisplay address={offer.buyer} />
-                        </div>
-                        <div className="flex gap-2 mt-auto">
+                        <div className="flex gap-1 shrink-0">
                           <button
                             type="button"
-                            onClick={() =>
-                              handleAcceptOffer(listing.auctionId, offer.buyer)
-                            }
-                            disabled={
-                              isAcceptingOffer ===
-                              `${listing.auctionId}-${offer.buyer}`
-                            }
-                            className="flex-1 inline-flex items-center justify-center rounded-lg border border-green-500/80 px-3 py-2 text-xs font-orbitron uppercase tracking-[0.15em] text-green-400 transition hover:bg-green-500 hover:text-black disabled:opacity-50"
+                            onClick={() => handleAcceptOffer(listing.auctionId, offer.buyer)}
+                            disabled={isAcceptingOffer === `${listing.auctionId}-${offer.buyer}`}
+                            className="rounded border border-green-500/60 px-1.5 py-0.5 text-[10px] font-orbitron text-green-400 hover:bg-green-500/20 disabled:opacity-50"
                           >
-                            {isAcceptingOffer ===
-                            `${listing.auctionId}-${offer.buyer}`
-                              ? "..."
-                              : "Accept"}
+                            {isAcceptingOffer === `${listing.auctionId}-${offer.buyer}` ? "…" : "Accept"}
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              handleRejectOffer(listing.auctionId, offer.buyer)
-                            }
-                            disabled={
-                              isRejectingOffer ===
-                              `${listing.auctionId}-${offer.buyer}`
-                            }
-                            className="flex-1 inline-flex items-center justify-center rounded-lg border border-red-500/80 px-3 py-2 text-xs font-orbitron uppercase tracking-[0.15em] text-red-400 transition hover:bg-red-500 hover:text-black disabled:opacity-50"
+                            onClick={() => handleRejectOffer(listing.auctionId, offer.buyer)}
+                            disabled={isRejectingOffer === `${listing.auctionId}-${offer.buyer}`}
+                            className="rounded border border-red-500/60 px-1.5 py-0.5 text-[10px] font-orbitron text-red-400 hover:bg-red-500/20 disabled:opacity-50"
                           >
-                            {isRejectingOffer ===
-                            `${listing.auctionId}-${offer.buyer}`
-                              ? "..."
-                              : "Reject"}
+                            {isRejectingOffer === `${listing.auctionId}-${offer.buyer}` ? "…" : "Reject"}
                           </button>
                         </div>
                       </div>
@@ -827,14 +1206,37 @@ export default function MyListings({
         ))}
       </div>
 
-      {listings.length > 0 && (
-        <div className="flex justify-center">
+      {totalPages > 1 && (
+        <div className="flex justify-center pt-2">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={handlePageChange}
           />
         </div>
+      )}
+
+      {isDetailModalOpen && selectedListing && (
+        <ListingDetailModal
+          listing={selectedListing}
+          items={selectedListingItems}
+          itemsLoading={auctionItemsLoading}
+          nfts={allNftsForModal}
+          onClose={closeListingDetail}
+          inBattleByTokenId={inBattleByTokenId}
+          onAdventurerCardClick={handleAdventurerCardClick}
+        />
+      )}
+
+      {adventurerModalOpen && adventurerModalNfts.length > 0 && (
+        <AdventurerDetailModal
+          isOpen={adventurerModalOpen}
+          onClose={closeAdventurerModal}
+          nfts={adventurerModalNfts}
+          currentIndex={adventurerModalIndex}
+          onNavigate={setAdventurerModalIndex}
+          viewOnly
+        />
       )}
     </section>
   );

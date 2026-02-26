@@ -6,7 +6,7 @@ use survivor_exchange::events::bid::BidPlacedTrait;
 use survivor_exchange::events::offer::OfferEventTrait;
 use survivor_exchange::models::index::{
     Auction, AuctionItem, AuctionOfferCount, AuctionOfferIndex, Bid, ExchangeSettings, ListedToken,
-    Offer, Rental, SupportedNFTCollection, Vault, VaultShare,
+    Offer, SupportedNFTCollection, Vault, VaultShare,
 };
 
 
@@ -50,16 +50,6 @@ pub impl StoreImpl of StoreTrait {
     #[inline]
     fn set_bid(ref self: Store, bid: @Bid) {
         self.world.write_model(bid)
-    }
-
-    #[inline]
-    fn rental(self: Store, token_id: u32) -> Rental {
-        self.world.read_model(token_id)
-    }
-
-    #[inline]
-    fn set_rental(ref self: Store, rental: @Rental) {
-        self.world.write_model(rental);
     }
 
     #[inline]

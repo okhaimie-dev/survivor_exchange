@@ -12,6 +12,13 @@ export interface AuctionItemNode {
   node: AuctionItem;
 }
 
+export interface AuctionWithNFTs extends Auction {
+  nfts: import("./nft").FormattedNFT[];
+  bids?: Bid[];
+  offers?: Offer[];
+  executedAt?: string;
+}
+
 export interface Auction {
   auction_id: string;
   current_bid: string;
@@ -23,6 +30,7 @@ export interface Auction {
   seller: string;
   starting_price: string;
   status: string;
+  source?: string;
 }
 
 export interface Bid {
@@ -53,25 +61,25 @@ export interface OfferNode {
 }
 
 export interface AuctionsResponse {
-  bm019AuctionModels: {
+  bm021AuctionModels: {
     edges: AuctionNode[];
   };
-  bm019AuctionItemModels: {
+  bm021AuctionItemModels: {
     edges: AuctionItemNode[];
   };
-  bm019BidModels: {
+  bm021BidModels: {
     edges: BidNode[];
   };
-  bm019OfferModels?: {
+  bm021OfferModels?: {
     edges: OfferNode[];
   };
 }
 
 export interface MyListingsResponse {
-  bm019AuctionModels: {
+  bm021AuctionModels: {
     edges: AuctionNode[];
   };
-  bm019OfferModels?: {
+  bm021OfferModels?: {
     edges: OfferNode[];
   };
 }
@@ -91,4 +99,36 @@ export interface ConsolidatedDataResponse {
   myListings?: {
     edges: AuctionNode[];
   };
+}
+
+/**
+ * Collection represents the display format for an auction in the UI
+ */
+export interface Collection {
+  id: string;
+  name: string;
+  fullName?: string;
+  totalMonsters: number;
+  startingPrice: number;
+  highestBid?: number;
+  image: string;
+  status: string;
+  endTime: string;
+  sellerFull: string;
+  highestBidderFull: string;
+  executedAt?: string;
+  /** Token the reserve is denominated in (e.g. USDC, STRK) */
+  reserveTokenSymbol?: string;
+  reserveTokenAddress?: string;
+}
+
+/**
+ * User's active offer on an auction
+ */
+export interface UserOffer {
+  buyer: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
 }

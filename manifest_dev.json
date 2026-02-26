@@ -1,8 +1,8 @@
 {
   "world": {
     "class_hash": "0x613551abceb2b37073b1149bb862ea70cf029981ce1ca47e9dd7c7ab97cb65d",
-    "address": "0x77d7feaa1055402978560511368f9c22805a360633e8a359483868960cf1e00",
-    "seed": "bm_0_1_9",
+    "address": "0x568850e36f9013d3ef1935c7481cf782f9e1dba11e3da37b2f70a1969f70fd5",
+    "seed": "bm_0_2_1",
     "name": "Dojo starter",
     "entrypoints": [
       "uuid",
@@ -33,11 +33,11 @@
   },
   "contracts": [
     {
-      "address": "0x62411cc7c39260d828951aadec0297afde46ce882930f416740252d5c9c7254",
-      "class_hash": "0x255419a5662c4f19687e86fd3d5064c3bd62b0f49346563ca7b26b7a49aee80",
+      "address": "0x7fdc9c65ec560529c6355ce01c3c169dab6e356c1468a91131bb7382ef55674",
+      "class_hash": "0x220115785548e3ea679eef3d68f2a0f7c6a8147f3ab5ff4211d40bbaae88014",
       "init_calldata": [],
-      "tag": "bm_0_1_9-admin_systems",
-      "selector": "0x307cd71ab9c6eaac6c497bac572a656c3e6ed6eb1df1a5843d14413992687d5",
+      "tag": "bm_0_2_1-admin_systems",
+      "selector": "0x61f81b996664a5339f3c2745273e6146f1ecf4a9485a170ca6f2b4edd90f95c",
       "systems": [
         "dojo_init",
         "add_supported_collection",
@@ -46,11 +46,11 @@
       ]
     },
     {
-      "address": "0x2dfedce0383bfd4b5a5dbf2693220841aaa3a1ebf639919a76dbe09a5ff41cb",
-      "class_hash": "0x126412b73ecbc914849568f812512523af0f790e45468b781508acb491b69cf",
+      "address": "0x6b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f",
+      "class_hash": "0x7122ba95a126ef0232b36af9494b3b353f43203aed8fcdfc4cbcde502a85af7",
       "init_calldata": [],
-      "tag": "bm_0_1_9-auction_systems",
-      "selector": "0x5ec21c17e09212f660cf7747afcdefc947b17aa2df99c049ce7972086eabbab",
+      "tag": "bm_0_2_1-auction_systems",
+      "selector": "0x7102f9a2f2ce3655bcd973994ccc60084f4fe33bb84e8554afec202b700b367",
       "systems": [
         "create_auction",
         "add_items",
@@ -67,11 +67,11 @@
       ]
     },
     {
-      "address": "0x2aa15e266a17d519301d5e658562ae8fe5a483be47660be42e67588b9ac29cd",
-      "class_hash": "0x7e808f525aadffaee8eee5f7b980c764ed82fd48a32965a8e109648befdbf3e",
+      "address": "0x4997f3441d022c9b7dc768b74d9f62de4cec43adfc844aa563885c9854c88ea",
+      "class_hash": "0x3e8c1f64e99eaf62c986a835563e0a97410e71f64c16e7fb5ffa3a77d160bfc",
       "init_calldata": [],
-      "tag": "bm_0_1_9-vault_systems",
-      "selector": "0x64bf7ccc375de0213a002303673ab9b48f6e1cf96140c486882f05ec2cab30",
+      "tag": "bm_0_2_1-vault_systems",
+      "selector": "0x1560626376dcba700550633f05979873222c8b500f931171399beec9224b2f7",
       "systems": [
         "dojo_init",
         "deposit",
@@ -138,8 +138,8 @@
         }
       ],
       "class_hash": "0x19d470913a7b305e597529aa4acc45ec8ec4492bc29b395ff5c7a1d440e7eed",
-      "tag": "bm_0_1_9-Auction",
-      "selector": "0x66b7c9cf221bf6882c2a3ed7f625e4c6fd48d76641e319c01376bb4285eade8"
+      "tag": "bm_0_2_1-Auction",
+      "selector": "0x3dcf4792b8d44717747643b10349526017f30e76a0c7020cade758706883ace"
     },
     {
       "members": [
@@ -165,8 +165,8 @@
         }
       ],
       "class_hash": "0x15808374daa08ca6fe788d169f85b0212c14d804413171abfa5533241d4db96",
-      "tag": "bm_0_1_9-AuctionItem",
-      "selector": "0x5c6027c0ec1d36be5873cccb00a21060678097dbc3e1c09da932938206a3103"
+      "tag": "bm_0_2_1-AuctionItem",
+      "selector": "0x3531d581760c9cfbc142d09e4622739b0a61c115398d1e565b45ca977197732"
     },
     {
       "members": [
@@ -182,8 +182,8 @@
         }
       ],
       "class_hash": "0x1f211f0550ac900eb57f774c96779f789453cf5d3c530119de0706d34a63f20",
-      "tag": "bm_0_1_9-AuctionOfferCount",
-      "selector": "0x7f710ec77a71ceecf10096468af961ee7ede5cb6c8e72078f0ac5b15e26b27c"
+      "tag": "bm_0_2_1-AuctionOfferCount",
+      "selector": "0x39ce35522a232c6ac3ea2032f620be622ddf9bb00855880890fd1d2d3aefe10"
     },
     {
       "members": [
@@ -204,8 +204,8 @@
         }
       ],
       "class_hash": "0x51d02d65d7573b3dd6fcb963370c7ec5a363571e79c489cfac15ad817a2345",
-      "tag": "bm_0_1_9-AuctionOfferIndex",
-      "selector": "0x498dba8ae42bc44cb5d9a1dd7a1e20d25d1d0e97abdf4fefb60c87119429427"
+      "tag": "bm_0_2_1-AuctionOfferIndex",
+      "selector": "0x72041bd10f690e726b342f3cd2b1a266cb00789aa481838ee0134526d66c43b"
     },
     {
       "members": [
@@ -226,8 +226,8 @@
         }
       ],
       "class_hash": "0x72992f2004870c81f7eac0975a07264d2be6f37c86bdc7e09e0fd396985dc16",
-      "tag": "bm_0_1_9-Bid",
-      "selector": "0x19004fd0342f7448f6843f2575ca39ccb7994fee41fbd532eac3be397340e16"
+      "tag": "bm_0_2_1-Bid",
+      "selector": "0x14bf021e136ac9a2f66ae9a121013fb8432abc801c189d7863ef986b5c01732"
     },
     {
       "members": [
@@ -253,8 +253,8 @@
         }
       ],
       "class_hash": "0x31056dcf0242470c77dfab9918875bd690f8207e78464386c7f10102b8d9dd8",
-      "tag": "bm_0_1_9-ExchangeSettings",
-      "selector": "0xf59bfc8951d7c3218ec101bb61621881d125eeecb3cedbf5c88e97f4baca75"
+      "tag": "bm_0_2_1-ExchangeSettings",
+      "selector": "0x446942d11d2bd2711506f08c0e1dd8330cb13d52f75c7f62f6928c702993359"
     },
     {
       "members": [
@@ -275,8 +275,8 @@
         }
       ],
       "class_hash": "0x3ab3b1559fe8b361e3df86821e57183391db0a23ad7bf77eaed198c80dd34f1",
-      "tag": "bm_0_1_9-ListedToken",
-      "selector": "0x4c63d9586989002849623720a45321b4960c13f8297cd13963bd53f067a96d2"
+      "tag": "bm_0_2_1-ListedToken",
+      "selector": "0x2329b9fa1a43a839e821d641fb2e206b425441d246664e800f962ac84221da9"
     },
     {
       "members": [
@@ -312,8 +312,8 @@
         }
       ],
       "class_hash": "0x10f1b32f0ecead3aee746ec47315fa64230cdc2e8d54442beb9a3c90060b66f",
-      "tag": "bm_0_1_9-Offer",
-      "selector": "0xf283e4c6b1e38343e22dc18855e05e467454b2a87856af06725b4b48e5ff4f"
+      "tag": "bm_0_2_1-Offer",
+      "selector": "0x3da61c92c1f650bb4557e29388e71143d2346907616100d2b85a8c3e0d4d441"
     },
     {
       "members": [
@@ -364,8 +364,8 @@
         }
       ],
       "class_hash": "0xc6ffb25d6bf2c1a574e5bd6999af3d717258c2a3311574f602f5022a4f1d7e",
-      "tag": "bm_0_1_9-Rental",
-      "selector": "0x1b14b55a614c92ea2378ecd033186e60351766e66869ffd00a1233a62cd893d"
+      "tag": "bm_0_2_1-Rental",
+      "selector": "0x712246e05fd7f1ef9fc855148e78397d908038b3f2faaff03de1066fb1ee7b4"
     },
     {
       "members": [
@@ -381,8 +381,8 @@
         }
       ],
       "class_hash": "0x7b2efac321be3bf712fd0a9ea496760ee9d74350cc1af098f10d1914c82c55f",
-      "tag": "bm_0_1_9-SupportedNFTCollection",
-      "selector": "0x7f707198531d3a46167f93cde448baf6c388e160be5adb1e85684cd7b8425f8"
+      "tag": "bm_0_2_1-SupportedNFTCollection",
+      "selector": "0x3ef09189dfea85814660c07dc9ba2c1e3acd00a28ddc94038c32b8baa19c176"
     },
     {
       "members": [
@@ -408,8 +408,8 @@
         }
       ],
       "class_hash": "0x68517c4b29b229f8d32a6efd2747f67b9e2cc3d908d6e292f0b10ce85c1e50f",
-      "tag": "bm_0_1_9-Vault",
-      "selector": "0x13af57833180f580f5c0ca758b85ce02be3d98add50b6110b202cd82983e14"
+      "tag": "bm_0_2_1-Vault",
+      "selector": "0x664f63fef12074c6904cdee34749e335f9033490e7c6d5d3e63a24ad3ce8ee4"
     },
     {
       "members": [
@@ -445,8 +445,8 @@
         }
       ],
       "class_hash": "0xc8105fa51cea2208cb8c497ea4c603c0a493d9a821d3d215fe18cdb6d87721",
-      "tag": "bm_0_1_9-VaultShare",
-      "selector": "0x5fd32f5889b3feb3b06a85f155e701b9c775dda8f220b8db3443cf45fe4a2f7"
+      "tag": "bm_0_2_1-VaultShare",
+      "selector": "0xf6d505301f99c07ccae7624681676d85c08752b92a7b32ffc25960933082bc"
     }
   ],
   "events": [
@@ -479,8 +479,8 @@
         }
       ],
       "class_hash": "0x50cf7a47be5469dae0c8904231c26bda24428131436ce5dee712a84c5e670d7",
-      "tag": "bm_0_1_9-AuctionEvent",
-      "selector": "0x42b49662ba18a8fefa1cd3909ab99570a6b79c6b787e049ff9835cc9edb304"
+      "tag": "bm_0_2_1-AuctionEvent",
+      "selector": "0x443e53c17c046594d0602b57d1c22dc4159b49b2819d9fb0c18ed14858d42c7"
     },
     {
       "members": [
@@ -506,8 +506,8 @@
         }
       ],
       "class_hash": "0x55aa0849e28938d2923a5ec9efd496c43f4b37edb01709274d7a9e0b2f30060",
-      "tag": "bm_0_1_9-BidPlaced",
-      "selector": "0x29d73d372d555e9b599ff535fb6d45ffa7bbe94958e857e57eaa238b3162529"
+      "tag": "bm_0_2_1-BidPlaced",
+      "selector": "0xbc0686195e5bb7d9a26d6cf7808370ccc92ffb12e6ccc615c131741c75f93e"
     },
     {
       "members": [
@@ -538,8 +538,8 @@
         }
       ],
       "class_hash": "0x32a36cde0f7a30233852391b8e18c96f0ac076b507fae0830f24d3e762f8641",
-      "tag": "bm_0_1_9-OfferEvent",
-      "selector": "0x3d4bfe888ffabf2fd50ec1afc42af25a4da4ed0de94bfd68682f0de2f387ce9"
+      "tag": "bm_0_2_1-OfferEvent",
+      "selector": "0x5877fc8a6ab5e3e52a8e17f4544bcb878aec6c8bf3eb7f82169da6cfbaea9b5"
     }
   ],
   "external_contracts": [],

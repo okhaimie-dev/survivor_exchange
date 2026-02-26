@@ -1,21 +1,59 @@
 export const MARKETPLACE_GRAPHQL_ENDPOINT =
-  "https://api.cartridge.gg/x/bm/torii/graphql";
+  "https://api.cartridge.gg/x/lax/torii/graphql";
 export const BEASTS_GRAPHQL_ENDPOINT =
-  "https://api.cartridge.gg/x/pg-beasts/torii/graphql";
+  "https://api.cartridge.gg/x/pg-mainnet-10/torii/graphql";
 
-export const IMAGE_BASE_URL = "https://api.cartridge.gg/x/bm/torii";
+export const IMAGE_BASE_URL = "https://api.cartridge.gg/x/lax/torii";
 
 export const MAINNET_RPC_URL = "https://api.cartridge.gg/x/starknet/mainnet";
 export const SEPOLIA_RPC_URL = "https://api.cartridge.gg/x/starknet/sepolia";
 
 export const AUCTION_CONTRACT_ADDRESS =
-  "0x02dfedce0383bfd4b5a5dbf2693220841aaa3a1ebf639919a76dbe09a5ff41cb";
+  "0x06b1983f6f4dcfe697bad2a79bd8998aa56f4829e65d4c338defc9ae3da6270f";
 export const VAULT_CONTRACT_ADDRESS =
-  "0x02aa15e266a17d519301d5e658562ae8fe5a483be47660be42e67588b9ac29cd";
+  "0x04997f3441d022c9b7dc768b74d9f62de4cec43adfc844aa563885c9854c88ea";
 export const BEASTS_NFT_CONTRACT_ADDRESS =
   "0x046da8955829adf2bda310099a0063451923f02e648cf25a1203aac6335cf0e4";
+export const ADVENTURER_NFT_CONTRACT_ADDRESS =
+  "0x036017e69d21d6d8c13e266eabb73ef1f1d02722d86bdcabe5f168f8e549d3cd";
+
+// Collection types for multi-collection support
+export type CollectionType = "beasts" | "adventurers";
+
+export interface CollectionConfig {
+  id: CollectionType;
+  name: string;
+  contractAddress: string;
+  singularName: string;
+  pluralName: string;
+}
+
+export const COLLECTIONS: Record<CollectionType, CollectionConfig> = {
+  beasts: {
+    id: "beasts",
+    name: "Beasts",
+    contractAddress: BEASTS_NFT_CONTRACT_ADDRESS,
+    singularName: "monster",
+    pluralName: "monsters",
+  },
+  adventurers: {
+    id: "adventurers",
+    name: "Adventurers",
+    contractAddress: ADVENTURER_NFT_CONTRACT_ADDRESS,
+    singularName: "adventurer",
+    pluralName: "adventurers",
+  },
+};
+
+export const DEFAULT_COLLECTION: CollectionType = "beasts";
 
 export const DEFAULT_PAGE_SIZE = 12;
+
+/** Grid page size: only this many NFT cards render at once. Stat bounds are computed from this grid; filters apply to full list. */
+export const GRID_PAGE_SIZE = 50;
+
+/** Max token IDs sent to adventurer-stat-bounds API (matches grid page; bounds are computed from current grid only). */
+export const STAT_BOUNDS_MAX_TOKENS = 50;
 
 // Maximum NFTs that can be selected for auction (contract limit)
 // TODO: Increase to 200 when contract is upgraded
@@ -54,7 +92,8 @@ export const STARKNET_MAINNET_CHAIN_ID = "0x534e5f4d41494e";
 export const STARKNET_MAINNET_CHAIN_ID_DECIMAL = "23448594291968334";
 
 // Summit game Torii endpoint for fetching SKULL token data
-export const SUMMIT_TORII_URL = "https://api.cartridge.gg/x/pg-mainnet-10/torii";
+export const SUMMIT_TORII_URL =
+  "https://api.cartridge.gg/x/pg-mainnet-10/torii";
 export const SUMMIT_NAMESPACE = "summit_relayer_6";
 export const LOOT_SURVIVOR_NAMESPACE = "ls_0_0_9";
 
@@ -63,6 +102,8 @@ export interface TokenInfo {
   symbol: string;
   name: string;
   decimals: number;
+  /** On-chain ERC20 decimals when different from auction contract decimals */
+  onChainDecimals?: number;
 }
 
 export const SUPPORTED_TOKENS: TokenInfo[] = [
@@ -88,7 +129,8 @@ export const SUPPORTED_TOKENS: TokenInfo[] = [
     address: LORDS_ADDRESS,
     symbol: "LORDS",
     name: "Lords",
-    decimals: 18,
+    decimals: 6, // contract uses 6 decimals for Lords amounts
+    onChainDecimals: 18, // actual ERC20 decimals on-chain
   },
   {
     address: SURVIVOR_ADDRESS_MAINNET,
@@ -120,3 +162,7 @@ export const getTokenBySymbol = (symbol: string): TokenInfo | undefined => {
     (token) => token.symbol.toUpperCase() === symbol.toUpperCase(),
   );
 };
+
+/** Returns the actual on-chain ERC20 decimals (falls back to `decimals`). */
+export const getOnChainDecimals = (token: TokenInfo): number =>
+  token.onChainDecimals ?? token.decimals;

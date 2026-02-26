@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
  
 import { sepolia, mainnet } from "@starknet-react/chains";
 import { StarknetConfig, jsonRpcProvider, braavos, argent, voyager } from "@starknet-react/core";
@@ -45,18 +45,67 @@ const policies = {
   }
 }
 
-const controller = new ControllerConnector({
-  policies,
-});
+// Initialize controller at module level so it's available immediately for autoConnect
+// This allows the controller to probe and auto-connect if there's an active session
+let controller: ControllerConnector | null = null;
+
+if (typeof window !== 'undefined') {
+  // Permanently filter Cartridge controller probe noise from console
+  // Probe logs {} when checking for active session (expected when not logged in or when opening controller)
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    // Suppress any single non-Error object (controller probe logs {}); real Error instances still get logged
+    if (
+      args.length === 1 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      !Array.isArray(args[0]) &&
+      !(args[0] instanceof Error)
+    ) {
+      return;
+    }
+    const errorStack = new Error().stack || '';
+    const isKeychainTimeout =
+      args.length >= 1 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      args[0] !== undefined &&
+      'message' in args[0] &&
+      String((args[0] as Error).message).includes('Timeout waiting for keychain') &&
+      errorStack.includes('controller');
+    if (isKeychainTimeout) {
+      return;
+    }
+    originalError.apply(console, args);
+  };
+
+  try {
+    controller = new ControllerConnector({
+      policies,
+    });
+  } catch (error) {
+    console.debug("ControllerConnector initialization failed:", error);
+    controller = null;
+  }
+}
 
 export function StarknetProvider({ children }: { children: React.ReactNode }) {
+
+  // Build connectors array - controller should always be included if available
+  // This allows autoConnect to work properly when there's an active session
+  const connectors = useMemo(() => [
+    ...(controller ? [controller] : []),
+    argent(),
+    braavos()
+  ], []);
+
   return (
     <StarknetConfig
       autoConnect={true}
       defaultChainId={mainnet.id}
       chains={[mainnet, sepolia]}
       provider={provider}
-      connectors={[controller, argent(), braavos()]}
+      connectors={connectors}
       explorer={voyager}
     >
       {children}

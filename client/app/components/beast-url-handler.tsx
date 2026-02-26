@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useBeastByTokenId } from "../hooks/use-beast-by-token-id";
-import BeastDetailModal from "./beast-detail-modal";
+import { useBeastByTokenId } from "../hooks";
+import { BeastDetailModal } from "./modals";
 
 /**
  * Component that handles the ?beast=tokenId URL parameter.

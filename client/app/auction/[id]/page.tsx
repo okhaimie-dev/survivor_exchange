@@ -1,7 +1,8 @@
-import { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-const MARKETPLACE_GRAPHQL_ENDPOINT = "https://api.cartridge.gg/x/bm/torii/graphql";
+const MARKETPLACE_GRAPHQL_ENDPOINT =
+  "https://api.cartridge.gg/x/lax/torii/graphql";
 
 interface AuctionData {
   auction_id: string;
@@ -12,13 +13,15 @@ interface AuctionData {
   item_count: string;
 }
 
-async function fetchAuctionData(auctionId: string): Promise<AuctionData | null> {
+async function fetchAuctionData(
+  auctionId: string,
+): Promise<AuctionData | null> {
   const auctionIdInt = parseInt(auctionId, 10);
   if (isNaN(auctionIdInt)) return null;
 
   const query = `
     query GetAuction {
-      bm019AuctionModels(where: { auction_id: ${auctionIdInt} }, limit: 1) {
+      bm021AuctionModels(where: { auction_id: ${auctionIdInt} }, limit: 1) {
         edges {
           node {
             auction_id
@@ -35,21 +38,21 @@ async function fetchAuctionData(auctionId: string): Promise<AuctionData | null> 
 
   try {
     const response = await fetch(MARKETPLACE_GRAPHQL_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
       next: { revalidate: 60 }, // Cache for 60 seconds
     });
 
     const data = await response.json();
-    return data?.data?.bm019AuctionModels?.edges?.[0]?.node || null;
+    return data?.data?.bm021AuctionModels?.edges?.[0]?.node || null;
   } catch {
     return null;
   }
 }
 
 function formatPrice(value: string | number, decimals: number = 6): string {
-  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(numValue) || numValue === 0) return "$0.00";
   const converted = numValue / Math.pow(10, decimals);
   if (converted >= 1000000) {
@@ -71,20 +74,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!auction) {
     return {
-      title: 'Auction Not Found - Survivor Exchange',
-      description: 'This auction could not be found.',
+      title: "Auction Not Found - Survivor Exchange",
+      description: "This auction could not be found.",
     };
   }
 
   const currentBid = parseFloat(auction.current_bid);
   const price = currentBid > 0 ? auction.current_bid : auction.starting_price;
-  const priceLabel = currentBid > 0 ? 'Current Bid' : 'Starting Price';
+  const priceLabel = currentBid > 0 ? "Current Bid" : "Starting Price";
   const itemCount = parseInt(auction.item_count);
-  const bundleText = itemCount > 1 ? `Bundle of ${itemCount} Beasts` : 'Beast Auction';
+  const bundleText =
+    itemCount > 1 ? `Bundle of ${itemCount} Beasts` : "Beast Auction";
 
   const title = `${auction.name} - Survivor Exchange`;
   const description = `${bundleText} | ${priceLabel}: ${formatPrice(price)}`;
-  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://survivor.exchange'}/api/og/auction/${id}`;
+  const ogImageUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "https://survivor.exchange"}/api/og/auction/${id}`;
 
   return {
     title,
@@ -92,8 +96,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title,
       description,
-      type: 'website',
-      siteName: 'Survivor Exchange',
+      type: "website",
+      siteName: "Survivor Exchange",
       images: [
         {
           url: ogImageUrl,
@@ -104,7 +108,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title,
       description,
       images: [ogImageUrl],

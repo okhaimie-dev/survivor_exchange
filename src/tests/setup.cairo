@@ -5,11 +5,11 @@ pub mod tests {
         ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
         spawn_test_world,
     };
-    use snforge_std::{
-        CheatSpan, ContractClassTrait, DeclareResultTrait, cheat_caller_address, declare,
-    };
+    use snforge_std::{ContractClassTrait, DeclareResultTrait, declare, start_cheat_caller_address};
     use starknet::{ContractAddress, SyscallResultTrait};
     use survivor_exchange::constants::DEFAULT_NS;
+    use survivor_exchange::models::index::SupportedNFTCollection;
+    use survivor_exchange::store::StoreTrait;
     use survivor_exchange::systems::auction::IAuctionMarketplaceDispatcher;
     use survivor_exchange::systems::vault::IVaultDispatcher;
 
@@ -49,14 +49,14 @@ pub mod tests {
             namespace: DEFAULT_NS(),
             resources: [
                 TestResource::Model("Bid"), TestResource::Model("Auction"),
-                TestResource::Model("AuctionItem"), TestResource::Model("Rental"),
-                TestResource::Model("ExchangeSettings"), TestResource::Model("Vault"),
-                TestResource::Model("VaultShare"), TestResource::Model("SupportedNFTCollection"),
-                TestResource::Model("Offer"), TestResource::Model("ListedToken"),
-                TestResource::Model("AuctionOfferIndex"), TestResource::Model("AuctionOfferCount"),
-                TestResource::Event("AuctionEvent"), TestResource::Event("BidPlaced"),
-                TestResource::Event("OfferEvent"),
+                TestResource::Model("AuctionItem"), TestResource::Model("ExchangeSettings"),
+                TestResource::Model("Vault"), TestResource::Model("VaultShare"),
+                TestResource::Model("SupportedNFTCollection"), TestResource::Model("Offer"),
+                TestResource::Model("ListedToken"), TestResource::Model("AuctionOfferIndex"),
+                TestResource::Model("AuctionOfferCount"), TestResource::Event("AuctionEvent"),
+                TestResource::Event("BidPlaced"), TestResource::Event("OfferEvent"),
                 TestResource::Contract("auction_systems"), TestResource::Contract("vault_systems"),
+                TestResource::Contract("admin_systems"),
             ]
                 .span(),
         };
@@ -70,6 +70,9 @@ pub mod tests {
                 .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span()),
             ContractDefTrait::new(@DEFAULT_NS(), @"vault_systems")
                 .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span()),
+            ContractDefTrait::new(@DEFAULT_NS(), @"admin_systems")
+                .with_writer_of([dojo::utils::bytearray_hash(@DEFAULT_NS())].span())
+                .with_init_calldata([].span()),
         ]
             .span()
     }
@@ -84,6 +87,15 @@ pub mod tests {
         let contract = declare("MockERC20").unwrap_syscall().contract_class();
         let (address, _) = contract.deploy(@array![]).unwrap_syscall();
         address
+    }
+
+    /// Whitelist a collection in the test world
+    pub fn whitelist_collection(ref world: WorldStorage, collection_address: ContractAddress) {
+        let mut store = StoreTrait::new(world);
+        let collection = SupportedNFTCollection {
+            collection_address: collection_address.into(), standard: 1 // ERC721
+        };
+        store.set_supported_nft_collection(@collection);
     }
 
     pub fn spawn_auction() -> (WorldStorage, Systems, Context) {
@@ -102,14 +114,20 @@ pub mod tests {
         let bidder_2: ContractAddress = BIDDER2();
         let context = Context { owner, bidder, bidder_2 };
 
-        cheat_caller_address(auction_address, owner, CheatSpan::TargetCalls(1));
+        // Set caller to owner indefinitely for the auction system
+        start_cheat_caller_address(auction_address, owner);
+
         (world, systems, context)
     }
 
     pub fn spawn_auction_with_mocks() -> (WorldStorage, Systems, Context, MockContracts) {
-        let (world, systems, context) = spawn_auction();
+        let (mut world, systems, context) = spawn_auction();
         let erc721_address = deploy_mock_erc721();
         let erc20_address = deploy_mock_erc20();
+
+        // Whitelist the mock ERC721 collection
+        whitelist_collection(ref world, erc721_address);
+
         let mocks = MockContracts { erc721_address, erc20_address };
         (world, systems, context, mocks)
     }

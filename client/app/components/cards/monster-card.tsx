@@ -1,0 +1,249 @@
+import Image from "next/image";
+import type { FormattedNFT } from "../../lib/types";
+import { IMAGE_BASE_URL } from "../../lib/constants";
+import { getReservePriceParts } from "../../lib/utils";
+
+type MonsterCardProps = {
+  nft: FormattedNFT;
+  selected: boolean;
+  onToggle: () => void;
+  onInfoClick?: () => void;
+  price?: number;
+  reserveTokenSymbol?: string;
+  auctionName?: string;
+  /** When true, show a "Listed" tag (e.g. in sell grid). */
+  listed?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type. */
+  inBattle?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type. */
+  priority?: boolean;
+  /** Unused on beast cards; accepted for shared CardComponent type (Sell tab uses "Price"). */
+  priceLabel?: "Buy" | "Price";
+  /** When true, auction is expired; show "Price" (no buy button) and red Expired tag. */
+  expired?: boolean;
+  /** Callback to open fixed-price listing modal. */
+  onListClick?: () => void;
+};
+
+export default function MonsterCard({
+  nft,
+  selected,
+  onToggle,
+  onInfoClick,
+  price,
+  reserveTokenSymbol,
+  auctionName,
+  listed,
+  inBattle: _inBattle,
+  priority: _priority,
+  priceLabel = "Price",
+  expired,
+  onListClick,
+}: MonsterCardProps) {
+  const getAttribute = (traitType: string) => {
+    const attr = nft.attributes.find((a) => a.trait_type === traitType);
+    return attr ? String(attr.value) : undefined;
+  };
+
+  const beastName = nft.beastName || "Unknown";
+  const beastType = nft.beastType || getAttribute("Type") || "Unknown";
+  const tier = nft.tier || getAttribute("Tier") || "—";
+  const level = nft.level || getAttribute("Level") || "0";
+  const power = nft.power || getAttribute("Power") || "0";
+  const health = getAttribute("Health") || "—";
+
+  const imageSrc = nft.metadata?.image
+    ? nft.metadata.image
+    : nft.imagePath
+      ? `${IMAGE_BASE_URL}/${nft.imagePath}`
+      : "/logo.png";
+
+  const stats = [
+    { label: "Power", value: parseFloat(power).toFixed(0) },
+    { label: "Level", value: level },
+    { label: "Tier", value: tier },
+    { label: "Health", value: health },
+    { label: "Type", value: beastType },
+  ];
+
+  const handleCardClick = () => {
+    if (onInfoClick) onInfoClick();
+    else onToggle();
+  };
+
+  return (
+    <article
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={handleCardClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleCardClick();
+        }
+      }}
+      className={`group relative flex h-full w-full min-w-0 min-h-[320px] flex-col gap-2 md:gap-4 overflow-hidden rounded-xl md:rounded-2xl border bg-black/70 backdrop-blur-sm p-3 md:p-4 transition-all duration-200 hover:-translate-y-0.5 hover:cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70 ${
+        selected
+          ? "border-[rgb(50,255,52)] shadow-[0_0_20px_rgba(50,255,52,0.3)]"
+          : "border-[rgb(50,255,52)]/15 hover:border-[rgb(50,255,52)]/40 hover:bg-black/80"
+      }`}
+    >
+      {listed && (
+        <div className="absolute top-2 left-2 z-20 flex flex-col gap-1">
+          <span className="rounded border border-[rgb(50,255,52)]/60 bg-black/80 px-2 py-0.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)]">
+            Listed
+          </span>
+        </div>
+      )}
+      {/* Small select checkbox top-right: click toggles selection only */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="absolute top-2 right-2 md:top-3 md:right-3 z-20 w-5 h-5 md:w-7 md:h-7 flex items-center justify-center rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(50,255,52)]/70"
+        aria-pressed={selected}
+        title={selected ? "Remove from selection" : "Add to selection"}
+      >
+        {selected ? (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-[rgb(50,255,52)]">
+            <path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z" />
+            <path d="m9 12 2 2 4-4" />
+          </svg>
+        ) : (
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full text-white/30 opacity-0 group-hover:opacity-100 transition-opacity">
+            <rect x="3" y="3" width="18" height="18" rx="4" />
+          </svg>
+        )}
+      </button>
+
+      <div className="flex flex-row md:flex-col items-center gap-3 text-white">
+        <div className="relative flex h-20 w-20 md:h-28 md:w-28 flex-shrink-0 items-center justify-center">
+          <Image
+            src={imageSrc}
+            alt={nft.metadataName}
+            width={112}
+            height={112}
+            draggable={false}
+            className="h-full w-full object-contain"
+            unoptimized
+          />
+          {onInfoClick && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onInfoClick();
+              }}
+              className="absolute bottom-0 right-0 z-20 w-5 h-5 md:w-6 md:h-6 rounded-full bg-black/70 border border-white/30 flex items-center justify-center text-white/80 hover:text-white hover:bg-black/90 hover:border-white/50 transition-all"
+              title="View details"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3 h-3 md:w-3.5 md:h-3.5"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-0.5 md:gap-1 text-left md:text-center flex-1 min-w-0 overflow-hidden">
+          <h3 className="text-sm md:text-base font-orbitron uppercase tracking-wide leading-tight line-clamp-2">
+            {nft.metadataName}
+          </h3>
+          <p className="text-[10px] md:text-[11px] text-[rgb(186,255,188)]/50 truncate">{beastName}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-1 md:gap-1.5 text-white mt-auto flex-1 min-h-0 min-w-0 overflow-hidden">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-md bg-white/5 px-1.5 py-1.5 overflow-hidden min-w-0 ${stat.label === "Type" ? "col-span-2" : ""}`}
+          >
+            <span
+              className={`text-base md:text-lg font-orbitron font-bold ${stat.label === "Health" ? "text-red-400" : "text-white"}`}
+            >
+              {stat.value}
+            </span>
+            <span className="text-[rgb(186,255,188)]/50 text-[7px] md:text-[8px] uppercase">
+              {stat.label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* Expired tag - red, below card content */}
+      {expired && (
+        <div className="flex justify-center shrink-0">
+          <span className="rounded border border-red-500/60 bg-red-500/20 px-2 py-0.5 text-[9px] font-orbitron uppercase tracking-wider text-red-400">
+            Expired
+          </span>
+        </div>
+      )}
+
+      {/* Price - fixed height; when expired or priceLabel=Price show static, else Buy button */}
+      {/* List for Sale button: shown when not auction-listed and callback provided */}
+      {price === undefined && !listed && onListClick && (
+        <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex items-center justify-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onListClick();
+            }}
+            className="rounded-full border border-[rgb(50,255,52)]/40 bg-[rgb(50,255,52)]/10 px-3 py-1.5 text-[9px] font-orbitron uppercase tracking-wider text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/20 transition"
+          >
+            List for Sale
+          </button>
+        </div>
+      )}
+
+      {price !== undefined && (() => {
+        const { symbol: priceSymbol, amount: priceAmount } = getReservePriceParts(price, reserveTokenSymbol);
+        return (
+          <div className="shrink-0 mt-auto border-t border-[rgb(50,255,52)]/20 h-[60px] flex flex-col justify-center overflow-hidden min-w-0">
+            {priceLabel === "Price" || expired ? (
+              <div className="flex flex-col items-center justify-center px-2">
+                <span className="text-base font-orbitron font-bold text-[rgb(50,255,52)]">
+                  {priceAmount}
+                </span>
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">
+                  {priceSymbol}
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onInfoClick) onInfoClick();
+                }}
+                className="flex flex-col items-center justify-center w-full h-full rounded-b-xl md:rounded-b-2xl text-[rgb(50,255,52)] hover:bg-[rgb(50,255,52)]/10 transition font-orbitron cursor-pointer px-2"
+                title="Open buy modal"
+              >
+                <span className="text-[10px] uppercase text-[rgb(186,255,188)]/70">Buy</span>
+                <span className="text-base font-orbitron font-bold">
+                  {priceAmount}
+                </span>
+                <span className="text-[9px] uppercase text-[rgb(186,255,188)]/50">
+                  {priceSymbol}
+                </span>
+              </button>
+            )}
+          </div>
+        );
+      })()}
+    </article>
+  );
+}

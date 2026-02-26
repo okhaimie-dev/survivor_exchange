@@ -1,5 +1,5 @@
 pub fn DEFAULT_NS() -> ByteArray {
-    "bm_0_1_9"
+    "bm_0_2_1"
 }
 
 pub const TEN_POW_18: u256 = 1000000000000000000;
@@ -15,7 +15,8 @@ pub mod Errors {
     pub const BID_TOO_LOW: felt252 = 'Auction: bid too low';
     pub const AUCTION_EXPIRED: felt252 = 'Auction: has expired';
     pub const UNAUTHORIZED_TO_END: felt252 = 'Auction: cannot end';
-    pub const NOT_BEAST_OWNER: felt252 = 'Beast: not owner';
+    pub const NOT_NFT_OWNER: felt252 = 'NFT: not owner';
+    pub const COLLECTION_NOT_SUPPORTED: felt252 = 'Collection not supported';
     pub const INVALID_BID: felt252 = 'Invalid bid amount';
     pub const AUCTION_NOT_ENDED: felt252 = 'Auction not ended';
     pub const UNAUTHORIZED: felt252 = 'Unauthorized access';

@@ -76,6 +76,13 @@ pub mod AuctionableComponent {
             let mut auction = store.auction(auction_id);
             auction.assert_is_draft();
 
+            // Verify collection is whitelisted (standard: 1=ERC721, 2=ERC1155)
+            let supported = store.supported_nft_collection(collection.into());
+            assert(
+                supported.standard == 1 || supported.standard == 2,
+                Errors::COLLECTION_NOT_SUPPORTED,
+            );
+
             let caller = get_caller_address();
             let collection_dispatcher = IERC721Dispatcher { contract_address: collection };
 
@@ -86,7 +93,7 @@ pub mod AuctionableComponent {
                 let token_id = *token_ids[i];
                 assert(
                     caller == collection_dispatcher.owner_of(token_id.into()),
-                    Errors::NOT_BEAST_OWNER,
+                    Errors::NOT_NFT_OWNER,
                 );
 
                 let listed_token = store.listed_token(collection.into(), token_id);

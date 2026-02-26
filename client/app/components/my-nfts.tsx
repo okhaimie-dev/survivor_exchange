@@ -1,6 +1,6 @@
 "use client";
 
-import { useMyNFTs } from '../hooks/use-my-nfts';
+import { useMyNFTs } from '../hooks';
 
 export default function MyNFTs() {
   const { nfts, loading, error, address } = useMyNFTs();

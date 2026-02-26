@@ -10,17 +10,21 @@
  * - Auctions ended
  */
 
-import fetch from 'node-fetch';
-import { TwitterApi } from 'twitter-api-v2';
-import 'dotenv/config';
+import fetch from "node-fetch";
+import { TwitterApi } from "twitter-api-v2";
+import "dotenv/config";
 
 // Configuration
 const CONFIG = {
-  toriiUrl: process.env.TORII_URL || 'https://api.cartridge.gg/x/survivor-exchange/torii/graphql',
+  toriiUrl:
+    process.env.TORII_URL ||
+    "https://api.cartridge.gg/x/survivor-exchange/torii/graphql",
   discordWebhook: process.env.DISCORD_WEBHOOK_URL,
   pollInterval: parseInt(process.env.POLL_INTERVAL) || 300000, // 5 minutes
-  siteUrl: process.env.SITE_URL || 'https://survivor.exchange',
-  enableTwitter: !!(process.env.TWITTER_API_KEY && process.env.TWITTER_ACCESS_TOKEN),
+  siteUrl: process.env.SITE_URL || "https://survivor.exchange",
+  enableTwitter: !!(
+    process.env.TWITTER_API_KEY && process.env.TWITTER_ACCESS_TOKEN
+  ),
   enableDiscord: !!process.env.DISCORD_WEBHOOK_URL,
 };
 
@@ -53,7 +57,7 @@ const AUCTIONS_QUERY = `
           entity {
             keys
             models {
-              ... on bm_0_1_9_Auction {
+              ... on bm_0_2_1_Auction {
                 auction_id
                 name
                 starting_price
@@ -78,26 +82,28 @@ const AUCTIONS_QUERY = `
 async function fetchAuctions() {
   try {
     const response = await fetch(CONFIG.toriiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query: AUCTIONS_QUERY }),
     });
 
     const data = await response.json();
 
     if (data.errors) {
-      console.error('GraphQL errors:', data.errors);
+      console.error("GraphQL errors:", data.errors);
       return [];
     }
 
     const edges = data?.data?.bmZeroOneNineAuctionModels?.edges || [];
-    return edges.map(edge => {
-      const models = edge.node?.entity?.models || [];
-      const auction = models.find(m => m.auction_id !== undefined);
-      return auction;
-    }).filter(Boolean);
+    return edges
+      .map((edge) => {
+        const models = edge.node?.entity?.models || [];
+        const auction = models.find((m) => m.auction_id !== undefined);
+        return auction;
+      })
+      .filter(Boolean);
   } catch (error) {
-    console.error('Error fetching auctions:', error);
+    console.error("Error fetching auctions:", error);
     return [];
   }
 }
@@ -106,7 +112,7 @@ async function fetchAuctions() {
  * Format price from raw value to USD string
  */
 function formatPrice(rawPrice) {
-  if (!rawPrice) return '$0.00';
+  if (!rawPrice) return "$0.00";
   const price = parseInt(rawPrice) / 1e6; // Assuming USDC with 6 decimals
   return `$${price.toFixed(2)}`;
 }
@@ -119,7 +125,7 @@ function getTimeRemaining(endTime) {
   const end = parseInt(endTime);
   const diff = end - now;
 
-  if (diff <= 0) return 'Ended';
+  if (diff <= 0) return "Ended";
 
   const hours = Math.floor(diff / 3600);
   const minutes = Math.floor((diff % 3600) / 60);
@@ -154,13 +160,13 @@ async function postToDiscord(content, embed = null) {
     }
 
     await fetch(CONFIG.discordWebhook, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    console.log('Posted to Discord:', content.substring(0, 50) + '...');
+    console.log("Posted to Discord:", content.substring(0, 50) + "...");
   } catch (error) {
-    console.error('Error posting to Discord:', error);
+    console.error("Error posting to Discord:", error);
   }
 }
 
@@ -172,9 +178,9 @@ async function postToTwitter(text) {
 
   try {
     await twitterClient.v2.tweet(text);
-    console.log('Posted to Twitter:', text.substring(0, 50) + '...');
+    console.log("Posted to Twitter:", text.substring(0, 50) + "...");
   } catch (error) {
-    console.error('Error posting to Twitter:', error);
+    console.error("Error posting to Twitter:", error);
   }
 }
 
@@ -195,11 +201,15 @@ async function notifyNewAuction(auction) {
   // Discord message
   const discordEmbed = {
     title: `🆕 New Auction: ${name}`,
-    color: 0x32FF34, // Green
+    color: 0x32ff34, // Green
     fields: [
-      { name: 'Reserve Price', value: price, inline: true },
-      { name: 'Items', value: `${itemCount} beast${itemCount > 1 ? 's' : ''}`, inline: true },
-      { name: 'Ends In', value: timeLeft, inline: true },
+      { name: "Reserve Price", value: price, inline: true },
+      {
+        name: "Items",
+        value: `${itemCount} beast${itemCount > 1 ? "s" : ""}`,
+        inline: true,
+      },
+      { name: "Ends In", value: timeLeft, inline: true },
     ],
     url: `${CONFIG.siteUrl}/?auction=${auctionId}`,
     timestamp: new Date().toISOString(),
@@ -212,7 +222,7 @@ async function notifyNewAuction(auction) {
 
 "${name}"
 💰 Reserve: ${price}
-🎴 ${itemCount} beast${itemCount > 1 ? 's' : ''}
+🎴 ${itemCount} beast${itemCount > 1 ? "s" : ""}
 ⏰ ${timeLeft} left
 
 Hunt yours 👇
@@ -231,7 +241,7 @@ async function notifyNewBid(auction) {
   const currentBid = auction.highest_bid;
 
   // Skip if no bid or same bid we already notified about
-  if (!currentBid || currentBid === '0' || currentBid === '0x0') return;
+  if (!currentBid || currentBid === "0" || currentBid === "0x0") return;
 
   const lastBid = notifiedBids.get(auctionId);
   if (lastBid === currentBid) return;
@@ -248,10 +258,10 @@ async function notifyNewBid(auction) {
   // Discord message
   const discordEmbed = {
     title: `🔥 New Bid: ${name}`,
-    color: 0xFF6B35, // Orange
+    color: 0xff6b35, // Orange
     fields: [
-      { name: 'Bid Amount', value: bidAmount, inline: true },
-      { name: 'Time Left', value: timeLeft, inline: true },
+      { name: "Bid Amount", value: bidAmount, inline: true },
+      { name: "Time Left", value: timeLeft, inline: true },
     ],
     url: `${CONFIG.siteUrl}/?auction=${auctionId}`,
     timestamp: new Date().toISOString(),
@@ -261,7 +271,8 @@ async function notifyNewBid(auction) {
 
   // Twitter message (less frequent - only for significant bids)
   const bidValue = parseInt(currentBid) / 1e6;
-  if (bidValue >= 50) { // Only tweet bids >= $50
+  if (bidValue >= 50) {
+    // Only tweet bids >= $50
     const tweet = `🔥 Bid Alert!
 
 "${name}" just got a ${bidAmount} bid!
@@ -287,18 +298,19 @@ async function notifyEndingSoon(auction) {
   notifiedEndingSoon.add(auctionId);
 
   const name = auction.name || `Auction #${auctionId}`;
-  const currentBid = auction.highest_bid && auction.highest_bid !== '0'
-    ? formatPrice(auction.highest_bid)
-    : 'No bids yet!';
+  const currentBid =
+    auction.highest_bid && auction.highest_bid !== "0"
+      ? formatPrice(auction.highest_bid)
+      : "No bids yet!";
   const timeLeft = getTimeRemaining(auction.end_time);
 
   // Discord message
   const discordEmbed = {
     title: `⏰ Ending Soon: ${name}`,
-    color: 0xFFD700, // Gold
+    color: 0xffd700, // Gold
     fields: [
-      { name: 'Current Bid', value: currentBid, inline: true },
-      { name: 'Time Left', value: timeLeft, inline: true },
+      { name: "Current Bid", value: currentBid, inline: true },
+      { name: "Time Left", value: timeLeft, inline: true },
     ],
     url: `${CONFIG.siteUrl}/?auction=${auctionId}`,
     timestamp: new Date().toISOString(),
@@ -341,11 +353,11 @@ async function poll() {
  * Start the notifier
  */
 async function main() {
-  console.log('🚀 Survivor Exchange Notifier Starting...');
-  console.log(`Discord: ${CONFIG.enableDiscord ? 'Enabled' : 'Disabled'}`);
-  console.log(`Twitter: ${CONFIG.enableTwitter ? 'Enabled' : 'Disabled'}`);
+  console.log("🚀 Survivor Exchange Notifier Starting...");
+  console.log(`Discord: ${CONFIG.enableDiscord ? "Enabled" : "Disabled"}`);
+  console.log(`Twitter: ${CONFIG.enableTwitter ? "Enabled" : "Disabled"}`);
   console.log(`Poll Interval: ${CONFIG.pollInterval / 1000}s`);
-  console.log('');
+  console.log("");
 
   // Initial poll
   await poll();
@@ -353,7 +365,7 @@ async function main() {
   // Set up recurring poll
   setInterval(poll, CONFIG.pollInterval);
 
-  console.log('✅ Notifier running. Press Ctrl+C to stop.');
+  console.log("✅ Notifier running. Press Ctrl+C to stop.");
 }
 
 main().catch(console.error);

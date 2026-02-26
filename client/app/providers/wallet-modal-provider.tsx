@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import WalletConnectModal from "../components/wallet-connect-modal";
+import { WalletConnectModal } from "../components/modals";
 
 interface WalletModalContextType {
   openWalletModal: () => void;
